@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `POST /v1/calls/bulk`
 
-Creates outbound calls to the phone numbers you provide, using one assistant (1–200 numbers per request).
+Creates outbound calls to the phone numbers you provide, using one assistant (1–1000 numbers per request).
 
 Each call may carry an optional `metadata` object: Vindy does not process it and **returns it verbatim** on each call object in [`POST /v1/calls/list`](list-calls/index.md), [`GET /v1/calls/:callId`](get-call.md), and [webhook events](webhooks.md). Use it to tie a call back to a record in your own system (a CRM contact, an order, a support ticket). See [Metadata](#metadata) for details and limits.
 
@@ -44,7 +44,7 @@ Content-Type: application/json
 | `assistant_id` | string (UUID) | yes | Assistant that places the calls. Get it from [`GET /v1/assistants`](list-assistants.md). |
 | `phone_number_id` | string | yes | The **caller line** the calls are placed from (the outbound caller/CLI). Must be one returned by [`GET /v1/phone-numbers`](list-phone-numbers.md) — i.e. it belongs to your company and is provisioned for outbound. Any usable number works with any assistant; an inbound assignment does not restrict it. |
 | `variables` | object | no | **Shared** template variables applied to **every** call as a base — filled into the assistant's `{{placeholder}}` tokens. Each `calls[].variables` overrides these per call. See [Variables](#variables). |
-| `calls` | array | yes | Call targets (1–200). |
+| `calls` | array | yes | Call targets (1–1000). |
 | `calls[].phone_number` | string | yes | Destination number. See [Phone numbers](#phone-numbers) below. |
 | `calls[].variables` | object | no | **Per-call** template variables for this number (e.g. `{ "first_name": "Ahmet" }`). Merged over the request-level `variables` (the per-call value wins). See [Variables](#variables). |
 | `calls[].metadata` | object | no | Optional key-value object (see [Metadata](#metadata) limits). Returned verbatim. |
@@ -117,11 +117,7 @@ A violation returns **`400 INVALID_VARIABLES`**; for a per-call `variables` the 
 ```json
 {
   "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
-  "accepted": 2,
-  "calls": [
-    { "call_id": "0f1e2d3c-4b5a-7c88-9d0e-1f2a3b4c5d6e", "phone_number": "+905551112233" },
-    { "call_id": "1a2b3c4d-5e6f-7a99-8b0c-2d3e4f5a6b7c", "phone_number": "+905554445566" }
-  ]
+  "accepted": 2
 }
 ```
 
@@ -129,10 +125,14 @@ A violation returns **`400 INVALID_VARIABLES`**; for a per-call `variables` the 
 |---|---|---|
 | `batch_call_id` | string (UUID) | Identifier of the created batch (campaign). **Always present** — `/v1/calls/bulk` always creates a batch, even for a single number. **Keep it** to cancel the batch later via [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) or to list its calls via [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md). For a one-off call with no batch, use [`POST /v1/calls`](create-call.md) instead. |
 | `accepted` | int | Number of calls queued. |
-| `calls` | array | One entry per queued call, in request order — each `{ call_id, phone_number }`. `call_id` is that call's stable id: use it to fetch the call with [`GET /v1/calls/:callId`](get-call.md), cancel it with [`POST /v1/calls/:callId/cancel`](cancel-call.md), or match it to incoming webhooks. `phone_number` is the normalized E.164 number. |
 
-:::info Correlating results
-Each queued call gets its own `call_id`, returned in `calls[]` in request order. Keep them — mapped to your `metadata` — so you can fetch, cancel, or correlate each call individually. Outcomes also arrive as calls complete via [`POST /v1/calls/list`](list-calls/index.md) and [webhook events](webhooks.md), which echo the `metadata` you sent.
+:::info Correlating results — no per-call ids are returned
+By design, the bulk response returns **only** `batch_call_id` and `accepted` — it does **not** list a `call_id` for each queued call (returning up to 1000 ids on every batch is unnecessary overhead). You correlate results in one of two ways:
+
+- **By your `metadata`** (recommended): attach your own identifier (e.g. `crm_contact_id`) to each call. Every outcome — via [`POST /v1/calls/list`](list-calls/index.md) and the [`call-ended` webhook](webhooks.md) — echoes it back as `call_metadata`, so you can route each result without ever needing our `call_id`.
+- **By listing the batch's calls**: page through the batch with [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md), which returns each call (with its `call_id`, phone number, and current status).
+
+For a one-off call where you *do* want the id back immediately, use the single-call endpoint [`POST /v1/calls`](create-call.md) instead — it returns that call's `call_id`.
 :::
 
 Calls are queued and run in the background. Results (transcript, recording, structured data) become available as each call completes.

@@ -25,7 +25,7 @@ The Vindy API gives you **programmatic access** to your Vindy data from your own
 |---|---|
 | See which assistants your company has | [`GET /v1/assistants`](api-reference/list-assistants.md) |
 | See which caller numbers you can place calls from | [`GET /v1/phone-numbers`](api-reference/list-phone-numbers.md) |
-| Create a batch of outbound calls (1–200 in one request) | [`POST /v1/calls/bulk`](api-reference/bulk-create-calls.md) |
+| Create a batch of outbound calls (1–1000 in one request) | [`POST /v1/calls/bulk`](api-reference/bulk-create-calls.md) |
 | Pull call records — transcripts, structured data, recordings | [`POST /v1/calls/list`](api-reference/list-calls/index.md) |
 | Fetch a single call by its ID | [`GET /v1/calls/:callId`](api-reference/get-call.md) |
 | Track a batch and page through its calls | [`POST /v1/calls/batches/:batchId/calls`](api-reference/get-batch-calls.md) |

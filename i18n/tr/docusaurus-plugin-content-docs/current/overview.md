@@ -25,7 +25,7 @@ Vindy API, Vindy verilerinize kendi sistemleriniz üzerinden programatik erişim
 |---|---|
 | Şirketinizin asistanlarını görüntülemek | [`GET /v1/assistants`](api-reference/list-assistants.md) |
 | Çağrıları hangi arayan numaralardan yapabileceğinizi görmek | [`GET /v1/phone-numbers`](api-reference/list-phone-numbers.md) |
-| Giden bir toplu arama oluşturmak (tek istekte 1–200 çağrı) | [`POST /v1/calls/bulk`](api-reference/bulk-create-calls.md) |
+| Giden bir toplu arama oluşturmak (tek istekte 1–1000 çağrı) | [`POST /v1/calls/bulk`](api-reference/bulk-create-calls.md) |
 | Çağrı kayıtlarını almak — transcript, yapısal veri, ses kaydı | [`POST /v1/calls/list`](api-reference/list-calls/index.md) |
 | Tek bir çağrıyı kimliğiyle getirmek | [`GET /v1/calls/:callId`](api-reference/get-call.md) |
 | Bir toplu aramayı takip etmek ve çağrılarını sayfalamak | [`POST /v1/calls/batches/:batchId/calls`](api-reference/get-batch-calls.md) |

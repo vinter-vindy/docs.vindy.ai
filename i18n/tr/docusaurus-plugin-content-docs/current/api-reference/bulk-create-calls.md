@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `POST /v1/calls/bulk`
 
-Verdiğiniz telefon numaralarına, bir asistan kullanarak giden çağrı oluşturur (tek istekte 1–200 numara).
+Verdiğiniz telefon numaralarına, bir asistan kullanarak giden çağrı oluşturur (tek istekte 1–1000 numara).
 
 Her çağrıya isteğe bağlı bir `metadata` nesnesi ekleyebilirsiniz: Vindy bu veriyi işlemez ve [`POST /v1/calls/list`](list-calls/index.md), [`GET /v1/calls/:callId`](get-call.md) ile [webhook olaylarındaki](webhooks.md) her çağrı nesnesinde **olduğu gibi geri döndürür**. Böylece bir çağrıyı kendi sisteminizdeki bir kayıtla (CRM kişisi, sipariş, destek kaydı) ilişkilendirebilirsiniz. Ayrıntılar ve limitler için bkz. [Metadata](#metadata).
 
@@ -44,7 +44,7 @@ Content-Type: application/json
 | `assistant_id` | string (UUID) | evet | Çağrıları yapacak asistan. [`GET /v1/assistants`](list-assistants.md) yanıtından alınır. |
 | `phone_number_id` | string | evet | Çağrıların yapılacağı **arayan hattı** (giden arayan/CLI). [`GET /v1/phone-numbers`](list-phone-numbers.md) yanıtındaki numaralardan biri olmalı — yani şirketinize ait ve giden arama için provisioned. Kullanılabilir herhangi bir numara, herhangi bir asistanla çalışır; bir inbound ataması bunu kısıtlamaz. |
 | `variables` | object | hayır | **Ortak** şablon değişkenleri; **her** çağrıya taban olarak uygulanır — asistanın `{{yer_tutucu}}` ifadelerine yerleştirilir. Her `calls[].variables` bunları çağrı başına ezer. Bkz. [Değişkenler](#variables). |
-| `calls` | array | evet | Aranacak hedefler (1–200). |
+| `calls` | array | evet | Aranacak hedefler (1–1000). |
 | `calls[].phone_number` | string | evet | Aranacak numara. Bkz. aşağıdaki [Telefon numaraları](#phone-numbers). |
 | `calls[].variables` | object | hayır | Bu numaraya özel **çağrı-başı** şablon değişkenleri (örneğin `{ "first_name": "Ahmet" }`). İstek düzeyindeki `variables` üzerine birleştirilir (çağrı-başı değer kazanır). Bkz. [Değişkenler](#variables). |
 | `calls[].metadata` | object | hayır | İsteğe bağlı anahtar-değer nesnesi (bkz. [Metadata](#metadata) limitleri). Aynen geri döner. |
@@ -117,11 +117,7 @@ Bir ihlal **`400 INVALID_VARIABLES`** döndürür; çağrı-başı bir `variable
 ```json
 {
   "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
-  "accepted": 2,
-  "calls": [
-    { "call_id": "0f1e2d3c-4b5a-7c88-9d0e-1f2a3b4c5d6e", "phone_number": "+905551112233" },
-    { "call_id": "1a2b3c4d-5e6f-7a99-8b0c-2d3e4f5a6b7c", "phone_number": "+905554445566" }
-  ]
+  "accepted": 2
 }
 ```
 
@@ -129,10 +125,14 @@ Bir ihlal **`400 INVALID_VARIABLES`** döndürür; çağrı-başı bir `variable
 |---|---|---|
 | `batch_call_id` | string (UUID) | Oluşturulan toplu aramanın (kampanya) kimliği. **Her zaman gelir** — `/v1/calls/bulk` tek numara için bile toplu arama oluşturur. Toplu aramayı daha sonra [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) ile iptal etmek veya çağrılarını [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile listelemek için **saklayın**. Toplu arama olmadan tekil çağrı için [`POST /v1/calls`](create-call.md) kullanın. |
 | `accepted` | int | Kuyruğa alınan çağrı sayısı. |
-| `calls` | array | İstek sırasında, kuyruğa alınan her çağrı için bir giriş — her biri `{ call_id, phone_number }`. `call_id`, o çağrının kalıcı kimliğidir: çağrıyı [`GET /v1/calls/:callId`](get-call.md) ile çekmek, [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile iptal etmek veya gelen webhook'larla eşleştirmek için kullanın. `phone_number`, normalize edilmiş E.164 numarasıdır. |
 
-:::info Sonuçları eşleştirme
-Kuyruğa alınan her çağrı, istek sırasında `calls[]` içinde dönen kendi `call_id` değerini alır. Bu değerleri — `metadata` ile eşleyerek — saklayın; böylece her çağrıyı tek tek çekebilir, iptal edebilir veya eşleştirebilirsiniz. Sonuçlar ayrıca çağrılar tamamlandıkça [`POST /v1/calls/list`](list-calls/index.md) ve [webhook olaylarıyla](webhooks.md) gelir; bunlar gönderdiğiniz `metadata` değerini yansıtır.
+:::info Sonuçları eşleştirme — per-call id dönmez
+Tasarım gereği bulk yanıtı **yalnızca** `batch_call_id` ve `accepted` döndürür — kuyruğa alınan her çağrı için ayrı bir `call_id` **listelemez** (her batch'te 1000'e kadar id döndürmek gereksiz yüktür). Sonuçları iki yoldan eşleştirirsiniz:
+
+- **`metadata` ile** (önerilen): her çağrıya kendi tanımlayıcınızı (ör. `crm_contact_id`) ekleyin. Her sonuç — [`POST /v1/calls/list`](list-calls/index.md) ve [`call-ended` webhook'u](webhooks.md) ile — bunu `call_metadata` olarak geri yansıtır; böylece bizim `call_id`'mize ihtiyaç duymadan her sonucu yönlendirirsiniz.
+- **Batch'in çağrılarını listeleyerek**: toplu aramayı [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile sayfalayın; bu uç her çağrıyı (kendi `call_id`'si, numarası ve güncel durumuyla) döndürür.
+
+id'yi hemen geri almak istediğiniz tekil bir çağrı için ise tekil uç [`POST /v1/calls`](create-call.md) kullanın — o, çağrının `call_id`'sini döndürür.
 :::
 
 Çağrılar kuyruğa alınır ve arka planda yürütülür. Sonuçlar (transcript, ses kaydı, yapısal veri) her çağrı tamamlandıkça erişilebilir hâle gelir.

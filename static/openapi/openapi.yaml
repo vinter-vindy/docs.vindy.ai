@@ -266,12 +266,16 @@ paths:
       tags: [Calls]
       summary: Create a batch of outbound calls
       description: >
-        Creates 1–200 outbound calls using a single assistant. Each call may
+        Creates 1–1000 outbound calls using a single assistant. Each call may
         carry an opaque metadata object that is returned verbatim. This always
         creates a batch (campaign) and always returns a non-null batch_call_id —
         even for a single number. For a one-off call with no batch, use
         POST /v1/calls instead. An optional scheduled_at defers the calls to
         a future time.
+        The response contains only batch_call_id and accepted — it does NOT
+        return a per-call id list. Correlate results by the metadata you attach
+        (echoed back on the call-ended webhook and in POST /v1/calls/list), or
+        list the batch's calls via POST /v1/calls/batches/{batchId}/calls.
       requestBody:
         required: true
         content:
@@ -954,7 +958,7 @@ components:
         calls:
           type: array
           minItems: 1
-          maxItems: 200
+          maxItems: 1000
           items:
             $ref: '#/components/schemas/BulkCallItem'
         variables:
@@ -1008,37 +1012,20 @@ components:
 
     BulkCreateCallsResponse:
       type: object
-      required: [batch_call_id, accepted, calls]
+      required: [batch_call_id, accepted]
       properties:
         batch_call_id:
           type: string
           description: >
             Batch (campaign) identifier — always present, even for a single
-            number. Keep it to cancel or query the batch.
+            number. Keep it to cancel the batch, list its calls
+            (POST /v1/calls/batches/{batchId}/calls), or correlate results.
         accepted:
           type: integer
           description: Number of calls queued.
-        calls:
-          type: array
-          description: One entry per queued call, in request order.
-          items:
-            type: object
-            required: [call_id, phone_number]
-            properties:
-              call_id:
-                type: string
-                description: Stable id for this queued call.
-              phone_number:
-                type: string
-                description: Normalized E.164 number.
       example:
         batch_call_id: '842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b'
         accepted: 2
-        calls:
-          - call_id: '0f1e2d3c-4b5a-7c88-9d0e-1f2a3b4c5d6e'
-            phone_number: '+905551112233'
-          - call_id: '1a2b3c4d-5e6f-7a99-8b0c-2d3e4f5a6b7c'
-            phone_number: '+905554443322'
 
     CancelCallResponse:
       type: object
