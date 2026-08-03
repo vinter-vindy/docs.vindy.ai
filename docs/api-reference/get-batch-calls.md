@@ -15,8 +15,8 @@ This returns **every call in the batch**, whatever its stage — not only finish
 
 Like List Calls, it's a `POST` with a small JSON body: the cursor is opaque, so it travels in the body rather than the query string. Unlike List Calls, it takes **no date filter** — it's scoped to a single batch and has its own cursor. Use it to page through a batch's results as they complete, or to pull the full set once the batch is done.
 
-:::info Same visibility rule as List Calls
-Calls appear in the same order and with the same visibility as [`POST /v1/calls/list`](list-calls/index.md): **newest first**, and **only terminal calls** (status `completed` or `failed`). In-progress calls are not returned as objects — they show up here once they reach a terminal state. Browser (WebRTC) calls are never returned.
+:::info Broader visibility than List Calls
+Unlike [`POST /v1/calls/list`](list-calls/index.md) — which returns only **terminal** calls (`completed` or `failed`) — this endpoint returns **every call in the batch, at any stage**. Queued and in-progress calls come back with a queue `call_status` (`pending`, `scheduled`, `in_progress`, or `cancelled`) and `null` conversation, recording, and timing fields; terminal calls come back as the full object. Results are ordered **newest first** (by creation time). This is what lets you poll a batch from queued through to done.
 :::
 
 ---
@@ -105,7 +105,7 @@ The body is optional — send `{}` (or nothing) to get the first page with the d
 
 **Call object**
 
-Each item in `data` has the **same fields** as a [List Calls](list-calls/index.md#response-fields) item — `call_id` (a string), `call_status` (`completed` or `failed`), `call_transcript`, `call_structured_data`, `call_metadata`, `call_recording`, the free-form `call_end_reason` string, and the rest. See the full [List Calls field reference](list-calls/index.md#response-fields) rather than re-reading them here.
+Each item in `data` has the **same fields** as a [List Calls](list-calls/index.md#response-fields) item — `call_id` (a string), `call_status` (`completed` or `failed` for terminal calls, or a queue status — `pending`, `scheduled`, `in_progress`, `cancelled` — for calls not yet finished), `call_transcript`, `call_structured_data`, `call_metadata`, `call_recording`, the free-form `call_end_reason` string, and the rest. Queued and in-progress calls carry `null` for the conversation, recording, and timing fields until they reach a terminal state. See the full [List Calls field reference](list-calls/index.md#response-fields) rather than re-reading them here.
 
 :::note Cursor is opaque — page with the same `batchId`
 The `cursor` is opaque: don't build or change it. To get the next page, send it back as `cursor` in the body **with the same `batchId`**, and keep `limit` identical across pages. Stop when `has_more` is `false` (at that point `next_cursor` is `null`). This cursor is independent from the one used by [`POST /v1/calls/list`](list-calls/index.md).

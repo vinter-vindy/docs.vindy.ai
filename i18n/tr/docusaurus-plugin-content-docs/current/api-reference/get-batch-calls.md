@@ -15,8 +15,8 @@ Bu uç, toplu aramadaki **her çağrıyı** döndürür — hangi aşamada olurs
 
 Çağrıları Listele gibi bu da küçük bir JSON gövdesiyle yapılan bir `POST` isteğidir: cursor opak olduğundan query string yerine gövdede taşınır. Çağrıları Listele'den farklı olarak **tarih filtresi almaz** — tek bir toplu aramayla sınırlıdır ve kendi cursor'una sahiptir. Çağrılar tamamlandıkça sonuçları sayfalamak ya da toplu arama bittikten sonra tüm kümeyi çekmek için kullanın.
 
-:::info Çağrıları Listele ile aynı görünürlük kuralı
-Çağrılar, [`POST /v1/calls/list`](list-calls/index.md) ile aynı sırada ve aynı görünürlükle döner: **en yeniden başlayarak** ve yalnızca **sonlanmış çağrılar** (durum `completed` veya `failed`). Devam eden çağrılar nesne olarak dönmez — sonlanmış bir duruma ulaştıklarında burada görünürler. Tarayıcı (WebRTC) çağrıları hiçbir zaman dönmez.
+:::info Çağrıları Listele'den daha geniş görünürlük
+[`POST /v1/calls/list`](list-calls/index.md) yalnızca **sonlanmış** çağrıları (`completed` veya `failed`) döndürürken, bu uç toplu aramadaki **her çağrıyı, hangi aşamada olursa olsun** döndürür. Kuyruktaki ve devam eden çağrılar kuyruk `call_status`'üyle (`pending`, `scheduled`, `in_progress` ya da `cancelled`) ve `null` konuşma/kayıt/zaman alanlarıyla; sonlanmış çağrılar ise tam nesneyle döner. Sonuçlar **en yeniden başlayarak** (oluşturulma zamanına göre) sıralanır. Bir toplu aramayı sıradan bitişe kadar yoklayabilmenizi (poll) sağlayan da budur.
 :::
 
 ---
@@ -105,7 +105,7 @@ Gövde opsiyoneldir — ilk sayfayı varsayılan limitle almak için `{}` (veya 
 
 **Çağrı nesnesi**
 
-`data` içindeki her öğe, bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı alanlara** sahiptir — `call_id` (bir dize), `call_status` (`completed` veya `failed`), `call_transcript`, `call_structured_data`, `call_metadata`, `call_recording`, serbest biçimli `call_end_reason` dizesi ve diğerleri. Bu alanları burada yeniden okumak yerine tam [Çağrıları Listele alan referansına](list-calls/index.md#yanıt-alanları) bakabilirsiniz.
+`data` içindeki her öğe, bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı alanlara** sahiptir — `call_id` (bir dize), `call_status` (sonlanmış çağrılar için `completed` veya `failed`, henüz bitmemiş çağrılar için `pending`/`scheduled`/`in_progress`/`cancelled` gibi bir kuyruk durumu), `call_transcript`, `call_structured_data`, `call_metadata`, `call_recording`, serbest biçimli `call_end_reason` dizesi ve diğerleri. Kuyruktaki ve devam eden çağrılar sonlanana dek konuşma/kayıt/zaman alanları için `null` taşır. Bu alanları burada yeniden okumak yerine tam [Çağrıları Listele alan referansına](list-calls/index.md#yanıt-alanları) bakabilirsiniz.
 
 :::note Cursor opaktır — aynı `batchId` ile sayfalayın
 `cursor` opaktır: onu oluşturmayın veya değiştirmeyin. Sonraki sayfayı almak için **aynı `batchId` ile** gövdede `cursor` olarak geri gönderin ve sayfalar arasında `limit` değerini aynı tutun. `has_more` `false` olduğunda durun (o noktada `next_cursor` `null` olur). Bu cursor, [`POST /v1/calls/list`](list-calls/index.md) tarafından kullanılan cursor'dan bağımsızdır.
