@@ -4,7 +4,7 @@ sidebar_label: Genel Bakış
 sidebar_position: 1
 ---
 
-# Genel Bakış
+# Genel Bakış DENEME
 
 Vindy API, Vindy verilerinize kendi sistemleriniz üzerinden programatik erişim sağlar. Asistan tanımlarınıza, çağrı kayıtlarınıza, transcript'lere, yapay zekânın çıkardığı yapısal verilere ve ses kayıtlarına HTTP üzerinden erişebilirsiniz. Veri okumanın ötesinde, giden çağrılardan oluşan toplu aramalar oluşturabilir; henüz aranmamış çağrıları tek tek veya toplu arama düzeyinde iptal edebilirsiniz. Dilerseniz **webhook**'ları da kullanabilirsiniz: Vindy, bir çağrı sona erdiği anda — ve bir toplu arama tamamlandığında — endpoint'inize bildirim gönderir; böylece sürekli sorgulamak (polling) yerine neredeyse anında tepki verebilirsiniz. Bkz. [Webhooks](api-reference/webhooks.md).
 
