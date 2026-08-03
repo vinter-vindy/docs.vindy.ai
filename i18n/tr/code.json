@@ -5,7 +5,7 @@
   },
   "homepage.features.calls.title": {
     "message": "Çağrı Verilerin",
-    "description": "Feature title: call data"
+    "description": "Feature title: call data "
   },
   "homepage.features.calls.description": {
     "message": "Çağrıları, transkriptleri, yapısal verileri ve ses kayıtlarını basit bir REST API ile çek",
