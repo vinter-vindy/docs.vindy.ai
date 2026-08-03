@@ -1,0 +1,8 @@
+{
+  "label": "API Referansı",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Her Vindy API endpoint'i; istek/yanıt ayrıntıları ve curl, Node.js, Python örnekleriyle birlikte."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "title": {
+    "message": "Vindy Docs",
+    "description": "The title in the navbar"
+  },
+  "logo.alt": {
+    "message": "Vindy AI Sesli Asistan Platformu",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.Docs": {
+    "message": "Dokümanlar",
+    "description": "Navbar item with label Docs"
+  }
+}

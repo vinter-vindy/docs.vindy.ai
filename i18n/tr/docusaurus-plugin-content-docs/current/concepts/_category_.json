@@ -1,0 +1,8 @@
+{
+  "label": "Kavramlar",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "Vindy API'nin yatay yapı taşları: yanıt formatı, multi-tenancy ve kişisel veriler."
+  }
+}

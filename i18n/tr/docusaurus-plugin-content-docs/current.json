@@ -1,0 +1,22 @@
+{
+  "version.label": {
+    "message": "v1.0.x",
+    "description": "The label for version current"
+  },
+  "sidebar.tutorialSidebar.category.Concepts": {
+    "message": "Kavramlar",
+    "description": "The label for category Concepts in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.API Reference": {
+    "message": "API Referansı",
+    "description": "The label for category API Reference in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Guides": {
+    "message": "Rehberler",
+    "description": "The label for category Guides in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Calls": {
+    "message": "Aramalar",
+    "description": "The label for category Calls in sidebar tutorialSidebar"
+  }
+}

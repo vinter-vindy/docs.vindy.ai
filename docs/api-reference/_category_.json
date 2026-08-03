@@ -1,0 +1,8 @@
+{
+  "label": "API Reference",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Every Vindy API endpoint with request/response details and curl, Node.js, and Python examples."
+  }
+}

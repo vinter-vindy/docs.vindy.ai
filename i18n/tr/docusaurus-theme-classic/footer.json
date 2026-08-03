@@ -1,0 +1,54 @@
+{
+  "link.title.Docs": {
+    "message": "Dokümanlar",
+    "description": "The title of the footer links column with title=Docs in the footer"
+  },
+  "link.title.Guides": {
+    "message": "Rehberler",
+    "description": "The title of the footer links column with title=Guides in the footer"
+  },
+  "link.title.More": {
+    "message": "Daha Fazlası",
+    "description": "The title of the footer links column with title=More in the footer"
+  },
+  "link.item.label.Overview": {
+    "message": "Genel Bakış",
+    "description": "The label of footer link with label=Overview linking to /docs/overview"
+  },
+  "link.item.label.Quickstart": {
+    "message": "Hızlı Başlangıç",
+    "description": "The label of footer link with label=Quickstart linking to /docs/quickstart"
+  },
+  "link.item.label.Authentication": {
+    "message": "Kimlik Doğrulama",
+    "description": "The label of footer link with label=Authentication linking to /docs/authentication"
+  },
+  "link.item.label.API Reference": {
+    "message": "API Referansı",
+    "description": "The label of footer link with label=API Reference linking to /docs/category/api-reference"
+  },
+  "link.item.label.Concepts": {
+    "message": "Kavramlar",
+    "description": "The label of footer link with label=Concepts linking to /docs/category/concepts"
+  },
+  "link.item.label.Cookbook": {
+    "message": "Pratik Rehberler",
+    "description": "The label of footer link with label=Cookbook linking to /docs/category/guides"
+  },
+  "link.item.label.Error Codes": {
+    "message": "Hata Kodları",
+    "description": "The label of footer link with label=Error Codes linking to /docs/errors"
+  },
+  "link.item.label.FAQ": {
+    "message": "SSS",
+    "description": "The label of footer link with label=FAQ linking to /docs/faq"
+  },
+  "link.item.label.Glossary": {
+    "message": "Sözlük",
+    "description": "The label of footer link with label=Glossary linking to /docs/glossary"
+  },
+  "copyright": {
+    "message": "Copyright © 2026 Vindy. All rights reserved",
+    "description": "The footer copyright"
+  }
+}

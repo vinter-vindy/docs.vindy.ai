@@ -1,0 +1,8 @@
+{
+  "label": "Rehberler",
+  "position": 7,
+  "link": {
+    "type": "generated-index",
+    "description": "Sık yapılan işlemler için hazır kullanım örnekleri: artımlı senkronizasyon, kayıt indirme ve tarih aralığı sorguları."
+  }
+}
