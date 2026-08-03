@@ -6,8 +6,7 @@ const config: Config = {
   title: 'Vindy API Docs',
   tagline: 'Vindy AI Voice Assistant Platform',
   favicon: 'img/favicon.ico',
-  // Domain is pending final confirmation — update url when DNS is settled.
-  url: 'https://docs.vindy.vinter.me',
+  url: 'https://docs.vindy.ai',
   baseUrl: '/',
   organizationName: 'vindy',
   projectName: 'vindy-docs',
