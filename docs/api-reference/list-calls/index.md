@@ -9,7 +9,11 @@ import TabItem from '@theme/TabItem';
 
 # `POST /v1/calls/list`
 
-Returns your company's calls — each with its transcript, the data your structured outputs extracted, any metadata you attached, and a recording link when one is ready. Results come back a page at a time via an opaque cursor, and you can narrow them by assistant, campaign, direction, and a range of days.
+Returns your company's calls — each with its transcript, the data your structured outputs extracted, any metadata you attached, and a recording link when one is ready. Results come back a page at a time via an opaque cursor, and you can narrow them by assistant, direction, and a range of days.
+
+:::tip Listing one batch's calls
+To list the calls of a specific batch (campaign), use the dedicated [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint. Unlike this list — which returns only finalized calls — the batch endpoint also shows a batch's not-yet-dialed, in-progress, and cancelled calls.
+:::
 
 :::info No half-baked data
 Only calls that are **ready to be shown to you** are returned. A call is ready when:
@@ -51,14 +55,13 @@ Every field is **optional** — send an empty body to page through all of your c
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `assistant_id` | string (UUID) | — | Only calls handled by this assistant. From [`GET /v1/assistants`](../list-assistants.md). |
-| `campaign_id` | string (UUID) | — | Only calls from this campaign — the `batch_call_id` returned by [`POST /v1/calls/bulk`](../bulk-create-calls.md). |
 | `call_bound_type` | string | — | `inbound` or `outbound`. Any other value (or omitting it) applies no direction filter. |
 | `date_from` | string (`YYYY-MM-DD`) | — | Include calls from this day onward. See [Filtering & Pagination](filtering-pagination.md). |
 | `date_to` | string (`YYYY-MM-DD`) | — | Include calls up to and including this day. See [Filtering & Pagination](filtering-pagination.md). |
 | `limit` | int | `50` | Maximum items in this page. Range: 1–200. |
 | `cursor` | string | — | Opaque cursor from a previous `next_cursor`. Omit on the first request. |
 
-**Combining filters.** `assistant_id`, `campaign_id`, `call_bound_type`, and the date range are independent — pass any subset and they combine (logical AND). Omit them all to scan every terminal call your company has.
+**Combining filters.** `assistant_id`, `call_bound_type`, and the date range are independent — pass any subset and they combine (logical AND). Omit them all to scan every terminal call your company has.
 
 **Validation rules:**
 
@@ -70,10 +73,10 @@ Every field is **optional** — send an empty body to page through all of your c
 
 Two independent controls shape the result, and they compose cleanly:
 
-- **The filters** (`assistant_id`, `campaign_id`, `call_bound_type`, `date_from` / `date_to`) decide *which* calls are in scope. All are optional.
+- **The filters** (`assistant_id`, `call_bound_type`, `date_from` / `date_to`) decide *which* calls are in scope. All are optional.
 - **The cursor** (`cursor` / `limit`) walks *through* that scope, one page at a time, **newest first**.
 
-You can use either on its own or both together. With no filters and no cursor, you simply page through all of your calls, **newest first** — the first request returns the newest `limit` calls (50 by default), and you keep going until there's nothing left. Add filters and you page through only that scope the same way. In every case the rule is the same: send your filters on the first request, then on each following request send back the `next_cursor` you received — **unchanged** — while keeping `assistant_id`, `campaign_id`, `call_bound_type`, `date_from`, `date_to`, and `limit` exactly as they were. The cursor encodes your position *within that specific query*, so changing a filter halfway through a walk produces meaningless results. You're done when `has_more` is `false` (at which point `next_cursor` is `null`).
+You can use either on its own or both together. With no filters and no cursor, you simply page through all of your calls, **newest first** — the first request returns the newest `limit` calls (50 by default), and you keep going until there's nothing left. Add filters and you page through only that scope the same way. In every case the rule is the same: send your filters on the first request, then on each following request send back the `next_cursor` you received — **unchanged** — while keeping `assistant_id`, `call_bound_type`, `date_from`, `date_to`, and `limit` exactly as they were. The cursor encodes your position *within that specific query*, so changing a filter halfway through a walk produces meaningless results — start a fresh walk (drop the cursor) whenever you change a filter. You're done when `has_more` is `false` (at which point `next_cursor` is `null`).
 
 The full parameter reference, accepted date formats, and copy-paste recipes live in **[Filtering & Pagination](filtering-pagination.md)**.
 
@@ -385,14 +388,9 @@ print(f"{len(calls)} calls")
 </TabItem>
 </Tabs>
 
-### Filter by campaign
+### List one batch's calls
 
-```bash
-curl -X POST https://api.vindy.ai/v1/calls/list \
-  -H "Authorization: Bearer $VINDY_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"campaign_id":"84213f7a-58cc-4372-a567-0e02b2c3d479","limit":50}'
-```
+This endpoint does not filter by campaign. To page through the calls of a specific batch, use the dedicated [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint — it also includes the batch's not-yet-dialed, in-progress, and cancelled calls.
 
 ### Date range — single day
 

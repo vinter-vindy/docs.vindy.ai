@@ -127,7 +127,7 @@ Bir ihlal **`400 INVALID_VARIABLES`** döndürür; çağrı-başı bir `variable
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `batch_call_id` | string (UUID) | Oluşturulan toplu aramanın (kampanya) kimliği. **Her zaman gelir** — `/v1/calls/bulk` tek numara için bile toplu arama oluşturur. Toplu aramayı daha sonra [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) ile iptal etmek veya çağrılarını [`POST /v1/calls/list`](list-calls/index.md) içinde `campaign_id` ile filtrelemek için **saklayın**. Toplu arama olmadan tekil çağrı için [`POST /v1/calls`](create-call.md) kullanın. |
+| `batch_call_id` | string (UUID) | Oluşturulan toplu aramanın (kampanya) kimliği. **Her zaman gelir** — `/v1/calls/bulk` tek numara için bile toplu arama oluşturur. Toplu aramayı daha sonra [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) ile iptal etmek veya çağrılarını [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile listelemek için **saklayın**. Toplu arama olmadan tekil çağrı için [`POST /v1/calls`](create-call.md) kullanın. |
 | `accepted` | int | Kuyruğa alınan çağrı sayısı. |
 | `calls` | array | İstek sırasında, kuyruğa alınan her çağrı için bir giriş — her biri `{ call_id, phone_number }`. `call_id`, o çağrının kalıcı kimliğidir: çağrıyı [`GET /v1/calls/:callId`](get-call.md) ile çekmek, [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile iptal etmek veya gelen webhook'larla eşleştirmek için kullanın. `phone_number`, normalize edilmiş E.164 numarasıdır. |
 

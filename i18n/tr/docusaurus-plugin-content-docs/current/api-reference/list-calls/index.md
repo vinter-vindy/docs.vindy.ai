@@ -9,7 +9,11 @@ import TabItem from '@theme/TabItem';
 
 # `POST /v1/calls/list`
 
-Şirketinizin çağrılarını döndürür; her çağrı kendi dökümü (transcript), structured output'larınızın çıkardığı veriler, eklediğiniz metadata ve hazır olduğunda bir ses kaydı bağlantısıyla birlikte gelir. Sonuçlar opak bir cursor ile sayfa sayfa gelir ve asistan, kampanya, yön ve bir gün aralığıyla daraltılabilir.
+Şirketinizin çağrılarını döndürür; her çağrı kendi dökümü (transcript), structured output'larınızın çıkardığı veriler, eklediğiniz metadata ve hazır olduğunda bir ses kaydı bağlantısıyla birlikte gelir. Sonuçlar opak bir cursor ile sayfa sayfa gelir ve asistan, yön ve bir gün aralığıyla daraltılabilir.
+
+:::tip Bir toplu aramanın (batch) çağrılarını listeleme
+Belirli bir toplu aramanın (kampanya) çağrılarını listelemek için özel [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint'ini kullanın. Yalnızca sonlanmış çağrıları döndüren bu listenin aksine, batch endpoint'i o toplu aramanın henüz aranmamış, devam eden ve iptal edilmiş çağrılarını da gösterir.
+:::
 
 :::info Yarım veri döndürülmez
 Yalnızca **size gösterilmeye hazır** çağrılar döndürülür. Bir çağrının hazır sayılması için:
@@ -51,14 +55,13 @@ Tüm alanlar **isteğe bağlıdır** — şirketinizin sonlanmış tüm çağrı
 | Alan | Tür | Varsayılan | Açıklama |
 |---|---|---|---|
 | `assistant_id` | string (UUID) | — | Yalnızca bu asistanın yürüttüğü çağrılar. [`GET /v1/assistants`](../list-assistants.md) yanıtından alınır. |
-| `campaign_id` | string (UUID) | — | Yalnızca bu kampanyanın çağrıları — [`POST /v1/calls/bulk`](../bulk-create-calls.md) yanıtında dönen `batch_call_id`. |
 | `call_bound_type` | string | — | `inbound` veya `outbound`. Başka bir değer (veya boş bırakmak) yön filtresi uygulamaz. |
 | `date_from` | string (`YYYY-MM-DD`) | — | Bu günden itibaren çağrıları dahil eder. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
 | `date_to` | string (`YYYY-MM-DD`) | — | Bu gün dahil olacak şekilde çağrıları dahil eder. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
 | `limit` | int | `50` | Bu sayfadaki en fazla kayıt sayısı. Aralık: 1–200. |
 | `cursor` | string | — | Önceki yanıttaki `next_cursor` değerinden alınan opak cursor. İlk istekte gönderilmez. |
 
-**Filtreleri birleştirme.** `assistant_id`, `campaign_id`, `call_bound_type` ve tarih aralığı bağımsızdır — herhangi bir alt kümesini gönderin, birlikte çalışırlar (mantıksal VE). Şirketinizin tüm sonlanmış çağrılarını taramak için hepsini boş bırakın.
+**Filtreleri birleştirme.** `assistant_id`, `call_bound_type` ve tarih aralığı bağımsızdır — herhangi bir alt kümesini gönderin, birlikte çalışırlar (mantıksal VE). Şirketinizin tüm sonlanmış çağrılarını taramak için hepsini boş bırakın.
 
 **Doğrulama kuralları:**
 
@@ -70,10 +73,10 @@ Tüm alanlar **isteğe bağlıdır** — şirketinizin sonlanmış tüm çağrı
 
 Sonucu iki bağımsız mekanizma şekillendirir ve bu ikisi sorunsuz biçimde birlikte çalışır:
 
-- **Filtreler** (`assistant_id`, `campaign_id`, `call_bound_type`, `date_from` / `date_to`) *hangi* çağrıların kapsama gireceğini belirler. Tümü isteğe bağlıdır.
+- **Filtreler** (`assistant_id`, `call_bound_type`, `date_from` / `date_to`) *hangi* çağrıların kapsama gireceğini belirler. Tümü isteğe bağlıdır.
 - **Cursor** (`cursor` / `limit`) bu kapsamın *içinde*, **en yeniden en eskiye** sayfa sayfa ilerler.
 
-İkisini ayrı ayrı da, birlikte de kullanabilirsiniz. Filtre ve cursor olmadan, tüm çağrılarınız arasında **en yeniden en eskiye** gezinirsiniz: ilk istek en yeni `limit` kadar çağrıyı (varsayılan 50) döndürür, geriye kayıt kalmayana dek devam edersiniz. Filtre eklediğinizde de aynı şekilde, yalnızca o kapsam içinde gezinirsiniz. Her durumda kural aynıdır: filtrelerinizi ilk istekte gönderin; sonraki her istekte aldığınız `next_cursor` değerini — **değiştirmeden** — geri gönderin ve `assistant_id`, `campaign_id`, `call_bound_type`, `date_from`, `date_to`, `limit` değerlerini olduğu gibi koruyun. Cursor, konumunuzu *o belirli sorgunun içinde* kodlar; bu yüzden gezinme sırasında bir filtreyi değiştirmek anlamsız sonuçlar üretir. `has_more` `false` olduğunda (bu noktada `next_cursor` da `null` olur) iş tamamlanmıştır.
+İkisini ayrı ayrı da, birlikte de kullanabilirsiniz. Filtre ve cursor olmadan, tüm çağrılarınız arasında **en yeniden en eskiye** gezinirsiniz: ilk istek en yeni `limit` kadar çağrıyı (varsayılan 50) döndürür, geriye kayıt kalmayana dek devam edersiniz. Filtre eklediğinizde de aynı şekilde, yalnızca o kapsam içinde gezinirsiniz. Her durumda kural aynıdır: filtrelerinizi ilk istekte gönderin; sonraki her istekte aldığınız `next_cursor` değerini — **değiştirmeden** — geri gönderin ve `assistant_id`, `call_bound_type`, `date_from`, `date_to`, `limit` değerlerini olduğu gibi koruyun. Cursor, konumunuzu *o belirli sorgunun içinde* kodlar; bu yüzden gezinme sırasında bir filtreyi değiştirmek anlamsız sonuçlar üretir — bir filtreyi değiştirdiğinizde cursor'ı bırakıp yeni bir gezinme başlatın. `has_more` `false` olduğunda (bu noktada `next_cursor` da `null` olur) iş tamamlanmıştır.
 
 Parametrelerin tam referansı, kabul edilen tarih biçimleri ve hazır reçeteler **[Filtreleme ve Sayfalama](filtering-pagination.md)** sayfasındadır.
 
@@ -385,14 +388,9 @@ print(f"{len(calls)} çağrı")
 </TabItem>
 </Tabs>
 
-### Kampanyaya göre filtreleme
+### Bir toplu aramanın çağrılarını listeleme
 
-```bash
-curl -X POST https://api.vindy.ai/v1/calls/list \
-  -H "Authorization: Bearer $VINDY_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"campaign_id":"84213f7a-58cc-4372-a567-0e02b2c3d479","limit":50}'
-```
+Bu endpoint kampanyaya göre filtrelemez. Belirli bir toplu aramanın çağrıları arasında sayfa sayfa gezinmek için özel [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint'ini kullanın — o uç, toplu aramanın henüz aranmamış, devam eden ve iptal edilmiş çağrılarını da içerir.
 
 ### Tarih aralığı — tek gün
 

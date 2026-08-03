@@ -6,7 +6,7 @@ sidebar_position: 3
 
 # Filtreleme ve Sayfalama
 
-[`POST /v1/calls/list`](index.md) çağrılarını daraltma ve sayfalama ile ilgili her şey: `cursor`, `limit`, `date_from` ve `date_to` parametreleri; ayrıca `assistant_id`, `campaign_id` ve `call_bound_type` filtreleri.
+[`POST /v1/calls/list`](index.md) çağrılarını daraltma ve sayfalama ile ilgili her şey: `cursor`, `limit`, `date_from` ve `date_to` parametreleri; ayrıca `assistant_id` ve `call_bound_type` filtreleri.
 
 Çağrılar **en yeniden en eskiye** sırayla döner; sıralama, her çağrının gerçekleştiği ana (başlangıç zamanına) göredir, çağrı kimliği ise eşitlik bozucudur.
 
@@ -23,7 +23,7 @@ sidebar_position: 3
 | `date_from` + `date_to` | İki ucu da dahil gün aralığındaki çağrılar, en yeniden başlayarak. |
 | Yukarıdakilerden herhangi biri **+ `cursor`** | Aynı sorgunun **sonraki sayfası**. Sayfalar arasında diğer tüm parametreleri aynı tutun — yalnızca `cursor` değişir. |
 
-**Diğer filtreler.** `assistant_id`, `campaign_id` ve `call_bound_type` (`inbound` / `outbound`) kapsamı daha da daraltır ve tarih aralığıyla ve birbirleriyle birlikte çalışır (mantıksal VE). `campaign_id`, [`POST /v1/calls/bulk`](../bulk-create-calls.md) yanıtında dönen `batch_call_id` değeridir. Bir gezinmenin her sayfasında aynı filtreleri gönderin.
+**Diğer filtreler.** `assistant_id` ve `call_bound_type` (`inbound` / `outbound`) kapsamı daha da daraltır ve tarih aralığıyla ve birbirleriyle birlikte çalışır (mantıksal VE). Bir gezinmenin her sayfasında aynı filtreleri gönderin. Bir toplu aramanın çağrılarını listelemek için bunun yerine özel [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint'ini kullanın — bu liste kampanyaya göre filtrelemez.
 
 ---
 
@@ -38,7 +38,7 @@ sidebar_position: 3
 - **İlk** istekte göndermeyin.
 - Her yanıt bir `pagination.next_cursor` döner. `has_more` `true` olduğu sürece bu değeri `cursor` olarak geri gönderip sonraki sayfayı alın.
 - `has_more` `false` olunca durun (bu noktada `next_cursor` `null`'dır).
-- Cursor, **opak** bir base64url anahtarıdır — `(started_at, çağrı kimliği)` üzerinde azalan sıralı bir keyset işaretçisi. Oluşturmayın veya çözmeyin. Cursor ile sayfalarken **aynı `assistant_id`, `campaign_id`, `call_bound_type`, `date_from`, `date_to` ve `limit` değerlerini tekrar gönderin**; cursor yalnızca o sorgudaki konumunuzu işaretler.
+- Cursor, **opak** bir base64url anahtarıdır — `(started_at, çağrı kimliği)` üzerinde azalan sıralı bir keyset işaretçisi. Oluşturmayın veya çözmeyin. Cursor ile sayfalarken **aynı `assistant_id`, `call_bound_type`, `date_from`, `date_to` ve `limit` değerlerini tekrar gönderin**; cursor yalnızca o sorgudaki konumunuzu işaretler. Bir filtreyi değiştirirseniz cursor'sız baştan başlayın. Cursor ayrıca bu endpoint'e özeldir — başka bir endpoint'ten (ör. batch çağrı listesi) gelen cursor'ı burada kullanmayın.
 - Cursor değerlerini uzun süre (örneğin günlerce) saklamayın — tek bir senkronizasyon oturumu içinde kullanın. Düzenli/**artımlı** senkron için çalıştırmalar arasında cursor saklamayın; bunun yerine en son çektiğiniz günü hatırlayıp sonraki çalıştırmada `date_from` olarak gönderin (ve bir gün tam olarak yeniden tarandığından `call_id` üzerinden tekilleştirin). Cursor, *tek bir sorgunun içindeki* konumu işaretler; kalıcı bir watermark değildir. Bkz. [artımlı senkron rehberi](../../guides/incremental-sync.md).
 
 ```bash

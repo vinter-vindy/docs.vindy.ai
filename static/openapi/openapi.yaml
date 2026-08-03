@@ -147,11 +147,6 @@ paths:
                 value:
                   call_bound_type: outbound
                   limit: 50
-              byCampaign:
-                summary: Filter by campaign (batch)
-                value:
-                  campaign_id: '842e0b19-3c7a-4f21-9d0e-1a2b3c4d5e6f'
-                  limit: 50
       responses:
         '200':
           description: One page of calls.
@@ -682,9 +677,6 @@ components:
         assistant_id:
           type: [string, 'null']
           description: Filter by assistant ID.
-        campaign_id:
-          type: [string, 'null']
-          description: Filter by campaign (batch) ID.
         call_bound_type:
           type: [string, 'null']
           enum: [inbound, outbound, null]

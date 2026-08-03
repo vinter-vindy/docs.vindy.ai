@@ -127,7 +127,7 @@ A violation returns **`400 INVALID_VARIABLES`**; for a per-call `variables` the 
 
 | Field | Type | Description |
 |---|---|---|
-| `batch_call_id` | string (UUID) | Identifier of the created batch (campaign). **Always present** — `/v1/calls/bulk` always creates a batch, even for a single number. **Keep it** to cancel the batch later via [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) or to filter its calls with `campaign_id` in [`POST /v1/calls/list`](list-calls/index.md). For a one-off call with no batch, use [`POST /v1/calls`](create-call.md) instead. |
+| `batch_call_id` | string (UUID) | Identifier of the created batch (campaign). **Always present** — `/v1/calls/bulk` always creates a batch, even for a single number. **Keep it** to cancel the batch later via [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) or to list its calls via [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md). For a one-off call with no batch, use [`POST /v1/calls`](create-call.md) instead. |
 | `accepted` | int | Number of calls queued. |
 | `calls` | array | One entry per queued call, in request order — each `{ call_id, phone_number }`. `call_id` is that call's stable id: use it to fetch the call with [`GET /v1/calls/:callId`](get-call.md), cancel it with [`POST /v1/calls/:callId/cancel`](cancel-call.md), or match it to incoming webhooks. `phone_number` is the normalized E.164 number. |
 

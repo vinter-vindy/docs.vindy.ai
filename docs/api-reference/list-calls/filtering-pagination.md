@@ -6,7 +6,7 @@ sidebar_position: 3
 
 # Filtering & Pagination
 
-Everything about narrowing and paging through [`POST /v1/calls/list`](index.md): the `cursor`, `limit`, `date_from`, and `date_to` parameters, plus the `assistant_id`, `campaign_id`, and `call_bound_type` filters.
+Everything about narrowing and paging through [`POST /v1/calls/list`](index.md): the `cursor`, `limit`, `date_from`, and `date_to` parameters, plus the `assistant_id` and `call_bound_type` filters.
 
 Calls are returned **newest first**, ordered by when each call took place (its start time), with the call id as a tiebreaker.
 
@@ -23,7 +23,7 @@ Calls are returned **newest first**, ordered by when each call took place (its s
 | `date_from` + `date_to` | Calls inside the inclusive day range, newest first. |
 | Any of the above **+ `cursor`** | The **next page** of that same query. Keep every other parameter identical across pages — only `cursor` changes. |
 
-**Other filters.** `assistant_id`, `campaign_id`, and `call_bound_type` (`inbound` / `outbound`) narrow the scope further and combine with the date range and with each other (logical AND). `campaign_id` is the `batch_call_id` returned by [`POST /v1/calls/bulk`](../bulk-create-calls.md). Send the same filters on every page of a walk.
+**Other filters.** `assistant_id` and `call_bound_type` (`inbound` / `outbound`) narrow the scope further and combine with the date range and with each other (logical AND). Send the same filters on every page of a walk. To list the calls of one batch, use the dedicated [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint instead — this list does not filter by campaign.
 
 ---
 
@@ -38,7 +38,7 @@ Calls are returned **newest first**, ordered by when each call took place (its s
 - Omit it on the **first** request.
 - Every response returns `pagination.next_cursor`. While `has_more` is `true`, send that value back as `cursor` to fetch the next page.
 - Stop when `has_more` is `false` (at that point `next_cursor` is `null`).
-- The cursor is an **opaque** base64url token — a keyset marker over `(started_at, call id)` in descending order. Don't build or decode it. When you page with a cursor, **resend the same `assistant_id`, `campaign_id`, `call_bound_type`, `date_from`, and `date_to`, and `limit`**; the cursor only marks your position within that exact query.
+- The cursor is an **opaque** base64url token — a keyset marker over `(started_at, call id)` in descending order. Don't build or decode it. When you page with a cursor, **resend the same `assistant_id`, `call_bound_type`, `date_from`, `date_to`, and `limit`**; the cursor only marks your position within that exact query. If you change any filter, start over with no cursor. The cursor is also specific to this endpoint — don't reuse a cursor from another endpoint (e.g. the batch-calls list).
 - Don't persist cursors long-term (e.g. for days) — use them within a single sync session. For ongoing **incremental** sync, don't save a cursor between runs; instead remember the latest day you've already pulled and pass it as `date_from` on the next run (and deduplicate on `call_id`, since a day is re-scanned in full). A cursor marks a position *inside one query*, not a durable watermark. See the [incremental sync guide](../../guides/incremental-sync.md).
 
 ```bash
