@@ -76,7 +76,7 @@ Two independent controls shape the result, and they compose cleanly:
 - **The filters** (`assistant_id`, `call_bound_type`, `date_from` / `date_to`) decide *which* calls are in scope. All are optional.
 - **The cursor** (`cursor` / `limit`) walks *through* that scope, one page at a time, **newest first**.
 
-You can use either on its own or both together. With no filters and no cursor, you simply page through all of your calls, **newest first** — the first request returns the newest `limit` calls (50 by default), and you keep going until there's nothing left. Add filters and you page through only that scope the same way. In every case the rule is the same: send your filters on the first request, then on each following request send back the `next_cursor` you received — **unchanged** — while keeping `assistant_id`, `call_bound_type`, `date_from`, `date_to`, and `limit` exactly as they were. The cursor encodes your position *within that specific query*, so changing a filter halfway through a walk produces meaningless results — start a fresh walk (drop the cursor) whenever you change a filter. You're done when `has_more` is `false` (at which point `next_cursor` is `null`).
+You can use either on its own or both together. With no filters and no cursor, you simply page through all of your calls, **newest first** — the first request returns the newest `limit` calls (50 by default), and you keep going until there's nothing left. Add filters and you page through only that scope the same way. In every case the rule is the same: send your filters on the first request, then on each following request send back the `next_cursor` you received — **unchanged** — while keeping `assistant_id`, `call_bound_type`, `date_from`, `date_to`, and `limit` exactly as they were. The cursor encodes your position *within that specific query*: it is valid only for the exact endpoint and filters that issued it. If you change a filter (or reuse it on another endpoint) and send the cursor anyway, the request is **rejected with `400 MALFORMED_CURSOR`** — start a fresh walk (drop the cursor) instead. You're done when `has_more` is `false` (at which point `next_cursor` is `null`).
 
 The full parameter reference, accepted date formats, and copy-paste recipes live in **[Filtering & Pagination](filtering-pagination.md)**.
 
@@ -284,7 +284,7 @@ Other values may appear, including **raw provider/SIP status text** (e.g. `User 
 | `400` | `DATE_RANGE_INVALID` | `date_from` after `date_to` |
 | `400` | `INVALID_DATE_FORMAT` | Date is not a plain `YYYY-MM-DD` value |
 | `400` | `INVALID_CURSOR` | Cursor is empty or cannot be decoded |
-| `400` | `MALFORMED_CURSOR` | Cursor payload has unexpected shape |
+| `400` | `MALFORMED_CURSOR` | Cursor can't be parsed, or is for a different endpoint/filters |
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Auth errors |
 | `429` | `RATE_LIMITED` | Per-minute rate limit exceeded |
 

@@ -25,7 +25,7 @@ All error responses share the same JSON shape — see the [error format](concept
 | `INVALID_DATE_FORMAT` | 400 | `date_from` / `date_to` is not a `YYYY-MM-DD` date. | Use a plain date. See [Filtering & Pagination](api-reference/list-calls/filtering-pagination.md). |
 | `DATE_RANGE_INVALID` | 400 | `date_from` is after `date_to`. | Fix the range. |
 | `INVALID_CURSOR` | 400 | Cursor is empty or could not be decoded. | Use a fresh cursor from a previous response. |
-| `MALFORMED_CURSOR` | 400 | Cursor payload doesn't have the expected shape. | Don't modify the cursor; use it as returned. |
+| `MALFORMED_CURSOR` | 400 | Cursor can't be parsed, **or** it was issued for a different endpoint or a different set of query filters (a cursor is valid only for the exact endpoint + filters that produced it). | Don't modify the cursor; use it as returned. If you changed a filter or switched endpoints, start a fresh walk without a cursor. |
 | `INVALID_PHONE_NUMBER` | 400 | A `calls[i].phone_number` could not be normalized. | Fix the number; the offending index is in `extensions.index`. See [Create a Call Batch](api-reference/bulk-create-calls.md#phone-numbers). |
 | `INVALID_METADATA` | 400 | A call's metadata exceeds the limits or uses an invalid value type. | Stay within the limits; the offending index is in `extensions.index`. See [Create a Call Batch](api-reference/bulk-create-calls.md#metadata). |
 | `INVALID_VARIABLES` | 400 | A `variables` object violates the limits (≤50 keys; key ≤40; value ≤500; string/number/boolean, no nesting). | For a per-call value the offending index is in `extensions.index`; a request-level violation reports `index: -1`. |

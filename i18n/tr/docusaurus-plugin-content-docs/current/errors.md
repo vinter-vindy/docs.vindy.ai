@@ -25,7 +25,7 @@ Tüm hata yanıtları aynı JSON yapısını paylaşır; bkz. [hata formatı](co
 | `INVALID_DATE_FORMAT` | 400 | `date_from` / `date_to` bir `YYYY-MM-DD` tarihi değil. | Yalnızca tarih kullanın. Bkz. [Filtreleme ve Sayfalama](api-reference/list-calls/filtering-pagination.md). |
 | `DATE_RANGE_INVALID` | 400 | `date_from`, `date_to`'dan sonra. | Aralığı düzeltin. |
 | `INVALID_CURSOR` | 400 | Cursor boş veya çözümlenemedi. | Önceki bir yanıttan alınan güncel bir cursor kullanın. |
-| `MALFORMED_CURSOR` | 400 | Cursor içeriği beklenen yapıda değil. | Cursor'u değiştirmeyin; döndürüldüğü biçimde kullanın. |
+| `MALFORMED_CURSOR` | 400 | Cursor çözümlenemiyor **ya da** farklı bir endpoint veya farklı bir filtre kümesi için üretilmiş (bir cursor yalnız onu üreten endpoint + filtreler için geçerlidir). | Cursor'u değiştirmeyin; döndürüldüğü biçimde kullanın. Bir filtreyi değiştirdiyseniz ya da endpoint değiştirdiyseniz cursor'sız baştan başlayın. |
 | `INVALID_PHONE_NUMBER` | 400 | Bir `calls[i].phone_number` normalize edilemedi. | Numarayı düzeltin; hatalı indeks `extensions.index` içindedir. Bkz. [Toplu Çağrı Oluştur](api-reference/bulk-create-calls.md#phone-numbers). |
 | `INVALID_METADATA` | 400 | Bir çağrının metadata'sı limitleri aşıyor veya geçersiz bir değer tipi kullanıyor. | Limitlere uyun; hatalı indeks `extensions.index` içindedir. Bkz. [Toplu Çağrı Oluştur](api-reference/bulk-create-calls.md#metadata). |
 | `INVALID_VARIABLES` | 400 | Bir `variables` nesnesi limitleri ihlal ediyor (≤50 anahtar; anahtar ≤40; değer ≤500; string/number/boolean, nesting yok). | Çağrı-başı bir değer için hatalı indeks `extensions.index` içindedir; istek düzeyindeki bir ihlal `index: -1` bildirir. |

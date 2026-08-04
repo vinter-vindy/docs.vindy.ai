@@ -108,7 +108,7 @@ The body is optional — send `{}` (or nothing) to get the first page with the d
 Each item in `data` has the **same fields** as a [List Calls](list-calls/index.md#response-fields) item — `call_id` (a string), `call_status` (`completed` or `failed` for terminal calls, or a queue status — `pending`, `scheduled`, `in_progress`, `cancelled` — for calls not yet finished), `call_transcript`, `call_structured_data`, `call_metadata`, `call_recording`, the free-form `call_end_reason` string, and the rest. Queued and in-progress calls carry `null` for the conversation, recording, and timing fields until they reach a terminal state. See the full [List Calls field reference](list-calls/index.md#response-fields) rather than re-reading them here.
 
 :::note Cursor is opaque — page with the same `batchId`
-The `cursor` is opaque: don't build or change it. To get the next page, send it back as `cursor` in the body **with the same `batchId`**, and keep `limit` identical across pages. Stop when `has_more` is `false` (at that point `next_cursor` is `null`). This cursor is independent from the one used by [`POST /v1/calls/list`](list-calls/index.md).
+The `cursor` is opaque: don't build or change it. To get the next page, send it back as `cursor` in the body **with the same `batchId`**. Stop when `has_more` is `false` (at that point `next_cursor` is `null`). This cursor is specific to this endpoint **and** to this batch: reusing a cursor from [`POST /v1/calls/list`](list-calls/index.md), or from a different batch, is rejected with `400 MALFORMED_CURSOR` — start a fresh walk instead.
 :::
 
 :::note No date filter here

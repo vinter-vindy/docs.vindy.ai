@@ -38,7 +38,7 @@ Calls are returned **newest first**, ordered by when each call took place (its s
 - Omit it on the **first** request.
 - Every response returns `pagination.next_cursor`. While `has_more` is `true`, send that value back as `cursor` to fetch the next page.
 - Stop when `has_more` is `false` (at that point `next_cursor` is `null`).
-- The cursor is an **opaque** base64url token — a keyset marker over `(started_at, call id)` in descending order. Don't build or decode it. When you page with a cursor, **resend the same `assistant_id`, `call_bound_type`, `date_from`, `date_to`, and `limit`**; the cursor only marks your position within that exact query. If you change any filter, start over with no cursor. The cursor is also specific to this endpoint — don't reuse a cursor from another endpoint (e.g. the batch-calls list).
+- The cursor is an **opaque** base64url token — a keyset marker over `(started_at, call id)` in descending order. Don't build or decode it. When you page with a cursor, **resend the same `assistant_id`, `call_bound_type`, `date_from`, and `date_to`**; the cursor only marks your position within that exact query. `limit` (page size) may change between pages, but the filters may not: a cursor is bound to the endpoint and filters that issued it, and **reusing it after changing a filter — or on a different endpoint (e.g. the batch-calls list) — is rejected with `400 MALFORMED_CURSOR`**. When you want a different scope, start a fresh walk with no cursor.
 - Don't persist cursors long-term (e.g. for days) — use them within a single sync session. For ongoing **incremental** sync, don't save a cursor between runs; instead remember the latest day you've already pulled and pass it as `date_from` on the next run (and deduplicate on `call_id`, since a day is re-scanned in full). A cursor marks a position *inside one query*, not a durable watermark. See the [incremental sync guide](../../guides/incremental-sync.md).
 
 ```bash
@@ -64,7 +64,7 @@ Cursor errors:
 | Status | Code | Meaning |
 |---|---|---|
 | `400` | `INVALID_CURSOR` | Cursor is empty or could not be decoded. Use a fresh cursor from a previous response. |
-| `400` | `MALFORMED_CURSOR` | Cursor payload doesn't have the expected shape. Don't modify the cursor — use it exactly as returned. |
+| `400` | `MALFORMED_CURSOR` | Cursor can't be parsed, **or** it was issued for a different endpoint or a different set of filters. Don't modify the cursor; if you changed a filter or switched endpoints, start a fresh walk without a cursor. |
 
 ## The pagination object {#paginated}
 

@@ -41,7 +41,22 @@ Content-Type: application/json
 | `phone_number` | string | **Required.** The number to call — E.164 (`+90…`) or a Turkish local number (`05…`), normalized to `+90…`. |
 | `variables` | object \| null | Optional **template variables**. Fills the `{{placeholder}}` tokens in the assistant's prompt and greeting for this call — a JSON object of `name → value` (multiple keys allowed). Unlike `metadata` (echoed back, does not affect the call), **variables change what the assistant says**. Values may be string/number/boolean (coerced to string); ≤50 keys, key ≤40 chars, value ≤500 chars, no nesting. The names an assistant expects are listed in `assistant_variables` from [`GET /v1/assistants`](list-assistants.md). |
 | `metadata` | object \| null | Optional opaque object echoed back verbatim on the call (≤50 keys; key ≤40, value ≤500; string/number/boolean; no nesting). Does **not** affect the call. |
-| `scheduled_at` | ISO 8601 \| null | Optional future time to place the call. Omit to dispatch as soon as capacity allows. |
+| `scheduled_at` | ISO 8601 datetime \| null | Optional future time to place the call. Omit to dispatch as soon as capacity allows. Send an ISO 8601 date-time **with a timezone offset** — see [Scheduling](#scheduled-at). |
+
+### Scheduling with `scheduled_at` {#scheduled-at}
+
+By default the call is queued immediately. To place it later, send `scheduled_at` as an **ISO 8601 / RFC 3339 date-time that includes a timezone offset**:
+
+| Form | Example | Fires at |
+|---|---|---|
+| Numeric offset (recommended) | `2026-06-10T09:00:00+03:00` | 09:00 in Istanbul (UTC+3) |
+| UTC (`Z`) | `2026-06-10T06:00:00Z` | 06:00 UTC = 09:00 Istanbul |
+
+**Always include the offset.** A value with no offset (a "naive" time such as `2026-06-10T09:00:00`) is interpreted as **UTC**, not local time — so it would fire at 12:00 Istanbul, three hours later than you probably intend. To schedule for 09:00 Istanbul, send `2026-06-10T09:00:00+03:00`.
+
+- Times are stored and compared in **UTC**; timestamps elsewhere in the API are returned in UTC (`+00:00`).
+- **No future check:** a time in the past is queued to start on the next dispatch cycle (≈immediately). To place a call right now, simply omit `scheduled_at`.
+- A value that isn't a valid ISO 8601 date-time (e.g. `10.06.2026`, `now`) is rejected with **`400 VALIDATION_FAILED`**.
 
 ## Response (201 Created)
 

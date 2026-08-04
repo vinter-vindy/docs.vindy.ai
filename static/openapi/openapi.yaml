@@ -492,8 +492,9 @@ paths:
                 $ref: '#/components/schemas/BatchCallsResponse'
         '400':
           description: >
-            Invalid request body — e.g. limit is out of the 1–200 range, or the
-            body has an unexpected field (VALIDATION_FAILED).
+            Validation error. Possible codes: VALIDATION_FAILED (e.g. limit out
+            of the 1–200 range or an unexpected body field), INVALID_CURSOR,
+            MALFORMED_CURSOR (the cursor is for a different endpoint or batch).
           content:
             application/json:
               schema:
@@ -672,7 +673,9 @@ components:
           type: [string, 'null']
           description: >
             Opaque cursor from a previous response's next_cursor. Omit (or null)
-            on the first request. Do not parse or modify.
+            on the first request. Do not parse or modify. Bound to the endpoint
+            and filters that issued it — reusing it after changing a filter, or on
+            another endpoint, is rejected with 400 MALFORMED_CURSOR.
         limit:
           type: integer
           minimum: 1
@@ -969,7 +972,12 @@ components:
         scheduled_at:
           type: [string, 'null']
           format: date-time
-          description: Optional ISO 8601 datetime to defer the calls to a future time.
+          description: >
+            Optional. Defers the whole batch to a future time. ISO 8601 / RFC 3339
+            date-time; always include a timezone offset (e.g. 2026-06-10T09:00:00+03:00
+            or ...Z). A value with no offset is treated as UTC. There is no future
+            check (a past time starts ≈immediately); an unparseable value is rejected
+            with 400 VALIDATION_FAILED.
 
     CreateCallRequest:
       type: object
@@ -997,7 +1005,12 @@ components:
         scheduled_at:
           type: [string, 'null']
           format: date-time
-          description: Optional future time to place the call.
+          description: >
+            Optional. Places the call at a future time. ISO 8601 / RFC 3339
+            date-time; always include a timezone offset (e.g. 2026-06-10T09:00:00+03:00
+            or ...Z). A value with no offset is treated as UTC. There is no future
+            check (a past time starts ≈immediately); an unparseable value is rejected
+            with 400 VALIDATION_FAILED.
 
     CreateCallResponse:
       type: object
@@ -1095,7 +1108,9 @@ components:
           type: [string, 'null']
           description: >
             Opaque cursor from a previous response's next_cursor. Omit on the
-            first request. Independent from the POST /v1/calls/list cursor.
+            first request. Bound to this endpoint and this batch — a cursor from
+            POST /v1/calls/list, or from a different batch, is rejected with
+            400 MALFORMED_CURSOR.
 
     BatchCallsResponse:
       type: object

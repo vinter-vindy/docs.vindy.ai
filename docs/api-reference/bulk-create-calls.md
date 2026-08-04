@@ -48,7 +48,7 @@ Content-Type: application/json
 | `calls[].phone_number` | string | yes | Destination number. See [Phone numbers](#phone-numbers) below. |
 | `calls[].variables` | object | no | **Per-call** template variables for this number (e.g. `{ "first_name": "Ahmet" }`). Merged over the request-level `variables` (the per-call value wins). See [Variables](#variables). |
 | `calls[].metadata` | object | no | Optional key-value object (see [Metadata](#metadata) limits). Returned verbatim. |
-| `scheduled_at` | ISO 8601 datetime | no | If set, the whole batch is queued to start at this **future** time instead of immediately. Include an offset, e.g. `2026-06-10T09:00:00+03:00`. |
+| `scheduled_at` | ISO 8601 datetime | no | If set, the whole batch is queued to start at this **future** time instead of immediately. Send an ISO 8601 date-time **with a timezone offset** — see [Scheduling](#scheduled-at). |
 
 ### Phone numbers {#phone-numbers}
 
@@ -111,6 +111,21 @@ Which names an assistant expects is listed in `assistant_variables` on [`GET /v1
 | Nested objects / arrays / `null` | Not allowed |
 
 A violation returns **`400 INVALID_VARIABLES`**; for a per-call `variables` the offending array position is in `extensions.index` (a request-level violation reports `index: -1`).
+
+### Scheduling with `scheduled_at` {#scheduled-at}
+
+By default the whole batch is queued immediately. To start it later, send `scheduled_at` as an **ISO 8601 / RFC 3339 date-time that includes a timezone offset** (it applies to the entire batch):
+
+| Form | Example | Fires at |
+|---|---|---|
+| Numeric offset (recommended) | `2026-06-10T09:00:00+03:00` | 09:00 in Istanbul (UTC+3) |
+| UTC (`Z`) | `2026-06-10T06:00:00Z` | 06:00 UTC = 09:00 Istanbul |
+
+**Always include the offset.** A value with no offset (a "naive" time such as `2026-06-10T09:00:00`) is interpreted as **UTC**, not local time — so it would fire at 12:00 Istanbul, three hours later than you probably intend. To schedule for 09:00 Istanbul, send `2026-06-10T09:00:00+03:00`.
+
+- Times are stored and compared in **UTC**; timestamps elsewhere in the API are returned in UTC (`+00:00`).
+- **No future check:** a time in the past queues the batch to start on the next dispatch cycle (≈immediately). To start now, simply omit `scheduled_at`.
+- A value that isn't a valid ISO 8601 date-time (e.g. `10.06.2026`, `now`) is rejected with **`400 VALIDATION_FAILED`**.
 
 ## Response (201 Created)
 

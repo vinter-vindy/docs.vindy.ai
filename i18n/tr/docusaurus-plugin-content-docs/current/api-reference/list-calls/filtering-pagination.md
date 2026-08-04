@@ -38,7 +38,7 @@ sidebar_position: 3
 - **İlk** istekte göndermeyin.
 - Her yanıt bir `pagination.next_cursor` döner. `has_more` `true` olduğu sürece bu değeri `cursor` olarak geri gönderip sonraki sayfayı alın.
 - `has_more` `false` olunca durun (bu noktada `next_cursor` `null`'dır).
-- Cursor, **opak** bir base64url anahtarıdır — `(started_at, çağrı kimliği)` üzerinde azalan sıralı bir keyset işaretçisi. Oluşturmayın veya çözmeyin. Cursor ile sayfalarken **aynı `assistant_id`, `call_bound_type`, `date_from`, `date_to` ve `limit` değerlerini tekrar gönderin**; cursor yalnızca o sorgudaki konumunuzu işaretler. Bir filtreyi değiştirirseniz cursor'sız baştan başlayın. Cursor ayrıca bu endpoint'e özeldir — başka bir endpoint'ten (ör. batch çağrı listesi) gelen cursor'ı burada kullanmayın.
+- Cursor, **opak** bir base64url anahtarıdır — `(started_at, çağrı kimliği)` üzerinde azalan sıralı bir keyset işaretçisi. Oluşturmayın veya çözmeyin. Cursor ile sayfalarken **aynı `assistant_id`, `call_bound_type`, `date_from` ve `date_to` değerlerini tekrar gönderin**; cursor yalnızca o sorgudaki konumunuzu işaretler. `limit` (sayfa boyutu) sayfalar arasında değişebilir ama filtreler değişemez: bir cursor onu üreten endpoint'e ve filtrelere bağlıdır ve **bir filtreyi değiştirdikten sonra — ya da başka bir endpoint'te (ör. batch çağrı listesi) — kullanmak `400 MALFORMED_CURSOR` ile reddedilir**. Farklı bir kapsam istediğinizde cursor'sız yeni bir gezinme başlatın.
 - Cursor değerlerini uzun süre (örneğin günlerce) saklamayın — tek bir senkronizasyon oturumu içinde kullanın. Düzenli/**artımlı** senkron için çalıştırmalar arasında cursor saklamayın; bunun yerine en son çektiğiniz günü hatırlayıp sonraki çalıştırmada `date_from` olarak gönderin (ve bir gün tam olarak yeniden tarandığından `call_id` üzerinden tekilleştirin). Cursor, *tek bir sorgunun içindeki* konumu işaretler; kalıcı bir watermark değildir. Bkz. [artımlı senkron rehberi](../../guides/incremental-sync.md).
 
 ```bash
@@ -64,7 +64,7 @@ Cursor hataları:
 | Durum | Kod | Anlamı |
 |---|---|---|
 | `400` | `INVALID_CURSOR` | Cursor boş veya çözümlenemedi. Önceki bir yanıttan alınan güncel bir cursor kullanın. |
-| `400` | `MALFORMED_CURSOR` | Cursor içeriği beklenen yapıda değil. Cursor'u değiştirmeyin — döndürüldüğü biçimde kullanın. |
+| `400` | `MALFORMED_CURSOR` | Cursor çözümlenemiyor **ya da** farklı bir endpoint veya filtre kümesi için üretilmiş. Cursor'u değiştirmeyin; bir filtreyi ya da endpoint'i değiştirdiyseniz cursor'sız baştan başlayın. |
 
 ## Sayfalama nesnesi {#paginated}
 

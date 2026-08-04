@@ -48,7 +48,7 @@ Content-Type: application/json
 | `calls[].phone_number` | string | evet | Aranacak numara. Bkz. aşağıdaki [Telefon numaraları](#phone-numbers). |
 | `calls[].variables` | object | hayır | Bu numaraya özel **çağrı-başı** şablon değişkenleri (örneğin `{ "first_name": "Ahmet" }`). İstek düzeyindeki `variables` üzerine birleştirilir (çağrı-başı değer kazanır). Bkz. [Değişkenler](#variables). |
 | `calls[].metadata` | object | hayır | İsteğe bağlı anahtar-değer nesnesi (bkz. [Metadata](#metadata) limitleri). Aynen geri döner. |
-| `scheduled_at` | ISO 8601 datetime | hayır | Verilirse, toplu arama hemen değil bu **ileri** zamanda başlatılmak üzere kuyruğa alınır. Offset ekleyin, örneğin `2026-06-10T09:00:00+03:00`. |
+| `scheduled_at` | ISO 8601 datetime | hayır | Verilirse, toplu arama hemen değil bu **ileri** zamanda başlatılmak üzere kuyruğa alınır. **Timezone offset'li** bir ISO 8601 tarih-saat gönderin — bkz. [Zamanlama](#scheduled-at). |
 
 ### Telefon numaraları {#phone-numbers}
 
@@ -111,6 +111,21 @@ Bir asistanın hangi adları beklediği [`GET /v1/assistants`](list-assistants.m
 | İç içe nesne / dizi / `null` | İzin verilmez |
 
 Bir ihlal **`400 INVALID_VARIABLES`** döndürür; çağrı-başı bir `variables` için hatalı dizi konumu `extensions.index` içindedir (istek düzeyindeki bir ihlal `index: -1` bildirir).
+
+### `scheduled_at` ile zamanlama {#scheduled-at}
+
+Varsayılan olarak tüm batch hemen kuyruğa alınır. İleri bir zamanda başlatmak için `scheduled_at`'i **timezone offset içeren bir ISO 8601 / RFC 3339 tarih-saat** olarak gönderin (tüm batch'e uygulanır):
+
+| Biçim | Örnek | Ne zaman tetiklenir |
+|---|---|---|
+| Sayısal offset (önerilen) | `2026-06-10T09:00:00+03:00` | Istanbul'da 09:00 (UTC+3) |
+| UTC (`Z`) | `2026-06-10T06:00:00Z` | 06:00 UTC = 09:00 Istanbul |
+
+**Offset'i her zaman ekleyin.** Offset'siz (naive) bir değer (ör. `2026-06-10T09:00:00`) yerel saat değil **UTC** kabul edilir — yani tahmin ettiğinizden 3 saat sonra, Istanbul'da 12:00'de tetiklenir. Istanbul'da 09:00 için `2026-06-10T09:00:00+03:00` gönderin.
+
+- Zamanlar **UTC** olarak saklanır ve karşılaştırılır; API'nin diğer yerlerindeki zaman damgaları UTC (`+00:00`) döner.
+- **Gelecek-zaman doğrulaması yok:** geçmiş bir zaman, batch'i bir sonraki dağıtım döngüsünde (≈hemen) başlatılmak üzere kuyruğa alır. Hemen başlatmak için `scheduled_at`'i hiç göndermeyin.
+- Geçerli bir ISO 8601 tarih-saat olmayan değer (ör. `10.06.2026`, `now`) **`400 VALIDATION_FAILED`** ile reddedilir.
 
 ## Yanıt (201 Created)
 

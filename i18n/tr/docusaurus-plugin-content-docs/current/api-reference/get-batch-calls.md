@@ -108,7 +108,7 @@ Gövde opsiyoneldir — ilk sayfayı varsayılan limitle almak için `{}` (veya 
 `data` içindeki her öğe, bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı alanlara** sahiptir — `call_id` (bir dize), `call_status` (sonlanmış çağrılar için `completed` veya `failed`, henüz bitmemiş çağrılar için `pending`/`scheduled`/`in_progress`/`cancelled` gibi bir kuyruk durumu), `call_transcript`, `call_structured_data`, `call_metadata`, `call_recording`, serbest biçimli `call_end_reason` dizesi ve diğerleri. Kuyruktaki ve devam eden çağrılar sonlanana dek konuşma/kayıt/zaman alanları için `null` taşır. Bu alanları burada yeniden okumak yerine tam [Çağrıları Listele alan referansına](list-calls/index.md#yanıt-alanları) bakabilirsiniz.
 
 :::note Cursor opaktır — aynı `batchId` ile sayfalayın
-`cursor` opaktır: onu oluşturmayın veya değiştirmeyin. Sonraki sayfayı almak için **aynı `batchId` ile** gövdede `cursor` olarak geri gönderin ve sayfalar arasında `limit` değerini aynı tutun. `has_more` `false` olduğunda durun (o noktada `next_cursor` `null` olur). Bu cursor, [`POST /v1/calls/list`](list-calls/index.md) tarafından kullanılan cursor'dan bağımsızdır.
+`cursor` opaktır: onu oluşturmayın veya değiştirmeyin. Sonraki sayfayı almak için **aynı `batchId` ile** gövdede `cursor` olarak geri gönderin. `has_more` `false` olduğunda durun (o noktada `next_cursor` `null` olur). Bu cursor hem bu endpoint'e **hem de** bu toplu aramaya özeldir: [`POST /v1/calls/list`](list-calls/index.md) cursor'ını ya da başka bir batch'in cursor'ını burada kullanmak `400 MALFORMED_CURSOR` ile reddedilir — bunun yerine yeni bir gezinme başlatın.
 :::
 
 :::note Burada tarih filtresi yok

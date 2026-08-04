@@ -41,7 +41,22 @@ Content-Type: application/json
 | `phone_number` | string | **Zorunlu.** Aranacak numara — E.164 (`+90…`) veya TR yerel (`05…`), `+90…`'a normalize edilir. |
 | `variables` | object \| null | Opsiyonel **şablon değişkenleri**. Asistanın prompt ve greeting'indeki `{{yer_tutucu}}` ifadelerini bu çağrı için doldurur — `ad → değer` JSON objesi (çok anahtar olabilir). `metadata`'dan farklı olarak (echo-back, çağrıyı etkilemez), **variables asistanın söylediğini değiştirir**. Değerler string/number/boolean olabilir (string'e çevrilir); ≤50 anahtar, anahtar ≤40, değer ≤500, iç içe yok. Bir asistanın beklediği adlar [`GET /v1/assistants`](list-assistants.md) → `assistant_variables`'ta listelenir. |
 | `metadata` | object \| null | Opsiyonel opak obje; çağrıda aynen geri döner (≤50 anahtar; anahtar ≤40, değer ≤500; string/number/boolean; iç içe yok). Çağrıyı **etkilemez**. |
-| `scheduled_at` | ISO 8601 \| null | Opsiyonel ileri tarih. Boşsa kapasite oldukça dağıtılır. |
+| `scheduled_at` | ISO 8601 datetime \| null | Opsiyonel ileri tarih. Boşsa kapasite oldukça dağıtılır. **Timezone offset'li** bir ISO 8601 tarih-saat gönderin — bkz. [Zamanlama](#scheduled-at). |
+
+### `scheduled_at` ile zamanlama {#scheduled-at}
+
+Varsayılan olarak çağrı hemen kuyruğa alınır. İleri bir zamana ertelemek için `scheduled_at`'i **timezone offset içeren bir ISO 8601 / RFC 3339 tarih-saat** olarak gönderin:
+
+| Biçim | Örnek | Ne zaman tetiklenir |
+|---|---|---|
+| Sayısal offset (önerilen) | `2026-06-10T09:00:00+03:00` | Istanbul'da 09:00 (UTC+3) |
+| UTC (`Z`) | `2026-06-10T06:00:00Z` | 06:00 UTC = 09:00 Istanbul |
+
+**Offset'i her zaman ekleyin.** Offset'siz (naive) bir değer (ör. `2026-06-10T09:00:00`) yerel saat değil **UTC** kabul edilir — yani tahmin ettiğinizden 3 saat sonra, Istanbul'da 12:00'de tetiklenir. Istanbul'da 09:00 için `2026-06-10T09:00:00+03:00` gönderin.
+
+- Zamanlar **UTC** olarak saklanır ve karşılaştırılır; API'nin diğer yerlerindeki zaman damgaları UTC (`+00:00`) döner.
+- **Gelecek-zaman doğrulaması yok:** geçmiş bir zaman, çağrıyı bir sonraki dağıtım döngüsünde (≈hemen) başlatılmak üzere kuyruğa alır. Hemen aramak için `scheduled_at`'i hiç göndermeyin.
+- Geçerli bir ISO 8601 tarih-saat olmayan değer (ör. `10.06.2026`, `now`) **`400 VALIDATION_FAILED`** ile reddedilir.
 
 ## Yanıt (201 Created)
 

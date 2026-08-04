@@ -76,7 +76,7 @@ Sonucu iki bağımsız mekanizma şekillendirir ve bu ikisi sorunsuz biçimde bi
 - **Filtreler** (`assistant_id`, `call_bound_type`, `date_from` / `date_to`) *hangi* çağrıların kapsama gireceğini belirler. Tümü isteğe bağlıdır.
 - **Cursor** (`cursor` / `limit`) bu kapsamın *içinde*, **en yeniden en eskiye** sayfa sayfa ilerler.
 
-İkisini ayrı ayrı da, birlikte de kullanabilirsiniz. Filtre ve cursor olmadan, tüm çağrılarınız arasında **en yeniden en eskiye** gezinirsiniz: ilk istek en yeni `limit` kadar çağrıyı (varsayılan 50) döndürür, geriye kayıt kalmayana dek devam edersiniz. Filtre eklediğinizde de aynı şekilde, yalnızca o kapsam içinde gezinirsiniz. Her durumda kural aynıdır: filtrelerinizi ilk istekte gönderin; sonraki her istekte aldığınız `next_cursor` değerini — **değiştirmeden** — geri gönderin ve `assistant_id`, `call_bound_type`, `date_from`, `date_to`, `limit` değerlerini olduğu gibi koruyun. Cursor, konumunuzu *o belirli sorgunun içinde* kodlar; bu yüzden gezinme sırasında bir filtreyi değiştirmek anlamsız sonuçlar üretir — bir filtreyi değiştirdiğinizde cursor'ı bırakıp yeni bir gezinme başlatın. `has_more` `false` olduğunda (bu noktada `next_cursor` da `null` olur) iş tamamlanmıştır.
+İkisini ayrı ayrı da, birlikte de kullanabilirsiniz. Filtre ve cursor olmadan, tüm çağrılarınız arasında **en yeniden en eskiye** gezinirsiniz: ilk istek en yeni `limit` kadar çağrıyı (varsayılan 50) döndürür, geriye kayıt kalmayana dek devam edersiniz. Filtre eklediğinizde de aynı şekilde, yalnızca o kapsam içinde gezinirsiniz. Her durumda kural aynıdır: filtrelerinizi ilk istekte gönderin; sonraki her istekte aldığınız `next_cursor` değerini — **değiştirmeden** — geri gönderin ve `assistant_id`, `call_bound_type`, `date_from`, `date_to`, `limit` değerlerini olduğu gibi koruyun. Cursor, konumunuzu *o belirli sorgunun içinde* kodlar: yalnız onu üreten endpoint ve filtreler için geçerlidir. Bir filtreyi değiştirip (ya da başka bir endpoint'te kullanıp) cursor'ı yine de gönderirseniz istek **`400 MALFORMED_CURSOR` ile reddedilir** — bunun yerine cursor'ı bırakıp yeni bir gezinme başlatın. `has_more` `false` olduğunda (bu noktada `next_cursor` da `null` olur) iş tamamlanmıştır.
 
 Parametrelerin tam referansı, kabul edilen tarih biçimleri ve hazır reçeteler **[Filtreleme ve Sayfalama](filtering-pagination.md)** sayfasındadır.
 
@@ -284,7 +284,7 @@ Başka değerler de görülebilir; bunlara **ham sağlayıcı/SIP durum metni** 
 | `400` | `DATE_RANGE_INVALID` | `date_from`, `date_to`'dan sonra |
 | `400` | `INVALID_DATE_FORMAT` | Tarih düz bir `YYYY-MM-DD` değeri değil |
 | `400` | `INVALID_CURSOR` | Cursor boş veya çözümlenemiyor |
-| `400` | `MALFORMED_CURSOR` | Cursor içeriği beklenen yapıda değil |
+| `400` | `MALFORMED_CURSOR` | Cursor çözümlenemiyor ya da farklı bir endpoint/filtre içindir |
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları |
 | `429` | `RATE_LIMITED` | Dakikalık hız limiti aşıldı |
 
