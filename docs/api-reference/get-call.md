@@ -100,6 +100,8 @@ The call object has the **same fields** as a [List Calls](list-calls/index.md#re
 | `call_metadata` | object \| null | The metadata you sent via [`POST /v1/calls/bulk`](bulk-create-calls.md), echoed back verbatim. `null` if the call wasn't created with metadata. |
 | `call_variables` | object \| null | The template variables sent for this call, echoed back verbatim — the same object you passed as `variables` when creating the call. `null` when none were sent (e.g. inbound calls). |
 
+All timestamp fields — `call_started_at`, `call_ended_at`, `call_created_at`, and `call_recording.expires_at` — are **UTC** in ISO 8601 `+00:00` form (e.g. `2026-06-08T10:30:00+00:00`); parse them with a real ISO-8601 parser and don't assume a `Z` suffix. See [Response Format → Dates and times](../concepts/response-envelopes.md#timestamps).
+
 For every other field — `call_transcript`, `call_structured_data`, `call_recording`, the free-form `call_end_reason` string, and what `call_recording.available: false` means — see the full [List Calls field reference](list-calls/index.md#response-fields).
 
 :::tip Fresh recording URL

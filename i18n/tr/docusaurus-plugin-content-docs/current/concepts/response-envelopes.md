@@ -12,6 +12,17 @@ Tüm Vindy API yanıtları JSON'dur (`application/json`) ve küçük, öngörül
 
 ---
 
+## Tarih ve saatler {#timestamps}
+
+API'nin **döndürdüğü** her zaman damgası **UTC**'dir; ISO 8601 / RFC 3339 biçiminde ve açık `+00:00` offset ile — örneğin `2026-05-15T10:30:00+00:00`. Gerçek bir ISO-8601 ayrıştırıcıyla çözümleyin; `Z` son ekini veya sabit sayıda kesirli-saniye basamağını **varsaymayın**. Bu, her yanıttaki her tarih-saat alanı için geçerlidir — `call_started_at`, `call_ended_at`, `call_created_at`, bir kaydın `expires_at`'i ve [webhook](../api-reference/webhooks.md) içeriklerindeki zaman damgaları.
+
+Tarih **girdileri** farklı çalışır ve iki türü vardır:
+
+- [`POST /v1/calls/list`](../api-reference/list-calls/filtering-pagination.md#range-semantics)'teki `date_from` / `date_to` **yalnız gün**dür (`YYYY-MM-DD`), **Europe/Istanbul** gün sınırlarıyla yorumlanır — saat veya timezone bileşeni yoktur.
+- [`POST /v1/calls`](../api-reference/create-call.md#scheduled-at) ve [`POST /v1/calls/bulk`](../api-reference/bulk-create-calls.md#scheduled-at)'taki `scheduled_at`, **timezone offset ile** göndermeniz gereken tam bir ISO 8601 tarih-saattir (ör. `...+03:00` veya `...Z`); offset'siz bir değer UTC okunur.
+
+---
+
 ## Hata formatı {#error-envelope}
 
 Her hata yanıtı aynı **minimal** yapıya sahiptir: insan-okunabilir bir `message` alanı ve her zaman makine-okunabilir bir `code` taşıyan bir `extensions` nesnesi.

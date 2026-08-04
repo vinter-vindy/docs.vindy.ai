@@ -12,6 +12,17 @@ Most list responses are wrapped in a pagination object — see [Filtering & Pagi
 
 ---
 
+## Dates and times {#timestamps}
+
+Every timestamp the API **returns** is **UTC**, in ISO 8601 / RFC 3339 form with an explicit `+00:00` offset — for example `2026-05-15T10:30:00+00:00`. Parse it with a real ISO-8601 parser; **do not** assume a `Z` suffix or a fixed number of fractional-second digits. This holds for every date-time field in every response — `call_started_at`, `call_ended_at`, `call_created_at`, a recording's `expires_at`, and the timestamps in [webhook](../api-reference/webhooks.md) payloads.
+
+Date **inputs** work differently, and there are two kinds:
+
+- `date_from` / `date_to` on [`POST /v1/calls/list`](../api-reference/list-calls/filtering-pagination.md#range-semantics) are **date-only** (`YYYY-MM-DD`), interpreted on **Europe/Istanbul** day boundaries — no time or timezone component.
+- `scheduled_at` on [`POST /v1/calls`](../api-reference/create-call.md#scheduled-at) and [`POST /v1/calls/bulk`](../api-reference/bulk-create-calls.md#scheduled-at) is a full ISO 8601 date-time you should send **with a timezone offset** (e.g. `...+03:00` or `...Z`); a value with no offset is read as UTC.
+
+---
+
 ## Error format {#error-envelope}
 
 Every error response has the same **minimal** shape: a human-readable `message` and an `extensions` object that always carries a machine-readable `code`.

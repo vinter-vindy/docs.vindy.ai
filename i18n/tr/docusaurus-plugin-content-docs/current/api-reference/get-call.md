@@ -100,6 +100,8 @@ Kuyrukta bekleyen bir giden çağrı, tamamlanana kadar bu minimal yapıyı dön
 | `call_metadata` | object \| null | [`POST /v1/calls/bulk`](bulk-create-calls.md) ile gönderdiğiniz metadata; aynen geri döner. Çağrı metadata ile oluşturulmadıysa `null` olur. |
 | `call_variables` | obje \| null | Bu çağrı için gönderilen şablon değişkenleri, aynen geri döner — çağrıyı oluştururken `variables` olarak gönderdiğiniz obje. Gönderilmediyse (ör. inbound çağrılar) `null`. |
 
+Tüm zaman damgası alanları — `call_started_at`, `call_ended_at`, `call_created_at` ve `call_recording.expires_at` — **UTC**'dir; ISO 8601 `+00:00` biçiminde (ör. `2026-06-08T10:30:00+00:00`). Gerçek bir ISO-8601 ayrıştırıcıyla çözümleyin, `Z` son eki varsaymayın. Bkz. [Yanıt Biçimi → Tarih ve saatler](../concepts/response-envelopes.md#timestamps).
+
 Diğer tüm alanlar — `call_transcript`, `call_structured_data`, `call_recording`, serbest biçimli `call_end_reason` string'i ve `call_recording.available: false` ne anlama geldiği — için tam [Çağrıları Listele alan referansına](list-calls/index.md#yanıt-alanları) bakabilirsiniz.
 
 :::tip Güncel ses kaydı bağlantısı
