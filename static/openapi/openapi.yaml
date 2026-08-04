@@ -591,11 +591,8 @@ components:
 
     AssistantItem:
       type: object
-      required: [type, assistant_id, assistant_name, assistant_created_at, structured_outputs]
+      required: [assistant_id, assistant_name, assistant_created_at, structured_outputs]
       properties:
-        type:
-          type: string
-          const: assistant
         assistant_id:
           type: string
           description: Stable assistant ID (uuid). Use in POST /v1/calls/list and /v1/calls/bulk.

@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `GET /v1/assistants`
 
-Returns your company's assistants in a **single list**. Each item carries a `type` field (currently always `"assistant"`) and the **structured output schema** attached to that assistant, if any.
+Returns your company's assistants in a **single list**. Each item carries the assistant's basic details and the **structured output schema** attached to that assistant, if any.
 
 ---
 
@@ -28,7 +28,6 @@ No query parameters. The response is **not paginated** — every assistant is re
 {
   "data": [
     {
-      "type": "assistant",
       "assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "assistant_name": "Vindy - Asistan",
       "assistant_language": "tr",
@@ -70,7 +69,6 @@ No query parameters. The response is **not paginated** — every assistant is re
 
 | Field | Type | Description |
 |---|---|---|
-| `type` | string | Discriminator — currently always `"assistant"`. |
 | `assistant_id` | string (UUID) | Stable assistant ID. Use it in [`POST /v1/calls/list`](list-calls/index.md) to filter that assistant's calls, and as the `assistant_id` when launching a batch of outbound calls with [`POST /v1/calls/bulk`](bulk-create-calls.md). |
 | `assistant_name` | string | Display name. |
 | `assistant_language` | string | Language code (e.g. `tr`, `en`). |

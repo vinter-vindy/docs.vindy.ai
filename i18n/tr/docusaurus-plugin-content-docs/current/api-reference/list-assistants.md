@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `GET /v1/assistants`
 
-Şirketinizin asistanlarını **tek bir liste** hâlinde döndürür. Her öğe bir `type` alanı (şu an her zaman `"assistant"`) ve varsa o asistana bağlı **structured output şemasını** taşır.
+Şirketinizin asistanlarını **tek bir liste** hâlinde döndürür. Her öğe asistanın temel bilgilerini ve varsa o asistana bağlı **structured output şemasını** taşır.
 
 ---
 
@@ -28,7 +28,6 @@ Sorgu parametresi yoktur. Yanıt **sayfalanmaz** — tüm asistanlar tek çağr�
 {
   "data": [
     {
-      "type": "assistant",
       "assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "assistant_name": "Vindy - Asistan",
       "assistant_language": "tr",
@@ -70,7 +69,6 @@ Sorgu parametresi yoktur. Yanıt **sayfalanmaz** — tüm asistanlar tek çağr�
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `type` | string | Tür ayırt edici (discriminator) — şu an her zaman `"assistant"`. |
 | `assistant_id` | string (UUID) | Kalıcı asistan kimliği. Bu asistanın çağrılarını filtrelemek için [`POST /v1/calls/list`](list-calls/index.md) isteğinde, toplu giden çağrı başlatırken de `assistant_id` olarak [`POST /v1/calls/bulk`](bulk-create-calls.md) isteğinde kullanılır. |
 | `assistant_name` | string | Görünen ad. |
 | `assistant_language` | string | Dil kodu (örneğin `tr`, `en`). |
