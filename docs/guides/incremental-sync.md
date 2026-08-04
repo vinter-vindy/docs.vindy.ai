@@ -67,7 +67,7 @@ async function syncCalls(assistantId, lastSyncedDate) {
       body: JSON.stringify({
         assistant_id: assistantId,
         date_from: lastSyncedDate, // YYYY-MM-DD — your previous run's date (re-scan is idempotent)
-        limit: 200, // max 200 per page
+        limit: 200, // page size (default 200, max 500)
         cursor,
       }),
     });
@@ -109,7 +109,7 @@ def sync_calls(assistant_id, last_synced_date):
         payload = {
             "assistant_id": assistant_id,
             "date_from": last_synced_date,  # YYYY-MM-DD — your previous run's date (re-scan is idempotent)
-            "limit": 200,  # max 200 per page
+            "limit": 200,  # page size (default 200, max 500)
         }
         if cursor:
             payload["cursor"] = cursor

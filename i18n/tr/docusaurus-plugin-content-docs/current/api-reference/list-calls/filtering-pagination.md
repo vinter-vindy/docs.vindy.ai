@@ -17,7 +17,7 @@ sidebar_position: 3
 | İstek | Ne döner? |
 |---|---|
 | `date_from`, `date_to`, `cursor` ve `limit` yok | Şirketinize ait **en yeni 50** sonlanmış çağrı. Daha fazlası varsa `has_more` `true` olur ve `next_cursor` döner — sonraki 50 için onu geri gönderin. |
-| Yalnızca `limit` (örn. `200`) | Tek sayfada en yeni *N* çağrı (en çok 200). |
+| Yalnızca `limit` (örn. `500`) | Tek sayfada en yeni *N* çağrı (en çok 500). |
 | Yalnızca `date_from` | O günden itibaren (dahil) çağrılar, en yeniden başlayarak. `cursor` ile devam edin. |
 | Yalnızca `date_to` | O gün dahil olacak şekilde ve öncesindeki çağrılar, en yeniden başlayarak. `cursor` ile devam edin. |
 | `date_from` + `date_to` | İki ucu da dahil gün aralığındaki çağrılar, en yeniden başlayarak. |
@@ -29,8 +29,8 @@ sidebar_position: 3
 
 ## `limit`
 
-- Varsayılan **50**, en fazla **200**; her sayfaya uygulanır.
-- **1–200** aralığı dışındaki bir değer `400 VALIDATION_FAILED` ile reddedilir.
+- Varsayılan **200**, en fazla **500**; her sayfaya uygulanır.
+- **1–500** aralığı dışındaki bir değer `400 VALIDATION_FAILED` ile reddedilir.
 - `limit` yalnızca sayfa boyutunu belirler — toplamda kaç çağrı çekebileceğinizi **sınırlamaz**. Tümünü okumak için `cursor` ile sayfalamaya devam edin.
 
 ## `cursor` {#cursors}

@@ -44,7 +44,7 @@ Content-Type: application/json
 
 | Alan | Tür | Zorunlu | Varsayılan | Açıklama |
 |---|---|---|---|---|
-| `limit` | int | hayır | `50` | Bu sayfadaki azami öğe sayısı. Aralık: 1–200. |
+| `limit` | int | hayır | `200` | Bu sayfadaki azami öğe sayısı. Aralık: 1–500. |
 | `cursor` | string | hayır | — | Önceki bir `next_cursor` değerinden gelen opak cursor. İlk istekte göndermeyin. |
 
 Gövde opsiyoneldir — ilk sayfayı varsayılan limitle almak için `{}` (veya boş) gönderebilirsiniz.
@@ -119,7 +119,7 @@ Bu endpoint `date_from` / `date_to` almaz — tek bir toplu aramayla sınırlıd
 
 | Durum | Kod | Açıklama |
 |---|---|---|
-| `400` | `VALIDATION_FAILED` | `limit` 1–200 aralığının dışında ya da gövdede beklenmeyen bir alan var. |
+| `400` | `VALIDATION_FAILED` | `limit` 1–500 aralığının dışında ya da gövdede beklenmeyen bir alan var. |
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları. |
 | `404` | `RESOURCE_NOT_FOUND` | Toplu arama bulunamadı veya başka bir şirkete ait. |
 | `429` | `RATE_LIMITED` | Dakika-başı istek limiti aşıldı; `Retry-After` saniye sonra tekrar deneyin. |

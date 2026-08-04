@@ -58,7 +58,7 @@ Tüm alanlar **isteğe bağlıdır** — şirketinizin sonlanmış tüm çağrı
 | `call_bound_type` | string | — | `inbound` veya `outbound`. Başka bir değer (veya boş bırakmak) yön filtresi uygulamaz. |
 | `date_from` | string (`YYYY-MM-DD`) | — | Bu günden itibaren çağrıları dahil eder. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
 | `date_to` | string (`YYYY-MM-DD`) | — | Bu gün dahil olacak şekilde çağrıları dahil eder. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
-| `limit` | int | `50` | Bu sayfadaki en fazla kayıt sayısı. Aralık: 1–200. |
+| `limit` | int | `200` | Bu sayfadaki en fazla kayıt sayısı. Aralık: 1–500. |
 | `cursor` | string | — | Önceki yanıttaki `next_cursor` değerinden alınan opak cursor. İlk istekte gönderilmez. |
 
 **Filtreleri birleştirme.** `assistant_id`, `call_bound_type` ve tarih aralığı bağımsızdır — herhangi bir alt kümesini gönderin, birlikte çalışırlar (mantıksal VE). Şirketinizin tüm sonlanmış çağrılarını taramak için hepsini boş bırakın.
@@ -66,7 +66,7 @@ Tüm alanlar **isteğe bağlıdır** — şirketinizin sonlanmış tüm çağrı
 **Doğrulama kuralları:**
 
 - `date_from`'un `date_to`'dan sonra olması → 400 (`DATE_RANGE_INVALID`).
-- `limit`'in 1–200 dışında olması → 400 (`VALIDATION_FAILED`).
+- `limit`'in 1–500 dışında olması → 400 (`VALIDATION_FAILED`).
 - Tarih davranışı ve kabul edilen biçimler için [Filtreleme ve Sayfalama](filtering-pagination.md) sayfasına bakabilirsiniz.
 
 ## Sayfalama ve filtreleme
@@ -76,7 +76,7 @@ Sonucu iki bağımsız mekanizma şekillendirir ve bu ikisi sorunsuz biçimde bi
 - **Filtreler** (`assistant_id`, `call_bound_type`, `date_from` / `date_to`) *hangi* çağrıların kapsama gireceğini belirler. Tümü isteğe bağlıdır.
 - **Cursor** (`cursor` / `limit`) bu kapsamın *içinde*, **en yeniden en eskiye** sayfa sayfa ilerler.
 
-İkisini ayrı ayrı da, birlikte de kullanabilirsiniz. Filtre ve cursor olmadan, tüm çağrılarınız arasında **en yeniden en eskiye** gezinirsiniz: ilk istek en yeni `limit` kadar çağrıyı (varsayılan 50) döndürür, geriye kayıt kalmayana dek devam edersiniz. Filtre eklediğinizde de aynı şekilde, yalnızca o kapsam içinde gezinirsiniz. Her durumda kural aynıdır: filtrelerinizi ilk istekte gönderin; sonraki her istekte aldığınız `next_cursor` değerini — **değiştirmeden** — geri gönderin ve `assistant_id`, `call_bound_type`, `date_from`, `date_to`, `limit` değerlerini olduğu gibi koruyun. Cursor, konumunuzu *o belirli sorgunun içinde* kodlar: yalnız onu üreten endpoint ve filtreler için geçerlidir. Bir filtreyi değiştirip (ya da başka bir endpoint'te kullanıp) cursor'ı yine de gönderirseniz istek **`400 MALFORMED_CURSOR` ile reddedilir** — bunun yerine cursor'ı bırakıp yeni bir gezinme başlatın. `has_more` `false` olduğunda (bu noktada `next_cursor` da `null` olur) iş tamamlanmıştır.
+İkisini ayrı ayrı da, birlikte de kullanabilirsiniz. Filtre ve cursor olmadan, tüm çağrılarınız arasında **en yeniden en eskiye** gezinirsiniz: ilk istek en yeni `limit` kadar çağrıyı (varsayılan 200) döndürür, geriye kayıt kalmayana dek devam edersiniz. Filtre eklediğinizde de aynı şekilde, yalnızca o kapsam içinde gezinirsiniz. Her durumda kural aynıdır: filtrelerinizi ilk istekte gönderin; sonraki her istekte aldığınız `next_cursor` değerini — **değiştirmeden** — geri gönderin ve `assistant_id`, `call_bound_type`, `date_from`, `date_to`, `limit` değerlerini olduğu gibi koruyun. Cursor, konumunuzu *o belirli sorgunun içinde* kodlar: yalnız onu üreten endpoint ve filtreler için geçerlidir. Bir filtreyi değiştirip (ya da başka bir endpoint'te kullanıp) cursor'ı yine de gönderirseniz istek **`400 MALFORMED_CURSOR` ile reddedilir** — bunun yerine cursor'ı bırakıp yeni bir gezinme başlatın. `has_more` `false` olduğunda (bu noktada `next_cursor` da `null` olur) iş tamamlanmıştır.
 
 Parametrelerin tam referansı, kabul edilen tarih biçimleri ve hazır reçeteler **[Filtreleme ve Sayfalama](filtering-pagination.md)** sayfasındadır.
 

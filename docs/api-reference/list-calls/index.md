@@ -58,7 +58,7 @@ Every field is **optional** — send an empty body to page through all of your c
 | `call_bound_type` | string | — | `inbound` or `outbound`. Any other value (or omitting it) applies no direction filter. |
 | `date_from` | string (`YYYY-MM-DD`) | — | Include calls from this day onward. See [Filtering & Pagination](filtering-pagination.md). |
 | `date_to` | string (`YYYY-MM-DD`) | — | Include calls up to and including this day. See [Filtering & Pagination](filtering-pagination.md). |
-| `limit` | int | `50` | Maximum items in this page. Range: 1–200. |
+| `limit` | int | `200` | Maximum items in this page. Range: 1–500. |
 | `cursor` | string | — | Opaque cursor from a previous `next_cursor`. Omit on the first request. |
 
 **Combining filters.** `assistant_id`, `call_bound_type`, and the date range are independent — pass any subset and they combine (logical AND). Omit them all to scan every terminal call your company has.
@@ -66,7 +66,7 @@ Every field is **optional** — send an empty body to page through all of your c
 **Validation rules:**
 
 - `date_from` after `date_to` → 400 (`DATE_RANGE_INVALID`).
-- `limit` outside 1–200 → 400 (`VALIDATION_FAILED`).
+- `limit` outside 1–500 → 400 (`VALIDATION_FAILED`).
 - See [Filtering & Pagination](filtering-pagination.md) for date behavior and accepted formats.
 
 ## Pagination and filtering
@@ -76,7 +76,7 @@ Two independent controls shape the result, and they compose cleanly:
 - **The filters** (`assistant_id`, `call_bound_type`, `date_from` / `date_to`) decide *which* calls are in scope. All are optional.
 - **The cursor** (`cursor` / `limit`) walks *through* that scope, one page at a time, **newest first**.
 
-You can use either on its own or both together. With no filters and no cursor, you simply page through all of your calls, **newest first** — the first request returns the newest `limit` calls (50 by default), and you keep going until there's nothing left. Add filters and you page through only that scope the same way. In every case the rule is the same: send your filters on the first request, then on each following request send back the `next_cursor` you received — **unchanged** — while keeping `assistant_id`, `call_bound_type`, `date_from`, `date_to`, and `limit` exactly as they were. The cursor encodes your position *within that specific query*: it is valid only for the exact endpoint and filters that issued it. If you change a filter (or reuse it on another endpoint) and send the cursor anyway, the request is **rejected with `400 MALFORMED_CURSOR`** — start a fresh walk (drop the cursor) instead. You're done when `has_more` is `false` (at which point `next_cursor` is `null`).
+You can use either on its own or both together. With no filters and no cursor, you simply page through all of your calls, **newest first** — the first request returns the newest `limit` calls (200 by default), and you keep going until there's nothing left. Add filters and you page through only that scope the same way. In every case the rule is the same: send your filters on the first request, then on each following request send back the `next_cursor` you received — **unchanged** — while keeping `assistant_id`, `call_bound_type`, `date_from`, `date_to`, and `limit` exactly as they were. The cursor encodes your position *within that specific query*: it is valid only for the exact endpoint and filters that issued it. If you change a filter (or reuse it on another endpoint) and send the cursor anyway, the request is **rejected with `400 MALFORMED_CURSOR`** — start a fresh walk (drop the cursor) instead. You're done when `has_more` is `false` (at which point `next_cursor` is `null`).
 
 The full parameter reference, accepted date formats, and copy-paste recipes live in **[Filtering & Pagination](filtering-pagination.md)**.
 

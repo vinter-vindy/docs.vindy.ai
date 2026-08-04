@@ -68,7 +68,7 @@ async function syncCalls(assistantId, lastSyncedDate) {
       body: JSON.stringify({
         assistant_id: assistantId,
         date_from: lastSyncedDate, // YYYY-MM-DD — bir önceki çalıştırmanın tarihi (yeniden tarama idempotenttir)
-        limit: 200, // sayfa başına en fazla 200
+        limit: 200, // sayfa boyutu (varsayılan 200, en fazla 500)
         cursor,
       }),
     });
@@ -111,7 +111,7 @@ def sync_calls(assistant_id, last_synced_date):
         payload = {
             "assistant_id": assistant_id,
             "date_from": last_synced_date,  # YYYY-MM-DD — bir önceki çalıştırmanın tarihi (yeniden tarama idempotenttir)
-            "limit": 200,  # sayfa başına en fazla 200
+            "limit": 200,  # sayfa boyutu (varsayılan 200, en fazla 500)
         }
         if cursor:
             payload["cursor"] = cursor

@@ -17,7 +17,7 @@ Calls are returned **newest first**, ordered by when each call took place (its s
 | Request | What you get |
 |---|---|
 | No `date_from`, `date_to`, `cursor`, or `limit` | The **newest 50** terminal calls for your company. If more exist, `has_more` is `true` and `next_cursor` is set — send it back to get the next 50. |
-| `limit` only (e.g. `200`) | The newest *N* calls in a single page (max 200). |
+| `limit` only (e.g. `500`) | The newest *N* calls in a single page (max 500). |
 | `date_from` only | Calls on or after that day, newest first. Continue with `cursor`. |
 | `date_to` only | Calls up to and including that day, newest first. Continue with `cursor`. |
 | `date_from` + `date_to` | Calls inside the inclusive day range, newest first. |
@@ -29,8 +29,8 @@ Calls are returned **newest first**, ordered by when each call took place (its s
 
 ## `limit`
 
-- Default **50**, maximum **200**, applied per page.
-- A value outside the **1–200** range is rejected with `400 VALIDATION_FAILED`.
+- Default **200**, maximum **500**, applied per page.
+- A value outside the **1–500** range is rejected with `400 VALIDATION_FAILED`.
 - `limit` sets the page size only — it does **not** cap how many calls you can retrieve in total. Keep paging with `cursor` to read everything.
 
 ## `cursor` {#cursors}

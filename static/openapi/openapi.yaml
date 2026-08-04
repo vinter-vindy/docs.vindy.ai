@@ -493,7 +493,7 @@ paths:
         '400':
           description: >
             Validation error. Possible codes: VALIDATION_FAILED (e.g. limit out
-            of the 1–200 range or an unexpected body field), INVALID_CURSOR,
+            of the 1–500 range or an unexpected body field), INVALID_CURSOR,
             MALFORMED_CURSOR (the cursor is for a different endpoint or batch).
           content:
             application/json:
@@ -676,8 +676,8 @@ components:
         limit:
           type: integer
           minimum: 1
-          maximum: 200
-          default: 50
+          maximum: 500
+          default: 200
         assistant_id:
           type: [string, 'null']
           description: Filter by assistant ID.
@@ -1099,8 +1099,8 @@ components:
         limit:
           type: integer
           minimum: 1
-          maximum: 200
-          default: 50
+          maximum: 500
+          default: 200
         cursor:
           type: [string, 'null']
           description: >
