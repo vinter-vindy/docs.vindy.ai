@@ -8,6 +8,10 @@ sidebar_position: 1
 
 Tüm Vindy API yanıtları JSON'dur (`application/json`) ve küçük, öngörülebilir bir yapı kümesine uyar. Bir kez öğrendiğinizde her endpoint tanıdık gelir.
 
+:::note Bilinmeyen istek alanları yok sayılır
+İstek gövdelerinde, endpoint'in tanımadığı herhangi bir alan **sessizce yok sayılır** — asla hata olmaz. Yanlış yazılmış ya da fazladan bir alan hiçbir etki yapmaz (filtrelemez, değiştirmez, isteği reddetmez). Yalnızca belgelenen alanları gönderin.
+:::
+
 Çoğu liste yanıtı bir sayfalama nesnesiyle sarmalanır — bkz. [Filtreleme ve Sayfalama](../api-reference/list-calls/filtering-pagination.md#paginated). Tek istisna, sayfalama nesnesi yerine `{ data, total }` döndüren [`GET /v1/assistants`](../api-reference/list-assistants.md) endpoint'idir.
 
 ---

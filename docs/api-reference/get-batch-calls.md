@@ -119,7 +119,7 @@ This endpoint takes no `date_from` / `date_to` — it's scoped to one batch. Dat
 
 | Status | Code | Description |
 |---|---|---|
-| `400` | `VALIDATION_FAILED` | `limit` is out of the 1–500 range, or the body has an unexpected field. |
+| `400` | `VALIDATION_FAILED` | `limit` is out of the 1–500 range, or a body field has an invalid type. Unknown/extra fields are **ignored**, not rejected. |
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Auth errors. |
 | `404` | `RESOURCE_NOT_FOUND` | Batch not found or belongs to another company. |
 | `429` | `RATE_LIMITED` | Rate limit exceeded (per-minute). Retry after `Retry-After` seconds. |

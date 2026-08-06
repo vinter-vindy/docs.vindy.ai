@@ -259,22 +259,23 @@ The object's keys and shape mirror the structured output schema you defined for 
 
 ## Call end reasons {#end-reasons}
 
-`call_end_reason` is a **free-form string** — the raw reason the call ended, returned unmapped. **Treat it as an opaque string — do not rely on a fixed enum.** Common values:
+`call_status` (`completed` / `failed`) is a derived summary of the call; `call_end_reason` is the **specific raw reason** it ended, returned unmapped. An outbound call that never reached a normal conversation comes back with **`call_status: failed`** and a reason such as `no_answer`, `busy`, or `rejected`. **Treat `call_end_reason` as an opaque string — do not rely on a fixed enum.** Common values:
 
 | Value | Description |
 |---|---|
-| `completed` | The call ran to a normal conclusion. |
-| `user_hangup` | The customer (end-user) hung up. |
-| `no_answer` | Outbound: the call was never answered. |
-| `busy` | Outbound: the line was busy or the call was rejected. |
+| `completed` | The call ran to a normal conclusion. (`call_status: completed`.) |
+| `user_hangup` | The customer (end-user) hung up. (`call_status: completed`.) |
+| `no_answer` | Outbound: the call was never answered, including a ring timeout. (`call_status: failed`.) |
+| `busy` | Outbound: the line was busy. (`call_status: failed`.) |
+| `rejected` | Outbound: the callee declined/rejected the call. (`call_status: failed`.) |
+| `error` | The call ended due to an error in the pipeline (provider, model, etc.). (`call_status: failed`.) |
 | `silence_timeout` | The call was ended after a long silence. |
 | `end_call_phrase` | A configured end-of-call phrase was detected. |
 | `idle_limit` | The call was ended after an idle period with no activity. |
 | `max_duration` | The maximum call duration was reached. |
 | `end_call_tool` | The assistant ended the call via its end-call tool. |
-| `error` | The call ended due to an error in the pipeline (provider, model, etc.). |
 
-Other values may appear, including **raw provider/SIP status text** (e.g. `User Busy`, `486`), and the set grows as new providers and adapters are added. If you keep a known-value list, **don't fail on unknown reasons** — log them and continue.
+Other values may appear, including **raw provider/SIP status text** (e.g. `User Busy`, `486`), and the set grows as new providers and adapters are added. If you keep a known-value list, **don't fail on unknown reasons** — log them and continue. When you need the pass/fail summary rather than the specific reason, read `call_status`, not `call_end_reason`.
 
 ## Errors
 

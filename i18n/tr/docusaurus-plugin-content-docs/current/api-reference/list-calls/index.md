@@ -259,22 +259,23 @@ Nesnenin anahtarları ve şekli, asistanınız için tanımladığınız yapısa
 
 ## Çağrı bitiş nedenleri {#end-reasons}
 
-`call_end_reason` **serbest biçimli bir string'tir** — çağrının sona erme ham nedeni, eşlenmeden döner. **Opak bir string olarak ele alın; sabit bir enum'a güvenmeyin.** Sık karşılaşılan değerler:
+`call_status` (`completed` / `failed`) çağrının **türetilmiş özetidir**; `call_end_reason` ise sona ermenin **belirli ham nedenidir**, eşlenmeden döner. Normal bir görüşmeye hiç ulaşmayan bir giden çağrı **`call_status: failed`** ile ve `no_answer`, `busy` ya da `rejected` gibi bir nedenle döner. **`call_end_reason`'ı opak bir string olarak ele alın; sabit bir enum'a güvenmeyin.** Sık karşılaşılan değerler:
 
 | Değer | Açıklama |
 |---|---|
-| `completed` | Çağrı normal biçimde tamamlandı. |
-| `user_hangup` | Müşteri (son kullanıcı) görüşmeyi kapattı. |
-| `no_answer` | Giden çağrı: çağrı hiç yanıtlanmadı. |
-| `busy` | Giden çağrı: hat meşguldü veya çağrı reddedildi. |
+| `completed` | Çağrı normal biçimde tamamlandı. (`call_status: completed`.) |
+| `user_hangup` | Müşteri (son kullanıcı) görüşmeyi kapattı. (`call_status: completed`.) |
+| `no_answer` | Giden çağrı: çağrı hiç yanıtlanmadı (çalma zaman aşımı dahil). (`call_status: failed`.) |
+| `busy` | Giden çağrı: hat meşguldü. (`call_status: failed`.) |
+| `rejected` | Giden çağrı: aranan kişi çağrıyı reddetti. (`call_status: failed`.) |
+| `error` | Çağrı, hattaki bir hata (sağlayıcı, model vb.) nedeniyle sona erdi. (`call_status: failed`.) |
 | `silence_timeout` | Uzun bir sessizliğin ardından çağrı sonlandırıldı. |
 | `end_call_phrase` | Tanımlı bir görüşme-bitirme ifadesi algılandı. |
 | `idle_limit` | Hiçbir etkinlik olmadan geçen bir süre sonrası çağrı sonlandırıldı. |
 | `max_duration` | Azami çağrı süresine ulaşıldı. |
 | `end_call_tool` | Asistan, görüşme-bitirme aracıyla çağrıyı sonlandırdı. |
-| `error` | Çağrı, hattaki bir hata (sağlayıcı, model vb.) nedeniyle sona erdi. |
 
-Başka değerler de görülebilir; bunlara **ham sağlayıcı/SIP durum metni** (örn. `User Busy`, `486`) da dahildir ve yeni sağlayıcılar ile bileşenler eklendikçe küme genişler. Bilinen değerlerden oluşan sabit bir liste tutuyorsanız, **tanımadığınız bir nedenle karşılaştığınızda hata fırlatmamalısınız**; değeri log'layıp işleme devam edin.
+Başka değerler de görülebilir; bunlara **ham sağlayıcı/SIP durum metni** (örn. `User Busy`, `486`) da dahildir ve yeni sağlayıcılar ile bileşenler eklendikçe küme genişler. Bilinen değerlerden oluşan sabit bir liste tutuyorsanız, **tanımadığınız bir nedenle karşılaştığınızda hata fırlatmamalısınız**; değeri log'layıp işleme devam edin. Belirli neden yerine geç/kal (pass/fail) özetine ihtiyacınız olduğunda `call_end_reason`'ı değil `call_status`'ü okuyun.
 
 ## Hatalar
 

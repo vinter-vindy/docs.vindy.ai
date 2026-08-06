@@ -8,6 +8,10 @@ sidebar_position: 1
 
 All Vindy API responses are JSON (`application/json`) and follow a small set of predictable shapes. Learn them once and every endpoint feels familiar.
 
+:::note Unknown request fields are ignored
+On request bodies, any field the endpoint doesn't recognize is **silently ignored** — it is never an error. A typo'd or extra field simply has no effect (it won't filter, change, or reject the request). Send only the documented fields.
+:::
+
 Most list responses are wrapped in a pagination object — see [Filtering & Pagination](../api-reference/list-calls/filtering-pagination.md#paginated). The one exception is [`GET /v1/assistants`](../api-reference/list-assistants.md), which returns `{ data, total }` instead.
 
 ---
