@@ -29,7 +29,7 @@ Calls are returned **newest first**, ordered by when each call took place (its s
 
 ## `limit`
 
-- Default **200**, maximum **500**, applied per page.
+- Default **200**, maximum **500**, applied per page. Sending `null` (or omitting `limit`) uses the default.
 - A value outside the **1–500** range is rejected with `400 VALIDATION_FAILED`.
 - `limit` sets the page size only — it does **not** cap how many calls you can retrieve in total. Keep paging with `cursor` to read everything.
 

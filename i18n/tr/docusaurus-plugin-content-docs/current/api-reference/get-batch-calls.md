@@ -44,7 +44,7 @@ Content-Type: application/json
 
 | Alan | Tür | Zorunlu | Varsayılan | Açıklama |
 |---|---|---|---|---|
-| `limit` | int | hayır | `200` | Bu sayfadaki azami öğe sayısı. Aralık: 1–500. |
+| `limit` | int | hayır | `200` | Bu sayfadaki azami öğe sayısı. Aralık: 1–500. Varsayılanı kullanmak için `null` gönderin veya alanı atlayın. |
 | `cursor` | string | hayır | — | Önceki bir `next_cursor` değerinden gelen opak cursor. İlk istekte göndermeyin. |
 
 Gövde opsiyoneldir — ilk sayfayı varsayılan limitle almak için `{}` (veya boş) gönderebilirsiniz.

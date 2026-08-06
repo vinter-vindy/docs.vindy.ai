@@ -29,7 +29,7 @@ sidebar_position: 3
 
 ## `limit`
 
-- Varsayılan **200**, en fazla **500**; her sayfaya uygulanır.
+- Varsayılan **200**, en fazla **500**; her sayfaya uygulanır. `null` göndermek (veya `limit`'i atlamak) varsayılanı kullanır.
 - **1–500** aralığı dışındaki bir değer `400 VALIDATION_FAILED` ile reddedilir.
 - `limit` yalnızca sayfa boyutunu belirler — toplamda kaç çağrı çekebileceğinizi **sınırlamaz**. Tümünü okumak için `cursor` ile sayfalamaya devam edin.
 

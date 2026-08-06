@@ -44,7 +44,7 @@ Content-Type: application/json
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | int | no | `200` | Maximum items in this page. Range: 1–500. |
+| `limit` | int | no | `200` | Maximum items in this page. Range: 1–500. Send `null` or omit it to use the default. |
 | `cursor` | string | no | — | Opaque cursor from a previous `next_cursor`. Omit on the first request. |
 
 The body is optional — send `{}` (or nothing) to get the first page with the default limit.

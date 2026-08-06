@@ -675,10 +675,11 @@ components:
             and filters that issued it — reusing it after changing a filter, or on
             another endpoint, is rejected with 400 MALFORMED_CURSOR.
         limit:
-          type: integer
+          type: [integer, 'null']
           minimum: 1
           maximum: 500
           default: 200
+          description: Page size (1–500). Send null or omit to use the default (200).
         assistant_id:
           type: [string, 'null']
           description: Filter by assistant ID.
@@ -1098,10 +1099,11 @@ components:
       description: Optional body; send {} for the first page with the default limit.
       properties:
         limit:
-          type: integer
+          type: [integer, 'null']
           minimum: 1
           maximum: 500
           default: 200
+          description: Page size (1–500). Send null or omit to use the default (200).
         cursor:
           type: [string, 'null']
           description: >

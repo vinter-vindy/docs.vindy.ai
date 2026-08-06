@@ -58,7 +58,7 @@ Tüm alanlar **isteğe bağlıdır** — şirketinizin sonlanmış tüm çağrı
 | `call_bound_type` | string | — | `inbound` veya `outbound`. Başka bir değer (veya boş bırakmak) yön filtresi uygulamaz. |
 | `date_from` | string (`YYYY-MM-DD`) | — | Bu günden itibaren çağrıları dahil eder. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
 | `date_to` | string (`YYYY-MM-DD`) | — | Bu gün dahil olacak şekilde çağrıları dahil eder. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
-| `limit` | int | `200` | Bu sayfadaki en fazla kayıt sayısı. Aralık: 1–500. |
+| `limit` | int | `200` | Bu sayfadaki en fazla kayıt sayısı. Aralık: 1–500. Varsayılanı kullanmak için `null` gönderin veya alanı atlayın. |
 | `cursor` | string | — | Önceki yanıttaki `next_cursor` değerinden alınan opak cursor. İlk istekte gönderilmez. |
 
 **Filtreleri birleştirme.** `assistant_id`, `call_bound_type` ve tarih aralığı bağımsızdır — herhangi bir alt kümesini gönderin, birlikte çalışırlar (mantıksal VE). Şirketinizin tüm sonlanmış çağrılarını taramak için hepsini boş bırakın.

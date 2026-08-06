@@ -58,7 +58,7 @@ Every field is **optional** — send an empty body to page through all of your c
 | `call_bound_type` | string | — | `inbound` or `outbound`. Any other value (or omitting it) applies no direction filter. |
 | `date_from` | string (`YYYY-MM-DD`) | — | Include calls from this day onward. See [Filtering & Pagination](filtering-pagination.md). |
 | `date_to` | string (`YYYY-MM-DD`) | — | Include calls up to and including this day. See [Filtering & Pagination](filtering-pagination.md). |
-| `limit` | int | `200` | Maximum items in this page. Range: 1–500. |
+| `limit` | int | `200` | Maximum items in this page. Range: 1–500. Send `null` or omit it to use the default. |
 | `cursor` | string | — | Opaque cursor from a previous `next_cursor`. Omit on the first request. |
 
 **Combining filters.** `assistant_id`, `call_bound_type`, and the date range are independent — pass any subset and they combine (logical AND). Omit them all to scan every terminal call your company has.
