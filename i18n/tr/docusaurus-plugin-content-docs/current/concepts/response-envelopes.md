@@ -110,7 +110,7 @@ Toplu bir istek belirli bir çağrıda başarısız olduğunda, `extensions.inde
   "extensions": {
     "code": "RATE_LIMITED",
     "retry_after": 60,
-    "limit": 60
+    "limit": 300
   }
 }
 ```

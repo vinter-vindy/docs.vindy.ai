@@ -38,7 +38,7 @@ No more than once per minute. For continuous syncing, use `date_from` with your 
 
 ## Is there a rate limit?
 
-Yes — **60 requests per minute per API key** by default. Going over returns a `429` with the `RATE_LIMITED` code, plus a `Retry-After` header (also in `extensions.retry_after`) telling you how many seconds to wait before retrying. Back off and retry after that window. See [Error Codes](errors.md).
+Yes — **300 requests per minute per API key** by default. Going over returns a `429` with the `RATE_LIMITED` code, plus a `Retry-After` header (also in `extensions.retry_after`) telling you how many seconds to wait before retrying. Back off and retry after that window. See [Error Codes](errors.md).
 
 ## Why do my date filters fail with 400?
 

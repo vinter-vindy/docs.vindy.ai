@@ -38,7 +38,7 @@ Dakikada birden fazla yapmamanız önerilir. Sürekli senkronizasyon için `date
 
 ## Bir hız limiti var mı? {#is-there-a-rate-limit}
 
-Evet — varsayılan olarak **API anahtarı başına dakikada 60 istek**. Bu sınırı aşmak, `RATE_LIMITED` kodlu bir `429` yanıtının yanı sıra, kaç saniye beklemeniz gerektiğini bildiren bir `Retry-After` header'ı (aynı değer `extensions.retry_after` içinde de bulunur) döndürür. O süre kadar bekleyip yeniden deneyin. Bkz. [Hata Kodları](errors.md).
+Evet — varsayılan olarak **API anahtarı başına dakikada 300 istek**. Bu sınırı aşmak, `RATE_LIMITED` kodlu bir `429` yanıtının yanı sıra, kaç saniye beklemeniz gerektiğini bildiren bir `Retry-After` header'ı (aynı değer `extensions.retry_after` içinde de bulunur) döndürür. O süre kadar bekleyip yeniden deneyin. Bkz. [Hata Kodları](errors.md).
 
 ## Tarih filtrelerim neden 400 döndürüyor?
 

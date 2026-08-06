@@ -14,22 +14,6 @@ Authorization: Bearer <api-key>
 
 ---
 
-## API anahtarı biçimi
-
-`<uuid>.<secret>` — toplam 80 karakter:
-
-- `uuid` bölümü (36 karakter) → anahtar kimliği, hassas bir değer değildir
-- `.` (nokta) → ayraç
-- `secret` bölümü (43 karakter) → asıl gizli kısım
-
-**Örnek:**
-
-```
-01902f6e-7c5a-7000-8000-abc123def456.R3vP9LkX2nM8jY7fW1qZ4tH6cB0sN5aDmGuI3oVpQ7r
-```
-
----
-
 ## Anahtar nasıl alınır?
 
 1. Vindy paneline giriş yapın.

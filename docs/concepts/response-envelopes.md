@@ -110,7 +110,7 @@ On `RATE_LIMITED`, `extensions` reports how long to wait and the per-minute limi
   "extensions": {
     "code": "RATE_LIMITED",
     "retry_after": 60,
-    "limit": 60
+    "limit": 300
   }
 }
 ```

@@ -14,22 +14,6 @@ Authorization: Bearer <api-key>
 
 ---
 
-## API key format
-
-`<uuid>.<secret>` — 80 characters total:
-
-- `uuid` part (36 chars) → the key ID, not sensitive
-- `.` (period) → separator
-- `secret` part (43 chars) → the actual secret
-
-**Example:**
-
-```
-01902f6e-7c5a-7000-8000-abc123def456.R3vP9LkX2nM8jY7fW1qZ4tH6cB0sN5aDmGuI3oVpQ7r
-```
-
----
-
 ## How to get a key
 
 1. Sign into the Vindy panel.
