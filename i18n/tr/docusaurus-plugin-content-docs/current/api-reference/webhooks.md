@@ -66,6 +66,7 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
   "call_id": "sess_9f2c8a10b3d4",
   "data": {
     "call_id": "sess_9f2c8a10b3d4",
+    "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
     "call_status": "completed",
     "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
     "call_assistant_name": "Vindy - Asistan",
@@ -119,6 +120,7 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
 | Alan | Tür | Açıklama |
 |---|---|---|
 | `call_id` | string | Kalıcı çağrı kimliği (üst düzeydeki `call_id` ile aynı değer). |
+| `batch_call_id` | string \| null | Bu çağrının ait olduğu batch (kampanya) — [`POST /v1/calls/bulk`](bulk-create-calls.md)'ın döndürdüğü `batch_call_id` ile aynı. Bir batch'in `call-ended` olaylarını gruplamak için kullanın. Çağrı bir batch'e ait değilse `null`: [`POST /v1/calls`](create-call.md) ile açılan tekil çağrı veya herhangi bir inbound çağrı. |
 | `call_status` | string | `completed` \| `failed` \| `cancelled`. `cancelled` yalnızca bu çağrıyı **tekli** bir kuyruk çağrısı olarak iptal ettiğinizde görünür — o teslimat minimal bir gövde taşır ([yukarıya](#a-cancelled-single-call) bakın). Fiziksel çağrılar yalnızca `completed` veya `failed` olur. |
 | `call_assistant_id` | string (UUID) \| null | Çağrıyı yürüten asistan. Bilinmiyorsa `null`. |
 | `call_assistant_name` | string \| null | İnsan-okur asistan adı. |
@@ -158,9 +160,10 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
   "call_id": "7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b",
   "data": {
     "call_id": "7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b",
+    "batch_call_id": null,
     "call_status": "cancelled",
     "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
-    "call_assistant_name": null,
+    "call_assistant_name": "Vindy - Asistan",
     "call_phone_number": "+905551112233",
     "call_bound_type": "outbound",
     "call_started_at": null,
@@ -179,10 +182,14 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
 
 ## `batch-ended` olayı {#batch-ended}
 
-[`POST /v1/calls/bulk`](bulk-create-calls.md) ile oluşturulan bir toplu arama `completed` durumuna ulaştığında (**içindeki her çağrı sonlanmış bir duruma ulaştığında**) **veya** [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) ile bir toplu arama iptal edildiğinde (`status: cancelled`), **bir kez** tetiklenir. Bir toplu aramadaki tüm çağrıların bittiğini bu sayede anlarsınız; sonuç için `counts` dökümünü kullanın, ardından çağrıları [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile çekin.
+[`POST /v1/calls/bulk`](bulk-create-calls.md) ile oluşturulan bir toplu arama `completed` durumuna ulaştığında (**içindeki her çağrı aramayı bitirip sonlanmış bir duruma ulaştığında**) **veya** [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) ile bir toplu arama iptal edildiğinde (`status: cancelled`), **bir kez** tetiklenir. Bu, toplu aramanın **arama turunun bittiğini** bildirir — sonuç için `counts` dökümünü kullanın, ardından çağrıları [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile çekin. Her çağrının `call-ended`'inin çoktan teslim edildiği anlamına **gelmez** — aşağıdaki sıra notuna bakın.
 
 :::caution İptaller webhook'lara nasıl yansır
-Bir toplu aramayı iptal etmek **tek** bir `batch-ended` olayı gönderir (`status: "cancelled"`). Bir toplu iptalin durdurduğu çağrılar tek tek `call-ended` **üretmez** — bunlar o tek `batch-ended` olayına toplanır (bu, büyük toplu iptallerde olay yağmurunu önler). Bunun yerine [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile **tekli** bir çağrıyı iptal ederseniz, o çağrı `call_status: "cancelled"` ile kendi [`call-ended`](#call-ended) olayını üretir.
+Bir toplu aramayı iptal etmek **tek** bir `batch-ended` olayı gönderir (`status: "cancelled"`). Bir toplu iptalin durdurduğu çağrılar tek tek `call-ended` **üretmez** — bunlar o tek `batch-ended` olayına toplanır (bu, büyük toplu iptallerde olay yağmurunu önler). Toplu aramada iptal **edilmeyen** çağrılar — o ana dek tamamlanmış (veya aranmakta olup biten) çağrılar — her zamanki gibi **kendi** `call-ended`'lerini üretmeye devam eder; yalnız toplu iptalin durdurduğu kuyruktaki çağrılar tek olaya toplanır. Bunun yerine [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile **tekli** bir çağrıyı iptal ederseniz, o çağrı `call_status: "cancelled"` ile kendi [`call-ended`](#call-ended) olayını üretir.
+:::
+
+:::caution `batch-ended` bir teslimat bariyeri değildir
+`batch-ended` almanız, o toplu aramanın **tüm** `call-ended`'lerini çoktan aldığınızı **garanti etmez**. Bir çağrının `call-ended`'i, kendi `batch-ended`'inden **sonra** gelebilir: başarılı bir çağrının `call-ended`'i, transkript ve yapılandırılmış-veri analizi hazır olana kadar bekler; toplu arama ise aramalar biter bitmez `completed`'e döner — ve tüm olaylar gibi teslimatlar bağımsız olarak yeniden denenir, **sıra garantisi yoktur**. Bu yüzden `batch-ended`'i "artık tüm çağrı olayları elimde" sinyali olarak **kullanmayın**. Bir toplu aramanın çağrılarının kesin ve eksiksiz listesine ihtiyacınız olduğunda, her `call-ended`'i topladığınıza güvenmek yerine [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile sayfalayın — kaynak-of-truth API'dir.
 :::
 
 Üst düzey nesne, `call-ended`'den farklıdır: üst seviyede `call_id` **değil** `batch_call_id` taşır ve `data`, bir çağrı nesnesi değil bir **toplu arama özetidir**.

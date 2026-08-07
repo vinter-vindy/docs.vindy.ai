@@ -87,6 +87,7 @@ The full parameter reference, accepted date formats, and copy-paste recipes live
   "data": [
     {
       "call_id": "sess_5f3a9c2b1e7d",
+      "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
       "call_status": "completed",
       "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "call_assistant_name": "Vindy - Asistan",
@@ -114,6 +115,7 @@ The full parameter reference, accepted date formats, and copy-paste recipes live
     },
     {
       "call_id": "sess_6a4b0d3c2f81",
+      "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
       "call_status": "completed",
       "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "call_assistant_name": "Vindy - Asistan",
@@ -164,6 +166,7 @@ The list returns `failed` calls as well as `completed` ones — not only success
 ```json
 {
   "call_id": "sess_7b5c1e4d3a09",
+  "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
   "call_status": "failed",
   "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
   "call_assistant_name": "Vindy - Asistan",
@@ -197,6 +200,7 @@ The list returns `failed` calls as well as `completed` ones — not only success
 | Field | Type | Description |
 |---|---|---|
 | `call_id` | string | The call's stable, unique identifier in our system. Use it wherever an endpoint takes a `:callId` — for example [`GET /v1/calls/:callId`](../get-call.md) to fetch this call or [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md) for a fresh recording link — and to correlate the call with its [`call-ended` webhook](../webhooks.md) payload. |
+| `batch_call_id` | string \| null | The batch (campaign) this call belongs to — the same `batch_call_id` returned by [`POST /v1/calls/bulk`](../bulk-create-calls.md). Use it to group a batch's calls (e.g. when handling `call-ended` webhooks). `null` when the call is not part of a batch: a single call from [`POST /v1/calls`](../create-call.md), or any inbound call. |
 | `call_status` | string | `completed` \| `failed`. Ongoing and cancelled-in-queue calls never reach this list. |
 | `call_assistant_id` | string (UUID) \| null | Assistant that handled the call. |
 | `call_assistant_name` | string \| null | Display name of the assistant. |

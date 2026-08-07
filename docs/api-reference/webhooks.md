@@ -66,6 +66,7 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
   "call_id": "sess_9f2c8a10b3d4",
   "data": {
     "call_id": "sess_9f2c8a10b3d4",
+    "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
     "call_status": "completed",
     "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
     "call_assistant_name": "Vindy - Asistan",
@@ -119,6 +120,7 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
 | Field | Type | Description |
 |---|---|---|
 | `call_id` | string | Stable call id (same value as the top-level `call_id`). |
+| `batch_call_id` | string \| null | The batch (campaign) this call belongs to — the same `batch_call_id` returned by [`POST /v1/calls/bulk`](bulk-create-calls.md). Use it to group a batch's `call-ended` events. `null` when the call is not part of a batch: a single call from [`POST /v1/calls`](create-call.md), or any inbound call. |
 | `call_status` | string | `completed` \| `failed` \| `cancelled`. `cancelled` appears only when you cancelled this as a **single** queued call — that delivery carries a minimal body (see [above](#a-cancelled-single-call)). Physical calls are only ever `completed` or `failed`. |
 | `call_assistant_id` | string (UUID) \| null | Assistant that handled the call. `null` if unknown. |
 | `call_assistant_name` | string \| null | Human-readable assistant name. |
@@ -158,9 +160,10 @@ When you cancel a **single** queued call via [`POST /v1/calls/:callId/cancel`](c
   "call_id": "7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b",
   "data": {
     "call_id": "7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b",
+    "batch_call_id": null,
     "call_status": "cancelled",
     "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
-    "call_assistant_name": null,
+    "call_assistant_name": "Vindy - Asistan",
     "call_phone_number": "+905551112233",
     "call_bound_type": "outbound",
     "call_started_at": null,
@@ -179,10 +182,14 @@ When you cancel a **single** queued call via [`POST /v1/calls/:callId/cancel`](c
 
 ## The `batch-ended` event {#batch-ended}
 
-Fires **once** when a batch — created via [`POST /v1/calls/bulk`](bulk-create-calls.md) — reaches `completed` (**every call in it has reached a terminal state**), **or** when a batch is cancelled via [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) (`status: cancelled`). This is how you know all the calls in a batch are done; use the `counts` breakdown for the outcome, then fetch the calls via [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md).
+Fires **once** when a batch — created via [`POST /v1/calls/bulk`](bulk-create-calls.md) — reaches `completed` (**every call in it has finished dialing and reached a terminal state**), **or** when a batch is cancelled via [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) (`status: cancelled`). It tells you the batch's **dialing is done** — read the `counts` breakdown for the outcome, then fetch the calls via [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md). It does **not** mean every per-call `call-ended` has already been delivered — see the ordering note below.
 
 :::caution How cancellations map to webhooks
-Cancelling a batch sends **one** `batch-ended` event with `status: "cancelled"`. The individual calls that a batch cancel stops do **not** each emit a `call-ended` — they roll up into that single `batch-ended` (this avoids a flood of events on large batch cancels). If you instead cancel a **single** call via [`POST /v1/calls/:callId/cancel`](cancel-call.md), that one call emits its own [`call-ended`](#call-ended) with `call_status: "cancelled"`.
+Cancelling a batch sends **one** `batch-ended` event with `status: "cancelled"`. The individual calls that a batch cancel stops do **not** each emit a `call-ended` — they roll up into that single `batch-ended` (this avoids a flood of events on large batch cancels). Calls in the batch that were **not** cancelled — those that had already run to completion (or were mid-dial and finished) — still emit their **own** `call-ended` as usual; only the queued calls stopped by the batch cancel are rolled up. If you instead cancel a **single** call via [`POST /v1/calls/:callId/cancel`](cancel-call.md), that one call emits its own [`call-ended`](#call-ended) with `call_status: "cancelled"`.
+:::
+
+:::caution `batch-ended` is not a delivery barrier
+Receiving `batch-ended` does **not** guarantee you have already received every `call-ended` for that batch. A call's `call-ended` can arrive **after** its `batch-ended`: a successful call's `call-ended` waits until its transcript and structured-data analysis is ready, while the batch flips to `completed` as soon as dialing finishes — and, like all events, deliveries are retried independently with **no ordering guarantee**. So do **not** treat `batch-ended` as a signal that all per-call events are in. When you need the definitive, complete set of a batch's calls, page [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) — the API is the source of truth — rather than relying on having collected every `call-ended`.
 :::
 
 The top-level object differs from `call-ended`: it carries `batch_call_id` (**not** `call_id`), and `data` is a **batch summary** rather than a call object.

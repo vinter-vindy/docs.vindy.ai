@@ -87,6 +87,7 @@ Parametrelerin tam referansı, kabul edilen tarih biçimleri ve hazır reçetele
   "data": [
     {
       "call_id": "sess_5f3a9c2b1e7d",
+      "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
       "call_status": "completed",
       "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "call_assistant_name": "Vindy - Asistan",
@@ -114,6 +115,7 @@ Parametrelerin tam referansı, kabul edilen tarih biçimleri ve hazır reçetele
     },
     {
       "call_id": "sess_6a4b0d3c2f81",
+      "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
       "call_status": "completed",
       "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "call_assistant_name": "Vindy - Asistan",
@@ -164,6 +166,7 @@ Liste yalnızca başarılı görüşmeleri değil; `completed` çağrıların ya
 ```json
 {
   "call_id": "sess_7b5c1e4d3a09",
+  "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
   "call_status": "failed",
   "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
   "call_assistant_name": "Vindy - Asistan",
@@ -197,6 +200,7 @@ Liste yalnızca başarılı görüşmeleri değil; `completed` çağrıların ya
 | Alan | Tür | Açıklama |
 |---|---|---|
 | `call_id` | string | Çağrının sistemimizdeki kalıcı ve benzersiz kimliği. Bir endpoint `:callId` aldığı her yerde kullanılır — örneğin bu çağrıyı getirmek için [`GET /v1/calls/:callId`](../get-call.md) veya güncel bir kayıt bağlantısı için [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md) — ayrıca çağrıyı [`call-ended` webhook](../webhooks.md) içeriğiyle eşleştirmek için. |
+| `batch_call_id` | string \| null | Bu çağrının ait olduğu batch (kampanya) — [`POST /v1/calls/bulk`](../bulk-create-calls.md)'ın döndürdüğü `batch_call_id` ile aynı. Bir batch'in çağrılarını gruplamak için kullanın (örn. `call-ended` webhook'larını işlerken). Çağrı bir batch'e ait değilse `null`: [`POST /v1/calls`](../create-call.md) ile açılan tekil çağrı veya herhangi bir inbound çağrı. |
 | `call_status` | string | `completed` \| `failed`. Devam eden ve kuyrukta iptal edilen çağrılar bu listeye hiç ulaşmaz. |
 | `call_assistant_id` | string (UUID) \| null | Çağrıyı yöneten asistan. |
 | `call_assistant_name` | string \| null | Asistanın görünen adı. |

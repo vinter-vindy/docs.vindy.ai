@@ -39,6 +39,7 @@ Authorization: Bearer <api-key>
 ```json
 {
   "call_id": "sess_a1b2c3d4e5f6",
+  "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
   "call_status": "completed",
   "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
   "call_assistant_name": "Vindy - Asistan",
@@ -71,6 +72,7 @@ Kuyrukta bekleyen bir giden çağrı, tamamlanana kadar bu minimal yapıyı dön
 ```json
 {
   "call_id": "0f1e2d3c-4b5a-7c88-9d0e-1f2a3b4c5d6e",
+  "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
   "call_status": "scheduled",
   "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
   "call_assistant_name": null,
@@ -96,6 +98,7 @@ Kuyrukta bekleyen bir giden çağrı, tamamlanana kadar bu minimal yapıyı dön
 | Alan | Tür | Açıklama |
 |---|---|---|
 | `call_id` | string | Çağrının kalıcı dize kimliği — yolda gönderdiğiniz değerin aynısı. |
+| `batch_call_id` | string \| null | Bu çağrının ait olduğu batch (kampanya) — [`POST /v1/calls/bulk`](bulk-create-calls.md)'ın döndürdüğü `batch_call_id` ile aynı. Bir batch'in çağrılarını gruplamak için kullanın (örn. `call-ended` webhook'larını işlerken). Çağrı bir batch'e ait değilse `null`: [`POST /v1/calls`](create-call.md) ile açılan tekil çağrı veya herhangi bir inbound çağrı. |
 | `call_status` | string | Sonlanmış bir çağrı için `completed` veya `failed`. Hâlâ kuyrukta veya devam ederken çekilen bir giden çağrı için ise bu, kuyruk durumudur: `pending`, `scheduled`, `in_progress` veya `cancelled`. Fiziksel bir çağrı asla `cancelled` olmaz — iptal edilen kuyruktaki bir çağrı hiçbir zaman fiziksel bir çağrıya dönüşmez. |
 | `call_metadata` | object \| null | [`POST /v1/calls/bulk`](bulk-create-calls.md) ile gönderdiğiniz metadata; aynen geri döner. Çağrı metadata ile oluşturulmadıysa `null` olur. |
 | `call_variables` | obje \| null | Bu çağrı için gönderilen şablon değişkenleri, aynen geri döner — çağrıyı oluştururken `variables` olarak gönderdiğiniz obje. Gönderilmediyse (ör. inbound çağrılar) `null`. |

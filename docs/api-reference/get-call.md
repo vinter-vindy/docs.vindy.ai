@@ -39,6 +39,7 @@ Same shape as a [`POST /v1/calls/list`](list-calls/index.md) `data[]` item:
 ```json
 {
   "call_id": "sess_a1b2c3d4e5f6",
+  "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
   "call_status": "completed",
   "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
   "call_assistant_name": "Vindy - Asistan",
@@ -71,6 +72,7 @@ A queued outbound call returns this minimal shape until it completes:
 ```json
 {
   "call_id": "0f1e2d3c-4b5a-7c88-9d0e-1f2a3b4c5d6e",
+  "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
   "call_status": "scheduled",
   "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
   "call_assistant_name": null,
@@ -96,6 +98,7 @@ The call object has the **same fields** as a [List Calls](list-calls/index.md#re
 | Field | Type | Description |
 |---|---|---|
 | `call_id` | string | The call's stable string id — the same value you pass in the path. |
+| `batch_call_id` | string \| null | The batch (campaign) this call belongs to — the same `batch_call_id` returned by [`POST /v1/calls/bulk`](bulk-create-calls.md). Use it to group a batch's calls (e.g. when handling `call-ended` webhooks). `null` when the call is not part of a batch: a single call from [`POST /v1/calls`](create-call.md), or any inbound call. |
 | `call_status` | string | For a terminal call, `completed` or `failed`. For an outbound call fetched while still queued or in progress, this is the queue status instead: `pending`, `scheduled`, `in_progress`, or `cancelled`. A physical call is never `cancelled` — a cancelled queued call simply never becomes one. |
 | `call_metadata` | object \| null | The metadata you sent via [`POST /v1/calls/bulk`](bulk-create-calls.md), echoed back verbatim. `null` if the call wasn't created with metadata. |
 | `call_variables` | object \| null | The template variables sent for this call, echoed back verbatim — the same object you passed as `variables` when creating the call. `null` when none were sent (e.g. inbound calls). |

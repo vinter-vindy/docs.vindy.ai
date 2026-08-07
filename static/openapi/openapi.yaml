@@ -745,6 +745,13 @@ components:
         call_id:
           type: string
           description: Stable, opaque call id (a string). Use in GET /v1/calls/{callId}/recording-url.
+        batch_call_id:
+          type: [string, 'null']
+          description: >
+            The batch (campaign) this call belongs to — the same `batch_call_id` returned by
+            POST /v1/calls/bulk. Use it to group a batch's calls (e.g. when handling `call-ended`
+            webhooks). `null` when the call is not part of a batch: a single call from POST /v1/calls,
+            or any inbound call.
         call_status:
           type: string
           enum: [completed, failed, cancelled, pending, scheduled, in_progress]
