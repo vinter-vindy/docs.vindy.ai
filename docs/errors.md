@@ -32,6 +32,7 @@ All error responses share the same JSON shape — see the [error format](concept
 | `ASSISTANT_NOT_FOUND` | 404 | Assistant not found, not in your company, or not callable. | Verify the `assistant_id`. |
 | `PHONE_NUMBER_NOT_FOUND` | 404 | The `phone_number_id` on `POST /v1/calls/bulk` is unknown, malformed, or not in your company. | Pick a caller line from [`GET /v1/phone-numbers`](api-reference/list-phone-numbers.md). |
 | `PHONE_NUMBER_NOT_USABLE` | 400 | The `phone_number_id` line exists but is not ready for outbound (not provisioned). | Choose a provisioned line from [`GET /v1/phone-numbers`](api-reference/list-phone-numbers.md). |
+| `INVALID_CALLING_WINDOW` | 400 | The `calling_window` on `POST /v1/calls/bulk` is invalid (bad timezone, `start ≥ end`, empty/invalid `days`, or bad `HH:MM`). | Fix the window shape. See [Create a Call Batch](api-reference/bulk-create-calls.md#calling-window). |
 | `RECORDING_NOT_AVAILABLE` | 404 | The call exists but no recording was ever produced for it. **Terminal.** | Don't retry. See [Get a Recording URL](api-reference/get-recording-url.md). |
 | `RECORDING_NOT_READY` | 409 | A recording exists but is not downloadable yet. | Try again shortly. See [Get a Recording URL](api-reference/get-recording-url.md). |
 | `ERR_CALL_NOT_CANCELLABLE` | 409 | Only a call still in the queue can be cancelled; this one is already being dialed (or was just dispatched). | Don't retry; wait for the outcome. See [Cancel a Call](api-reference/cancel-call.md). |

@@ -889,6 +889,7 @@ components:
                 - ASSISTANT_NOT_FOUND
                 - PHONE_NUMBER_NOT_FOUND
                 - PHONE_NUMBER_NOT_USABLE
+                - INVALID_CALLING_WINDOW
                 - RECORDING_NOT_AVAILABLE
                 - RECORDING_NOT_READY
                 - ERR_CALL_NOT_CANCELLABLE
@@ -984,6 +985,52 @@ components:
             or ...Z). A value with no offset is treated as UTC. There is no future
             check (a past time starts ≈immediately); an unparseable value is rejected
             with 400 VALIDATION_FAILED.
+        calling_window:
+          description: >
+            Optional business-hours window for the whole batch. Calls are only
+            dialed inside it; calls that come due outside it are deferred to the
+            next opening (not rejected). scheduled_at is also clamped into the
+            window. Omit (or send null) to apply the platform's default
+            business-hours window — currently weekday (Mon–Fri) 09:00–18:00
+            Europe/Istanbul, configurable by the platform via
+            CALLING_WINDOW_DEFAULT_*. Invalid → 400 INVALID_CALLING_WINDOW.
+          oneOf:
+            - $ref: '#/components/schemas/CallingWindow'
+            - type: 'null'
+
+    CallingWindow:
+      type: object
+      required: [start, end, days]
+      description: >
+        Recurring weekly business-hours rule (days-of-week, not calendar dates).
+        Applied to a whole batch; out-of-window calls are deferred to the next
+        opening.
+      properties:
+        timezone:
+          type: string
+          description: >
+            IANA timezone name (e.g. Europe/Istanbul); the window's hours are
+            interpreted in this zone. Omit to default to Europe/Istanbul.
+        start:
+          type: string
+          description: Opening time, HH:MM (24-hour).
+          example: '09:00'
+        end:
+          type: string
+          description: >
+            Closing time, HH:MM. Must be after start — overnight windows
+            (crossing midnight) are not supported.
+          example: '18:00'
+        days:
+          type: array
+          description: >
+            Days of the week the window is active, ISO numbering 1=Monday .. 7=Sunday.
+            A non-empty subset of 1..7.
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+          example: [1, 2, 3, 4, 5]
 
     CreateCallRequest:
       type: object
@@ -1031,7 +1078,7 @@ components:
 
     BulkCreateCallsResponse:
       type: object
-      required: [batch_call_id, accepted]
+      required: [batch_call_id, accepted, calling_window]
       properties:
         batch_call_id:
           type: string
@@ -1042,9 +1089,20 @@ components:
         accepted:
           type: integer
           description: Number of calls queued.
+        calling_window:
+          allOf:
+            - $ref: '#/components/schemas/CallingWindow'
+          description: >
+            The business-hours window applied to this batch — your normalized
+            window, or the platform default if you omitted it. Always present.
       example:
         batch_call_id: '842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b'
         accepted: 2
+        calling_window:
+          timezone: Europe/Istanbul
+          start: '09:00'
+          end: '18:00'
+          days: [1, 2, 3, 4, 5]
 
     CancelCallResponse:
       type: object
@@ -1128,6 +1186,13 @@ components:
         status:
           type: string
           description: 'Campaign status — active, completed, or cancelled.'
+        calling_window:
+          oneOf:
+            - $ref: '#/components/schemas/CallingWindow'
+            - type: 'null'
+          description: >
+            The business-hours window applied to this batch. Null if the batch
+            has no calls.
         data:
           type: array
           items:

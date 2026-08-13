@@ -55,6 +55,7 @@ Gövde opsiyoneldir — ilk sayfayı varsayılan limitle almak için `{}` (veya 
 {
   "batch_call_id": "842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f",
   "status": "completed",
+  "calling_window": { "timezone": "Europe/Istanbul", "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] },
   "data": [
     {
       "call_id": "sess_a1b2c3d4e5f6",
@@ -100,6 +101,7 @@ Gövde opsiyoneldir — ilk sayfayı varsayılan limitle almak için `{}` (veya 
 |---|---|---|
 | `batch_call_id` | string | Sorguladığınız toplu arama (yolda gönderdiğiniz `batchId`). |
 | `status` | string | Toplu aramanın güncel durumu — `active`, `completed` veya `cancelled`. |
+| `calling_window` | object \| null | Toplu aramanın arama penceresi (uygulanan mesai penceresi). Batch'in hiç çağrısı yoksa `null`. |
 | `data` | array | Bu sayfadaki çağrı nesneleri — bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı yapı**. |
 | `pagination` | object | Standart [sayfalama nesnesi](list-calls/filtering-pagination.md#paginated). |
 
