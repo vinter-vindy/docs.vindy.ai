@@ -31,7 +31,6 @@ Content-Type: application/json
   "phone_number_id": "2a80da64-32dc-4837-b880-e6dc9ccd632d",
   "variables": { "company": "Vindy" },
   "scheduled_at": "2026-06-10T09:00:00+03:00",
-  "calling_window": { "timezone": "Europe/Istanbul", "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] },
   "calls": [
     { "phone_number": "+905551112233", "variables": { "first_name": "Ahmet" }, "metadata": { "crm_contact_id": "CNT-90412" } },
     { "phone_number": "05554445566", "variables": { "first_name": "Ayşe" }, "metadata": { "crm_contact_id": "CNT-90413" } }
@@ -51,7 +50,6 @@ Content-Type: application/json
 | `calls[].variables` | object | no | **Per-call** template variables for this number (e.g. `{ "first_name": "Ahmet" }`). Merged over the request-level `variables` (the per-call value wins). See [Variables](#variables). |
 | `calls[].metadata` | object | no | Optional key-value object (see [Metadata](#metadata) limits). Returned verbatim. |
 | `scheduled_at` | ISO 8601 datetime | no | If set, the whole batch is queued to start at this **future** time instead of immediately. Send an ISO 8601 date-time **with a timezone offset** — see [Scheduling](#scheduled-at). |
-| `calling_window` | object \| null | no | Optional **business-hours window** for the whole batch — calls are only dialed inside it; those that come due outside it are **deferred**, not rejected. Omit to use the platform's default business-hours window. See [Calling window](#calling-window). |
 
 ### Phone numbers {#phone-numbers}
 
@@ -130,47 +128,12 @@ By default the whole batch is queued immediately. To start it later, send `sched
 - **No future check:** a time in the past queues the batch to start on the next dispatch cycle (≈immediately). To start now, simply omit `scheduled_at`.
 - A value that isn't a valid ISO 8601 date-time (e.g. `10.06.2026`, `now`) is rejected with **`400 VALIDATION_FAILED`**.
 
-### Calling window {#calling-window}
-
-`calling_window` restricts the hours during which the batch's calls may be dialed (business hours). It applies to the **whole batch**. Calls that come due outside the window are **not rejected — they are deferred** to the next opening, so a batch is only ever dialed during its allowed hours.
-
-```json
-{
-  "timezone": "Europe/Istanbul",
-  "start": "09:00",
-  "end": "18:00",
-  "days": [1, 2, 3, 4, 5]
-}
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `timezone` | string | IANA timezone name (e.g. `Europe/Istanbul`). The window's hours are interpreted in this zone. Omit to default to `Europe/Istanbul`. |
-| `start` | string | Opening time, `HH:MM` (24-hour). |
-| `end` | string | Closing time, `HH:MM`. Must be **after** `start` — overnight windows (crossing midnight) are not supported. |
-| `days` | array | Days of the **week** the window is active, ISO numbering **1 = Monday … 7 = Sunday**; a non-empty subset of `1..7`. |
-
-- **Recurring weekly rule, not calendar dates.** `days` are weekdays, so the window repeats every week.
-- **Whole batch.** Every call in the request obeys the same window.
-- **`scheduled_at` is clamped too.** The effective start is the later of `scheduled_at` and now, then moved into the window — if `scheduled_at` falls outside the window, dialing begins at the next opening after it.
-- **Omitted or `null` → platform default.** If you don't send `calling_window` (or send `null`), the platform's default business-hours window is applied — currently **weekday (Mon–Fri) 09:00–18:00 Europe/Istanbul** (`days: [1, 2, 3, 4, 5]`), configurable by the platform via `CALLING_WINDOW_DEFAULT_*`. The window that was actually **applied** is echoed back in the response's `calling_window`, so you can always confirm exactly what was used.
-
-An invalid `calling_window` (bad timezone, `start ≥ end`, empty or out-of-range `days`, or a malformed `HH:MM`) is rejected with **`400 INVALID_CALLING_WINDOW`**:
-
-```json
-{
-  "message": "calling_window is invalid. Provide { timezone: IANA name, start: 'HH:MM', end: 'HH:MM' (start before end, same day), days: non-empty list of ISO weekdays 1-7 (Mon=1..Sun=7) }.",
-  "extensions": { "code": "INVALID_CALLING_WINDOW" }
-}
-```
-
 ## Response (201 Created)
 
 ```json
 {
   "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
-  "accepted": 2,
-  "calling_window": { "timezone": "Europe/Istanbul", "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] }
+  "accepted": 2
 }
 ```
 
@@ -178,7 +141,6 @@ An invalid `calling_window` (bad timezone, `start ≥ end`, empty or out-of-rang
 |---|---|---|
 | `batch_call_id` | string (UUID) | Identifier of the created batch (campaign). **Always present** — `/v1/calls/bulk` always creates a batch, even for a single number. **Keep it** to cancel the batch later via [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) or to list its calls via [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md). For a one-off call with no batch, use [`POST /v1/calls`](create-call.md) instead. |
 | `accepted` | int | Number of calls queued. |
-| `calling_window` | object | The calling window **applied** to this batch — your normalized window, or the platform default if you didn't send one. **Always present.** See [Calling window](#calling-window). |
 
 :::info Correlating results — no per-call ids are returned
 By design, the bulk response returns **only** `batch_call_id` and `accepted` — it does **not** list a `call_id` for each queued call (returning up to 1000 ids on every batch is unnecessary overhead). You correlate results in one of two ways:
@@ -204,7 +166,6 @@ When a `batch_call_id` was returned (a multi-call batch), page through its calls
 | `400` | `INVALID_VARIABLES` | A `variables` object violates the limits or uses an invalid value type. For a per-call value the offending index is in `extensions.index`; a request-level violation reports `index: -1`. |
 | `400` | `INVALID_METADATA` | A call's metadata violates the limits or uses an invalid value type. The offending index is in `extensions.index`. |
 | `400` | `PHONE_NUMBER_NOT_USABLE` | The `phone_number_id` line exists but is not ready for outbound (not provisioned). |
-| `400` | `INVALID_CALLING_WINDOW` | The `calling_window` is invalid — bad timezone, `start ≥ end`, empty/out-of-range `days`, or malformed `HH:MM`. |
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Auth errors. |
 | `404` | `ASSISTANT_NOT_FOUND` | Assistant not found, not in your company, or not callable. |
 | `404` | `PHONE_NUMBER_NOT_FOUND` | The `phone_number_id` is unknown, malformed, or not in your company. Pick one from [`GET /v1/phone-numbers`](list-phone-numbers.md). |

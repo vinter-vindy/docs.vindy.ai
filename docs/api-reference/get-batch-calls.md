@@ -55,7 +55,6 @@ The body is optional — send `{}` (or nothing) to get the first page with the d
 {
   "batch_call_id": "842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f",
   "status": "completed",
-  "calling_window": { "timezone": "Europe/Istanbul", "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] },
   "data": [
     {
       "call_id": "sess_a1b2c3d4e5f6",
@@ -101,7 +100,6 @@ The body is optional — send `{}` (or nothing) to get the first page with the d
 |---|---|---|
 | `batch_call_id` | string | The batch you queried (the `batchId` you passed in the path). |
 | `status` | string | The batch's current status — `active`, `completed`, or `cancelled`. |
-| `calling_window` | object \| null | The batch's calling window (the applied business-hours window). `null` if the batch has no calls. |
 | `data` | array | Call objects in this page — **same shape** as a [List Calls](list-calls/index.md#response-fields) item. |
 | `pagination` | object | Standard [pagination object](list-calls/filtering-pagination.md#paginated). |
 
