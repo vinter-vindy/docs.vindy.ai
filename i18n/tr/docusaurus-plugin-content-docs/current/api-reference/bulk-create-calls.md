@@ -31,9 +31,10 @@ Content-Type: application/json
   "phone_number_id": "2a80da64-32dc-4837-b880-e6dc9ccd632d",
   "variables": { "company": "Vindy" },
   "scheduled_at": "2026-06-10T09:00:00+03:00",
+  "calling_window": { "timezone": "Europe/Istanbul", "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] },
   "calls": [
     { "phone_number": "+905551112233", "variables": { "first_name": "Ahmet" }, "metadata": { "crm_contact_id": "CNT-90412" } },
-    { "phone_number": "05554445566", "variables": { "first_name": "Ayşe" }, "metadata": { "crm_contact_id": "CNT-90413" } }
+    { "phone_number": "+905554445566", "variables": { "first_name": "Ayşe" }, "metadata": { "crm_contact_id": "CNT-90413" } }
   ]
 }
 ```
@@ -50,21 +51,22 @@ Content-Type: application/json
 | `calls[].variables` | object | hayır | Bu numaraya özel **çağrı-başı** şablon değişkenleri (örneğin `{ "first_name": "Ahmet" }`). İstek düzeyindeki `variables` üzerine birleştirilir (çağrı-başı değer kazanır). Bkz. [Değişkenler](#variables). |
 | `calls[].metadata` | object | hayır | İsteğe bağlı anahtar-değer nesnesi (bkz. [Metadata](#metadata) limitleri). Aynen geri döner. |
 | `scheduled_at` | ISO 8601 datetime | hayır | Verilirse, toplu arama hemen değil bu **ileri** zamanda başlatılmak üzere kuyruğa alınır. **Timezone offset'li** bir ISO 8601 tarih-saat gönderin — bkz. [Zamanlama](#scheduled-at). |
+| `calling_window` | object \| null | hayır | Tüm batch için isteğe bağlı **mesai (business-hours) penceresi** — çağrılar yalnız pencere içinde çevrilir; pencere dışında sıraya düşenler reddedilmez, **ertelenir**. Verilmezse platformun varsayılan mesai penceresi uygulanır. Bkz. [Arama penceresi](#calling-window). |
 
 ### Telefon numaraları {#phone-numbers}
 
-Numaralar aranmadan önce E.164 biçimine normalize edilir. Yaygın ayraçlar — boşluk, tire ve parantez — tolere edilip temizlenir; bu nedenle `+90 555 111 22 33` ve `0555-111-2233` gibi numaralar da kabul edilir.
+Numaralar tam uluslararası **E.164** biçiminde verilmelidir: baştan `+`, sonra ülke kodu, sonra numara. Yaygın ayraçlar — boşluk, tire ve parantez — tolere edilip temizlenir; bu nedenle `+90 555 111 22 33` da kabul edilir.
 
-| Gönderdiğiniz | Normalize edilir |
+| Gönderdiğiniz | Sonuç |
 |---|---|
-| `+905551112233` | `+905551112233` |
-| `905551112233` | `+905551112233` |
-| `05551112233` | `+905551112233` |
-| `5551112233` | `+905551112233` |
-| `00905551112233` | `+905551112233` |
-| `+441632960000` | `+441632960000` |
+| `+905551112233` | `+905551112233` — kabul |
+| `+90 555 111 22 33` | `+905551112233` — ayraçlar temizlenir |
+| `+441632960000` | `+441632960000` — kabul |
+| `05551112233` | **Reddedilir** — `400 INVALID_PHONE_NUMBER` (baştan `+` yok) |
+| `5551112233` | **Reddedilir** — baştan `+` yok |
+| `905551112233` | **Reddedilir** — baştan `+` yok |
 
-Türkiye biçimleri — baştaki `0`, `90`/`0090` ülke öneki veya 10 haneli düz bir numara — `+90…` biçimine normalize edilir. `+` ile uluslararası biçimde (8–15 hane) yazılmış bir numara **olduğu gibi** korunur. Normalize edilemeyen her şey **`400 INVALID_PHONE_NUMBER`** ile reddedilir ve hatalı dizi konumu `extensions.index` içinde döner.
+**Hiçbir ülkeye özel normalizasyon yoktur** — baştan `+` olmayan numara **`400 INVALID_PHONE_NUMBER`** ile reddedilir (toplu istekte hatalı dizi konumu `extensions.index` içindedir). Her numarayı tam E.164 (`+` + ülke kodu + numara) verin.
 
 Kabul edilen numaralar normalize edilmiş biçimde saklanır ve aranır; bu değeri daha sonra liste, tekil çağrı ve webhook yanıtlarında `call_phone_number` olarak görürsünüz.
 
@@ -128,12 +130,47 @@ Varsayılan olarak tüm batch hemen kuyruğa alınır. İleri bir zamanda başla
 - **Gelecek-zaman doğrulaması yok:** geçmiş bir zaman, batch'i bir sonraki dağıtım döngüsünde (≈hemen) başlatılmak üzere kuyruğa alır. Hemen başlatmak için `scheduled_at`'i hiç göndermeyin.
 - Geçerli bir ISO 8601 tarih-saat olmayan değer (ör. `10.06.2026`, `now`) **`400 VALIDATION_FAILED`** ile reddedilir.
 
+### Arama penceresi {#calling-window}
+
+`calling_window`, batch'in çağrılarının çevrilebileceği saatleri kısıtlar (mesai saatleri). **Tüm batch'e** uygulanır. Pencere dışında sıraya düşen çağrılar **reddedilmez — bir sonraki açılışa ertelenir**; böylece batch yalnız izinli saatlerde çevrilir.
+
+```json
+{
+  "timezone": "Europe/Istanbul",
+  "start": "09:00",
+  "end": "18:00",
+  "days": [1, 2, 3, 4, 5]
+}
+```
+
+| Alan | Tür | Açıklama |
+|---|---|---|
+| `timezone` | string | IANA timezone adı (ör. `Europe/Istanbul`). Pencere saatleri bu dilimde yorumlanır. Verilmezse `Europe/Istanbul` varsayılır. |
+| `start` | string | Açılış saati, `HH:MM` (24 saat). |
+| `end` | string | Kapanış saati, `HH:MM`. `start`'tan **sonra** olmalı — gece-aşan (yarım geceyi geçen) pencere desteklenmez. |
+| `days` | array | Pencerenin aktif olduğu **haftanın günleri**, ISO numaralandırma **1 = Pazartesi … 7 = Pazar**; boş olmayan bir `1..7` alt kümesi. |
+
+- **Takvim tarihi değil, haftalık tekrarlayan kural.** `days` haftanın günleridir, yani pencere her hafta tekrarlanır.
+- **Tüm batch.** İstekteki her çağrı aynı pencereye uyar.
+- **`scheduled_at` de kırpılır.** Efektif başlangıç, `scheduled_at` ile şimdinin büyüğüdür ve sonra pencereye taşınır — `scheduled_at` pencere dışına düşerse çevirme ondan sonraki ilk açılışta başlar.
+- **Verilmezse veya `null` → platform varsayılanı.** `calling_window` göndermezseniz (ya da `null` gönderirseniz) platformun varsayılan mesai penceresi uygulanır — şu an **hafta içi (Pzt–Cuma) 09:00–18:00 Europe/Istanbul** (`days: [1, 2, 3, 4, 5]`), platform tarafından `CALLING_WINDOW_DEFAULT_*` ile ayarlanabilir. **Uygulanan** pencere yanıttaki `calling_window` alanında geri döner; böylece ne kullanıldığını her zaman görebilirsiniz.
+
+Geçersiz bir `calling_window` (bozuk timezone, `start ≥ end`, boş veya aralık-dışı `days`, ya da bozuk `HH:MM`) **`400 INVALID_CALLING_WINDOW`** ile reddedilir:
+
+```json
+{
+  "message": "calling_window is invalid. Provide { timezone: IANA name, start: 'HH:MM', end: 'HH:MM' (start before end, same day), days: non-empty list of ISO weekdays 1-7 (Mon=1..Sun=7) }.",
+  "extensions": { "code": "INVALID_CALLING_WINDOW" }
+}
+```
+
 ## Yanıt (201 Created)
 
 ```json
 {
   "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
-  "accepted": 2
+  "accepted": 2,
+  "calling_window": { "timezone": "Europe/Istanbul", "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] }
 }
 ```
 
@@ -141,6 +178,7 @@ Varsayılan olarak tüm batch hemen kuyruğa alınır. İleri bir zamanda başla
 |---|---|---|
 | `batch_call_id` | string (UUID) | Oluşturulan toplu aramanın (kampanya) kimliği. **Her zaman gelir** — `/v1/calls/bulk` tek numara için bile toplu arama oluşturur. Toplu aramayı daha sonra [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) ile iptal etmek veya çağrılarını [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile listelemek için **saklayın**. Toplu arama olmadan tekil çağrı için [`POST /v1/calls`](create-call.md) kullanın. |
 | `accepted` | int | Kuyruğa alınan çağrı sayısı. |
+| `calling_window` | object | Bu batch'e **uygulanan** arama penceresi — gönderdiğiniz normalize pencere ya da göndermediyseniz platform varsayılanı. **Her zaman gelir.** Bkz. [Arama penceresi](#calling-window). |
 
 :::info Sonuçları eşleştirme — per-call id dönmez
 Tasarım gereği bulk yanıtı **yalnızca** `batch_call_id` ve `accepted` döndürür — kuyruğa alınan her çağrı için ayrı bir `call_id` **listelemez** (her batch'te 1000'e kadar id döndürmek gereksiz yüktür). Sonuçları iki yoldan eşleştirirsiniz:
@@ -166,6 +204,7 @@ Bir `batch_call_id` döndüyse (çok çağrılı bir batch), çağrılarını ta
 | `400` | `INVALID_VARIABLES` | Bir `variables` nesnesi limitleri aşıyor veya geçersiz bir değer tipi kullanıyor. Çağrı-başı bir değer için hatalı indeks `extensions.index` içindedir; istek düzeyindeki bir ihlal `index: -1` bildirir. |
 | `400` | `INVALID_METADATA` | Bir çağrının metadata'sı limitleri aşıyor veya geçersiz bir değer tipi kullanıyor. Hatalı indeks `extensions.index` içindedir. |
 | `400` | `PHONE_NUMBER_NOT_USABLE` | `phone_number_id` hattı mevcut ama giden arama için hazır değil (provisioned değil). |
+| `400` | `INVALID_CALLING_WINDOW` | `calling_window` geçersiz — bozuk timezone, `start ≥ end`, boş/aralık-dışı `days` veya bozuk `HH:MM`. |
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları. |
 | `404` | `ASSISTANT_NOT_FOUND` | Asistan bulunamadı, sizin şirketinize ait değil veya arama için uygun değil. |
 | `404` | `PHONE_NUMBER_NOT_FOUND` | `phone_number_id` bilinmiyor, hatalı biçimli veya şirketinize ait değil. [`GET /v1/phone-numbers`](list-phone-numbers.md) yanıtından birini seçin. |
@@ -193,7 +232,7 @@ curl -X POST https://api.vindy.ai/v1/calls/bulk \
     "phone_number_id": "2a80da64-32dc-4837-b880-e6dc9ccd632d",
     "calls": [
       { "phone_number": "+905551112233", "metadata": { "crm_contact_id": "CNT-90412" } },
-      { "phone_number": "05554445566", "metadata": { "crm_contact_id": "CNT-90413" } }
+      { "phone_number": "+905554445566", "metadata": { "crm_contact_id": "CNT-90413" } }
     ]
   }'
 # → { "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479", "accepted": 2 }
@@ -233,7 +272,7 @@ await createBulkCalls(
   "2a80da64-32dc-4837-b880-e6dc9ccd632d",
   [
     { phone_number: "+905551112233", metadata: { crm_contact_id: "CNT-90412" } },
-    { phone_number: "05554445566", metadata: { crm_contact_id: "CNT-90413" } },
+    { phone_number: "+905554445566", metadata: { crm_contact_id: "CNT-90413" } },
   ],
 );
 ```
@@ -267,7 +306,7 @@ create_bulk_calls(
     "2a80da64-32dc-4837-b880-e6dc9ccd632d",
     [
         {"phone_number": "+905551112233", "metadata": {"crm_contact_id": "CNT-90412"}},
-        {"phone_number": "05554445566", "metadata": {"crm_contact_id": "CNT-90413"}},
+        {"phone_number": "+905554445566", "metadata": {"crm_contact_id": "CNT-90413"}},
     ],
 )
 ```

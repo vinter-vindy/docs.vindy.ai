@@ -27,7 +27,7 @@ Content-Type: application/json
 {
   "assistant_id": "8f3a1c2e-4b5d-6e7f-8a9b-0c1d2e3f4a5b",
   "phone_number_id": "2a80da64-32dc-4837-b880-e6dc9ccd632d",
-  "phone_number": "05551112233",
+  "phone_number": "+905551112233",
   "variables": { "first_name": "Ahmet", "appointment_time": "14:30" },
   "metadata": { "crm_contact_id": "CNT-90412" },
   "scheduled_at": "2026-08-01T09:00:00Z"
@@ -38,7 +38,7 @@ Content-Type: application/json
 |---|---|---|
 | `assistant_id` | string (UUID) | **Required.** The assistant that will handle the call. From [`GET /v1/assistants`](list-assistants.md). |
 | `phone_number_id` | string (UUID) | **Required.** The caller line the call is placed **from**. Must be one returned by [`GET /v1/phone-numbers`](list-phone-numbers.md) (owned by your organization and ready for outbound). |
-| `phone_number` | string | **Required.** The number to call — E.164 (`+90…`) or a Turkish local number (`05…`), normalized to `+90…`. |
+| `phone_number` | string | **Required.** The number to call, in full international **E.164** format (a leading `+`, then country code, then the number — e.g. `+905551112233`). Common separators (spaces, dashes, parentheses) are tolerated and stripped. There is **no country-specific normalization** — a number without a leading `+` is rejected with **`400 INVALID_PHONE_NUMBER`**. |
 | `variables` | object \| null | Optional **template variables**. Fills the `{{placeholder}}` tokens in the assistant's prompt and greeting for this call — a JSON object of `name → value` (multiple keys allowed). Unlike `metadata` (echoed back, does not affect the call), **variables change what the assistant says**. Values may be string/number/boolean (coerced to string); ≤50 keys, key ≤40 chars, value ≤500 chars, no nesting. The names an assistant expects are listed in `assistant_variables` from [`GET /v1/assistants`](list-assistants.md). |
 | `metadata` | object \| null | Optional opaque object echoed back verbatim on the call (≤50 keys; key ≤40, value ≤500; string/number/boolean; no nesting). Does **not** affect the call. |
 | `scheduled_at` | ISO 8601 datetime \| null | Optional future time to place the call. Omit to dispatch as soon as capacity allows. Send an ISO 8601 date-time **with a timezone offset** — see [Scheduling](#scheduled-at). |
@@ -95,7 +95,7 @@ curl -X POST https://api.vindy.ai/v1/calls \
   -d '{
     "assistant_id": "8f3a1c2e-4b5d-6e7f-8a9b-0c1d2e3f4a5b",
     "phone_number_id": "2a80da64-32dc-4837-b880-e6dc9ccd632d",
-    "phone_number": "05551112233"
+    "phone_number": "+905551112233"
   }'
 ```
 
@@ -112,7 +112,7 @@ const res = await fetch("https://api.vindy.ai/v1/calls", {
   body: JSON.stringify({
     assistant_id: "8f3a1c2e-4b5d-6e7f-8a9b-0c1d2e3f4a5b",
     phone_number_id: "2a80da64-32dc-4837-b880-e6dc9ccd632d",
-    phone_number: "05551112233",
+    phone_number: "+905551112233",
   }),
 });
 const { call_id } = await res.json();
@@ -131,7 +131,7 @@ res = requests.post(
     json={
         "assistant_id": "8f3a1c2e-4b5d-6e7f-8a9b-0c1d2e3f4a5b",
         "phone_number_id": "2a80da64-32dc-4837-b880-e6dc9ccd632d",
-        "phone_number": "05551112233",
+        "phone_number": "+905551112233",
     },
 )
 print(res.json()["call_id"])

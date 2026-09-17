@@ -27,7 +27,7 @@ Content-Type: application/json
 {
   "assistant_id": "8f3a1c2e-4b5d-6e7f-8a9b-0c1d2e3f4a5b",
   "phone_number_id": "2a80da64-32dc-4837-b880-e6dc9ccd632d",
-  "phone_number": "05551112233",
+  "phone_number": "+905551112233",
   "variables": { "first_name": "Ahmet", "appointment_time": "14:30" },
   "metadata": { "crm_contact_id": "CNT-90412" },
   "scheduled_at": "2026-08-01T09:00:00Z"
@@ -38,7 +38,7 @@ Content-Type: application/json
 |---|---|---|
 | `assistant_id` | string (UUID) | **Zorunlu.** Çağrıyı yürütecek asistan. [`GET /v1/assistants`](list-assistants.md)'ten. |
 | `phone_number_id` | string (UUID) | **Zorunlu.** Çağrının yapılacağı arayan (caller) hat. [`GET /v1/phone-numbers`](list-phone-numbers.md)'in döndürdüğü (organizasyonunuza ait, outbound'a hazır) hatlardan biri olmalı. |
-| `phone_number` | string | **Zorunlu.** Aranacak numara — E.164 (`+90…`) veya TR yerel (`05…`), `+90…`'a normalize edilir. |
+| `phone_number` | string | **Zorunlu.** Aranacak numara, tam uluslararası **E.164** biçiminde (baştan `+`, sonra ülke kodu, sonra numara — ör. `+905551112233`). Yaygın ayraçlar (boşluk, tire, parantez) tolere edilip temizlenir. **Hiçbir ülkeye özel normalizasyon yoktur** — baştan `+` olmayan numara **`400 INVALID_PHONE_NUMBER`** ile reddedilir. |
 | `variables` | object \| null | Opsiyonel **şablon değişkenleri**. Asistanın prompt ve greeting'indeki `{{yer_tutucu}}` ifadelerini bu çağrı için doldurur — `ad → değer` JSON objesi (çok anahtar olabilir). `metadata`'dan farklı olarak (echo-back, çağrıyı etkilemez), **variables asistanın söylediğini değiştirir**. Değerler string/number/boolean olabilir (string'e çevrilir); ≤50 anahtar, anahtar ≤40, değer ≤500, iç içe yok. Bir asistanın beklediği adlar [`GET /v1/assistants`](list-assistants.md) → `assistant_variables`'ta listelenir. |
 | `metadata` | object \| null | Opsiyonel opak obje; çağrıda aynen geri döner (≤50 anahtar; anahtar ≤40, değer ≤500; string/number/boolean; iç içe yok). Çağrıyı **etkilemez**. |
 | `scheduled_at` | ISO 8601 datetime \| null | Opsiyonel ileri tarih. Boşsa kapasite oldukça dağıtılır. **Timezone offset'li** bir ISO 8601 tarih-saat gönderin — bkz. [Zamanlama](#scheduled-at). |
@@ -95,7 +95,7 @@ curl -X POST https://api.vindy.ai/v1/calls \
   -d '{
     "assistant_id": "8f3a1c2e-4b5d-6e7f-8a9b-0c1d2e3f4a5b",
     "phone_number_id": "2a80da64-32dc-4837-b880-e6dc9ccd632d",
-    "phone_number": "05551112233"
+    "phone_number": "+905551112233"
   }'
 ```
 
@@ -112,7 +112,7 @@ const res = await fetch("https://api.vindy.ai/v1/calls", {
   body: JSON.stringify({
     assistant_id: "8f3a1c2e-4b5d-6e7f-8a9b-0c1d2e3f4a5b",
     phone_number_id: "2a80da64-32dc-4837-b880-e6dc9ccd632d",
-    phone_number: "05551112233",
+    phone_number: "+905551112233",
   }),
 });
 const { call_id } = await res.json();
@@ -131,7 +131,7 @@ res = requests.post(
     json={
         "assistant_id": "8f3a1c2e-4b5d-6e7f-8a9b-0c1d2e3f4a5b",
         "phone_number_id": "2a80da64-32dc-4837-b880-e6dc9ccd632d",
-        "phone_number": "05551112233",
+        "phone_number": "+905551112233",
     },
 )
 print(res.json()["call_id"])
