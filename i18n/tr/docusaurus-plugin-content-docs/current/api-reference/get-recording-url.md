@@ -16,7 +16,7 @@ Belirli bir çağrının ses kaydı için imzalı (presigned) bir indirme bağla
 ## İstek
 
 ```http
-GET https://api.vindy.ai/v1/calls/sess_a1b2c3d4e5f6/recording-url
+GET https://api.vindy.ai/v1/calls/01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f/recording-url
 Authorization: Bearer <api-key>
 ```
 
@@ -30,14 +30,14 @@ Authorization: Bearer <api-key>
 
 ```json
 {
-  "url": "https://...?X-Amz-Algorithm=...&X-Amz-Signature=...",
-  "expires_at": "2026-06-04T12:39:56+00:00"
+  "url": "https://storage.vindy.ai/recordings/01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f.wav?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=vindy%2F20260607%2Feu-central-1%2Fs3%2Faws4_request&X-Amz-Date=20260607T120000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=8f2b1c4d5e6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
+  "expires_at": "2026-06-08T12:00:00+00:00"
 }
 ```
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `url` | string | İmzalı indirme bağlantısı. Ses kaydını indirmek için bu adrese doğrudan bir GET isteği gönderin; imza bağlantıya gömülüdür. Bağlantı geçicidir (~24 saat), kalıcı olarak önbelleğe almayın. |
+| `url` | string | İmzalı indirme bağlantısı. Ses kaydını indirmek için bu adrese doğrudan bir GET isteği gönderin; imza bağlantıya gömülüdür. |
 | `expires_at` | ISO string | Bağlantının geçerliliğini yitireceği an (UTC). Oluşturulmasından yaklaşık **24 saat** sonra (varsayılan 86400s, yapılandırılabilir). |
 
 ## Hatalar
@@ -46,15 +46,15 @@ Authorization: Bearer <api-key>
 |---|---|---|
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları. |
 | `404` | `RESOURCE_NOT_FOUND` | Çağrı bulunamadı, bir tarayıcı (WebRTC) çağrısı veya sizin şirketinize ait değil. |
-| `404` | `RECORDING_NOT_AVAILABLE` | Çağrı mevcut, ancak bu çağrı için hiç ses kaydı üretilmemiş. **Kalıcı** — yeniden denemek sonucu değiştirmez. |
+| `404` | `RECORDING_NOT_AVAILABLE` | Çağrı mevcut, ancak indirilebilir bir ses kaydı yok — ya hiç üretilmemiştir ya da kaydın oluşturulması kalıcı olarak başarısız olmuş veya devre dışı bırakılmıştır. **Kalıcı** — yeniden denemek sonucu değiştirmez. |
 | `409` | `RECORDING_NOT_READY` | Ses kaydı var ama henüz indirilebilir değil. Nadir bir yarış koşulu — birkaç dakika sonra tekrar deneyin. |
 | `429` | `RATE_LIMITED` | Dakika-başı istek limiti aşıldı; `Retry-After` saniye sonra tekrar deneyin. |
 
-**404 örneği — hiç ses kaydı üretilmemiş (kalıcı):**
+**404 örneği — ses kaydı yok (kalıcı):**
 
 ```json
 {
-  "message": "No recording was produced for this call. This is permanent — there is nothing to retrieve, and retrying will not help.",
+  "message": "No recording is available for this call.",
   "extensions": {
     "code": "RECORDING_NOT_AVAILABLE"
   }
@@ -65,14 +65,14 @@ Authorization: Bearer <api-key>
 
 ```json
 {
-  "message": "Recording is not ready yet. Retry in a few minutes.",
+  "message": "The recording is not ready yet.",
   "extensions": {
     "code": "RECORDING_NOT_READY"
   }
 }
 ```
 
-:::info Kalıcı vs. nadir yarış
+:::info Kalıcı durum ile nadir yarış koşulu
 [`POST /v1/calls/list`](list-calls/index.md) endpoint'ten aldığınız `call_id` değerleri için neredeyse her zaman ya **200** (ses kaydı hazır, bağlantı ile) ya da kalıcı **404 `RECORDING_NOT_AVAILABLE`** alırsınız — çünkü bir çağrı, ses kaydı kalıcı bir duruma ulaşmadan listede görünmez. **409 `RECORDING_NOT_READY`** nadir bir yarış koşuludur; karşılaşırsanız birkaç dakika sonra tekrar deneyin.
 :::
 
@@ -80,8 +80,7 @@ Authorization: Bearer <api-key>
 
 - **Bağlantıyı kalıcı olarak önbelleğe almayın.** Bağlantı ~24 saat sonra geçerliliğini yitirir. Veritabanınıza kalıcı olarak kaydederseniz, geçerliliğini yitirmiş bağlantılarla karşılaşabilirsiniz. Bağlantıyı gerektiğinde yeniden oluşturun ve indirin.
 - **Birden çok indirme.** Aynı bağlantıyı geçerlilik penceresi (~24 saat) içinde birden çok GET isteğiyle kullanabilirsiniz. Kayıtları farklı kullanıcılara iletiyorsanız, **her kullanıcı için ayrı bir bağlantı oluşturun**.
-- **Kalıcı vs. nadir yarış.** [`POST /v1/calls/list`](list-calls/index.md) endpoint'ten alınan `call_id` değerlerinde hazır-değil yanıtı neredeyse her zaman kalıcıdır — bir `404 RECORDING_NOT_AVAILABLE`, ki yeniden denemek sonucu değiştirmez. Nadir yarış koşullarında bir `409 RECORDING_NOT_READY` görebilirsiniz; bu durumda birkaç dakika sonra tekrar deneyin.
-- **Biçim.** Ses dosyaları genellikle `.wav` biçimindedir (mono, 8 kHz veya 16 kHz). Bazı kayıtlar farklı bir codec kullanabileceğinden, `Content-Type` header'ını denetlemeniz güvenli olur.
+- **Biçim.** Ses dosyaları genellikle `.wav` biçimindedir (mono, 8 kHz veya 16 kHz). Bazı kayıtlar farklı bir codec kullanabileceğinden, `Content-Type` header'ını kontrol etmenizde fayda vardır.
 - **Boyut.** Tipik olarak 1–10 MB; uzun çağrılarda 30 MB'a kadar çıkabilir.
 
 ## Örnekler
@@ -92,7 +91,7 @@ Authorization: Bearer <api-key>
 ```bash
 # 1. Bağlantıyı alın
 curl -H "Authorization: Bearer $VINDY_API_KEY" \
-  https://api.vindy.ai/v1/calls/sess_a1b2c3d4e5f6/recording-url
+  https://api.vindy.ai/v1/calls/01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f/recording-url
 # → { "url": "https://...call.wav?X-Amz-...", "expires_at": "..." }
 
 # 2. Hemen indirin (bağlantıyı tırnak içine alın — sorgu dizesi uzundur)
@@ -135,7 +134,7 @@ async function downloadRecording(callId) {
   return `call-${callId}.wav`;
 }
 
-await downloadRecording("sess_a1b2c3d4e5f6");
+await downloadRecording("01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f");
 ```
 
 </TabItem>
@@ -175,7 +174,7 @@ def download_recording(call_id):
         f.write(audio.content)
     return path
 
-download_recording("sess_a1b2c3d4e5f6")
+download_recording("01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f")
 ```
 
 </TabItem>

@@ -1,6 +1,6 @@
 ---
-title: Toplu Çağrıyı İptal Et
-sidebar_label: Toplu Çağrıyı İptal Et
+title: Toplu Aramayı İptal Et
+sidebar_label: Toplu Aramayı İptal Et
 sidebar_position: 7
 ---
 
@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `POST /v1/calls/batches/:batchId/cancel`
 
-[`POST /v1/calls/bulk`](bulk-create-calls.md) ile oluşturulan bir batch'teki tüm **kuyruktaki** çağrıları iptal eder. Yalnızca hâlâ kuyrukta bekleyen (`pending` veya `scheduled`) çağrılar iptal edilir; halihazırda aranmakta olan veya bitmiş çağrılara dokunulmaz.
+[`POST /v1/calls/bulk`](bulk-create-calls.md) ile oluşturulan bir toplu aramadaki tüm **kuyruktaki** çağrıları iptal eder. Yalnızca hâlâ kuyrukta bekleyen (`pending` veya `scheduled`) çağrılar iptal edilir; halihazırda aranmakta olan veya bitmiş çağrılara dokunulmaz.
 
 `batchId`, bulk yanıtında dönen `batch_call_id` değeridir.
 
@@ -18,7 +18,7 @@ import TabItem from '@theme/TabItem';
 ## İstek
 
 ```http
-POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/cancel
+POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/cancel
 Authorization: Bearer <api-key>
 ```
 
@@ -28,15 +28,15 @@ Authorization: Bearer <api-key>
 
 | Parametre | Tür | Açıklama |
 |---|---|---|
-| `batchId` | string | Batch'in kimliği — [`POST /v1/calls/bulk`](bulk-create-calls.md) yanıtındaki `batch_call_id`. |
+| `batchId` | string | Toplu aramanın kimliği — [`POST /v1/calls/bulk`](bulk-create-calls.md) yanıtındaki `batch_call_id`. |
 
 ## Yanıt (200 OK)
 
-Batch özetini ve ayrıca `cancelled_now` değerini — bu isteğin az önce iptal ettiği kuyruktaki çağrı sayısını — döndürür.
+Toplu arama özetini ve ayrıca `cancelled_now` değerini — bu isteğin az önce iptal ettiği kuyruktaki çağrı sayısını — döndürür.
 
 ```json
 {
-  "batch_call_id": "842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f",
+  "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
   "status": "cancelled",
   "total_count": 200,
   "counts": {
@@ -53,11 +53,11 @@ Batch özetini ve ayrıca `cancelled_now` değerini — bu isteğin az önce ipt
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `batch_call_id` | string | İptal edilen batch'in kimliği (istekte gönderdiğiniz `batchId`). |
-| `status` | string | Batch'in iptal sonrası durumu. |
-| `total_count` | int | Batch'teki toplam çağrı sayısı. |
-| `counts` | object | Durum bazında döküm: `completed`, `failed`, `cancelled`, `pending`, `processing`. |
-| `created_at` | ISO string | Batch'in oluşturulduğu an (UTC, `+00:00`). |
+| `batch_call_id` | string | İptal edilen toplu aramanın kimliği (istekte gönderdiğiniz `batchId`). |
+| `status` | string | Toplu aramanın iptal sonrası durumu. |
+| `total_count` | int | Toplu aramadaki toplam çağrı sayısı. |
+| `counts` | object | Durum bazında döküm; her değer bir tam sayıdır: `completed`, `failed`, `cancelled`, `pending`, `processing`. (`pending` = scheduled + pending, `processing` = in_progress.) |
+| `created_at` | ISO string | Toplu aramanın oluşturulduğu an (UTC, `+00:00`). |
 | `cancelled_now` | int | Bu isteğin az önce iptal ettiği kuyruktaki çağrı sayısı. |
 
 ## Hatalar
@@ -65,15 +65,15 @@ Batch özetini ve ayrıca `cancelled_now` değerini — bu isteğin az önce ipt
 | Durum | Kod | Açıklama |
 |---|---|---|
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları. |
-| `404` | `RESOURCE_NOT_FOUND` | Batch bulunamadı veya sizin şirketinize ait değil. |
+| `404` | `RESOURCE_NOT_FOUND` | Toplu arama bulunamadı veya sizin şirketinize ait değil. |
 | `429` | `RATE_LIMITED` | Dakika-başı istek limiti aşıldı; `Retry-After` saniye sonra tekrar deneyin. |
 
 :::note Yalnızca kuyruktaki çağrılar etkilenir
-Bu endpoint, henüz başlamamış çağrıları durdurur. Halihazırda devam eden çağrılar tamamlanana kadar sürer, bitmiş çağrılar değişmez. Dönen `cancelled_now`, bu istekle tam olarak kaç çağrının durdurulduğunu belirtir. Aynı batch üzerinde tekrar çağırırsanız güncel özet `cancelled_now: 0` ile döner.
+Bu endpoint, henüz başlamamış çağrıları durdurur. Halihazırda devam eden çağrılar tamamlanana kadar sürer, bitmiş çağrılar değişmez. Dönen `cancelled_now`, bu istekle tam olarak kaç çağrının durdurulduğunu belirtir. Aynı toplu arama üzerinde tekrar çağırırsanız güncel özet `cancelled_now: 0` ile döner.
 :::
 
-:::note Bir batch'i iptal etmek tek bir `batch-ended` webhook'u üretir
-Bir webhook aboneliğiniz varsa, bir batch'i iptal etmek `status: "cancelled"` ile tek bir [`batch-ended`](webhooks.md#batch-ended) olayı üretir. Bunun durdurduğu bireysel çağrılar tek tek `call-ended` ile **raporlanmaz** — hepsi o tek olaya toplanır; bu, büyük batch'lerde olay yağmurunu önler. Bunun yerine tekli bir çağrıyı iptal edip çağrı başına [`call-ended`](webhooks.md#call-ended) (`call_status: "cancelled"` ile) almak için [`POST /v1/calls/:callId/cancel`](cancel-call.md) kullanın.
+:::note Bir toplu aramayı iptal etmek tek bir `batch-ended` webhook'u üretir
+Bir webhook aboneliğiniz varsa, bir toplu aramayı iptal etmek `status: "cancelled"` ile tek bir [`batch-ended`](webhooks.md#batch-ended) olayı üretir. Bunun durdurduğu bireysel çağrılar tek tek `call-ended` ile **raporlanmaz** — hepsi o tek olaya toplanır; bu, büyük toplu aramalarda olay yağmurunu önler. Bunun yerine tekli bir çağrıyı iptal edip çağrı başına [`call-ended`](webhooks.md#call-ended) (`call_status: "cancelled"` ile) almak için [`POST /v1/calls/:callId/cancel`](cancel-call.md) kullanın.
 :::
 
 ## Örnekler
@@ -82,9 +82,9 @@ Bir webhook aboneliğiniz varsa, bir batch'i iptal etmek `status: "cancelled"` i
 <TabItem value="curl" label="curl">
 
 ```bash
-curl -X POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/cancel \
+curl -X POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/cancel \
   -H "Authorization: Bearer $VINDY_API_KEY"
-# → { "batch_call_id": "842f1e9a-...", "status": "cancelled", "cancelled_now": 37, ... }
+# → { "batch_call_id": "84213f7a-...", "status": "cancelled", "cancelled_now": 37, ... }
 ```
 
 </TabItem>
@@ -101,7 +101,7 @@ async function cancelBatch(batchId) {
   );
 
   if (response.status === 404) {
-    return null; // batch bulunamadı veya sizin şirketinizde değil
+    return null; // toplu arama bulunamadı veya sizin şirketinizde değil
   }
   if (!response.ok) {
     const error = await response.json();
@@ -113,7 +113,7 @@ async function cancelBatch(batchId) {
   return summary;
 }
 
-await cancelBatch("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f");
+await cancelBatch("84213f7a-58cc-4372-a567-0e02b2c3d479");
 ```
 
 </TabItem>
@@ -130,7 +130,7 @@ def cancel_batch(batch_call_id):
     )
 
     if response.status_code == 404:
-        return None  # batch bulunamadı veya sizin şirketinizde değil
+        return None  # toplu arama bulunamadı veya sizin şirketinizde değil
     if not response.ok:
         error = response.json()
         code = error.get("extensions", {}).get("code")
@@ -140,7 +140,7 @@ def cancel_batch(batch_call_id):
     print(f"{summary['cancelled_now']} kuyruktaki çağrı iptal edildi")
     return summary
 
-cancel_batch("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f")
+cancel_batch("84213f7a-58cc-4372-a567-0e02b2c3d479")
 ```
 
 </TabItem>

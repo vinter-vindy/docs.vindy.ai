@@ -11,10 +11,10 @@ sidebar_position: 9
 | **API Anahtarı** | `<keyId>.<secret>` biçimindeki müşteri kimlik bilgisi |
 | **keyId** | API anahtarının noktadan önceki bölümü (UUID) |
 | **Açık Anahtar (Plain Key)** | API anahtarının tam metni — yalnızca oluşturma anında görünür |
-| **Cursor** | Pagination için kullanılan opak base64 değeri |
+| **Cursor** | Sayfalama (pagination) için kullanılan opak base64 değeri |
 | **İmzalı Bağlantı (Presigned URL)** | Geçici, imzalı indirme bağlantısı — varsayılan olarak yaklaşık 24 saat / 86400 saniye geçerli, yapılandırılabilir |
 | **structured_output** | Bir çağrıdan yapay zekâ tarafından çıkarılan veri için JSON Schema şablonu |
-| **Call (Çağrı)** | Bir Vindy asistanı tarafından yönetilen telefon görüşmesi kaydı — metin (string) bir `call_id` ile tanımlanır |
+| **Call (Çağrı)** | Bir Vindy asistanı tarafından yönetilen telefon görüşmesi kaydı — bir metin (string) `call_id` ile tanımlanır |
 | **call_id** | Tek bir çağrıyı tanımlayan kararlı, opak metin (string) — çağrının tüm yaşamı boyunca (kuyrukta → devam ederken → sonlanmış) değişmez. Opak kabul edin; ayrıştırmayın |
 | **Assistant (Asistan)** | Vindy'de tanımlı bir yapay zekâ sesli asistanı — `assistant_id` değeri metin (UUID) türündedir |
 | **Company (Şirket)** | Vindy'deki tenant — her müşteri bir şirkettir |

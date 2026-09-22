@@ -75,11 +75,11 @@ Asistanlarınız tek bir liste hâlinde döner. Bir sonraki adımda gerekeceği 
 {
   "data": [
     {
-      "type": "assistant",
       "assistant_id": "8f3a1c20-9d4e-4b2a-b1c7-2e5f6a8b9c01",
       "assistant_name": "Customer Support",
       "assistant_language": "tr",
       "assistant_created_at": "2026-05-01T10:30:00+00:00",
+      "assistant_variables": ["first_name", "appointment_time"],
       "structured_outputs": [ /* ... */ ]
     }
   ],
@@ -141,7 +141,7 @@ Her çağrı; transcript'i, yapay zekânın çıkardığı yapısal veriyi ve me
 {
   "data": [
     {
-      "call_id": "sess_a1b2c3d4e5f6",
+      "call_id": "019fb38d-7a1c-7e42-b3c9-2f6a8d4e1b05",
       "call_status": "completed",
       "call_phone_number": "+905551112233",
       "call_started_at": "2026-05-15T10:30:00+00:00",
@@ -154,7 +154,7 @@ Her çağrı; transcript'i, yapay zekânın çıkardığı yapısal veriyi ve me
       "call_recording": {
         "available": true,
         "url": "https://...",
-        "expires_at": "2026-05-15T10:35:00+00:00"
+        "expires_at": "2026-05-16T10:31:27+00:00"
       }
     }
   ],

@@ -1,5 +1,5 @@
 ---
-title: List a Batch's Calls
+title: List Batch Calls
 sidebar_label: List Batch Calls
 sidebar_position: 8
 ---
@@ -11,7 +11,7 @@ import TabItem from '@theme/TabItem';
 
 Returns the calls belonging to one batch — the `batch_call_id` from [`POST /v1/calls/bulk`](bulk-create-calls.md) — with cursor-based pagination. Each call object is the **same shape** as an item in [`POST /v1/calls/list`](list-calls/index.md).
 
-This returns **every call in the batch**, whatever its stage — not only finished ones. Calls still waiting to be dialed appear with a queue `call_status` (`pending`, `scheduled`, `in_progress`, or `cancelled`) and `null` conversation, recording, and timing fields; calls that have finished carry the full object with `completed` or `failed`. So you can poll this endpoint to watch a batch progress from queued to done.
+This returns **every call in the batch**, at any stage — not only finished ones — so you can poll it to watch a batch progress from queued to done.
 
 Like List Calls, it's a `POST` with a small JSON body: the cursor is opaque, so it travels in the body rather than the query string. Unlike List Calls, it takes **no date filter** — it's scoped to a single batch and has its own cursor. Use it to page through a batch's results as they complete, or to pull the full set once the batch is done.
 
@@ -24,7 +24,7 @@ Unlike [`POST /v1/calls/list`](list-calls/index.md) — which returns only **ter
 ## Request
 
 ```http
-POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/calls
+POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/calls
 Authorization: Bearer <api-key>
 Content-Type: application/json
 
@@ -38,7 +38,7 @@ Content-Type: application/json
 
 | Parameter | Type | Description |
 |---|---|---|
-| `batchId` | string | The batch's id — the `batch_call_id` from [`POST /v1/calls/bulk`](bulk-create-calls.md). |
+| `batchId` | string | The batch's ID — the `batch_call_id` from [`POST /v1/calls/bulk`](bulk-create-calls.md). |
 
 ## Body parameters
 
@@ -53,12 +53,13 @@ The body is optional — send `{}` (or nothing) to get the first page with the d
 
 ```json
 {
-  "batch_call_id": "842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f",
+  "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
   "status": "completed",
   "calling_window": { "timezone": "Europe/Istanbul", "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] },
   "data": [
     {
-      "call_id": "sess_a1b2c3d4e5f6",
+      "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f",
+      "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
       "call_status": "completed",
       "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "call_assistant_name": "Vindy - Asistan",
@@ -71,18 +72,37 @@ The body is optional — send `{}` (or nothing) to get the first page with the d
       "call_end_reason": "completed",
       "call_transcript": "[23:40:10] Asistan: Hi, this is Vindy, your AI assistant. I'd like to ask a few quick questions for our customer satisfaction survey — is now a good time?\n[23:40:16] Müşteri: Sure, go ahead.",
       "call_structured_data": {
-        "age": 32,
-        "overall_satisfaction": 4,
-        "support_speed": 5,
-        "would_recommend": true
+        "arama_sonucu": "tamamlandi",
+        "genel_memnuniyet_puani": 4,
+        "geri_arama_talebi": false,
+        "ilgilenilen_urunler": null
       },
-      "call_metadata": { "crm_contact_id": "CNT-90412" },
-      "call_variables": { "first_name": "Batu" },
+      "call_metadata": { "order_id": "ORD-4821" },
+      "call_variables": { "first_name": "Elif" },
       "call_recording": {
         "available": true,
         "url": "https://...?X-Amz-...",
-        "expires_at": "2026-06-09T23:46:40+00:00"
+        "expires_at": "2026-06-10T23:41:37+00:00"
       }
+    },
+    {
+      "call_id": "01a0c8d0-5f2b-7a41-bc03-1e2d3c4b5a69",
+      "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
+      "call_status": "failed",
+      "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
+      "call_assistant_name": "Vindy - Asistan",
+      "call_phone_number": "+905553334455",
+      "call_bound_type": "outbound",
+      "call_started_at": "2026-06-09T23:40:10+00:00",
+      "call_ended_at": "2026-06-09T23:40:16+00:00",
+      "call_created_at": "2026-06-09T23:39:20+00:00",
+      "call_duration_seconds": 0,
+      "call_end_reason": "User Busy",
+      "call_transcript": null,
+      "call_structured_data": null,
+      "call_metadata": { "order_id": "ORD-4822" },
+      "call_variables": { "first_name": "Deniz" },
+      "call_recording": { "available": false }
     }
   ],
   "pagination": {
@@ -101,9 +121,17 @@ The body is optional — send `{}` (or nothing) to get the first page with the d
 |---|---|---|
 | `batch_call_id` | string | The batch you queried (the `batchId` you passed in the path). |
 | `status` | string | The batch's current status — `active`, `completed`, or `cancelled`. |
-| `calling_window` | object \| null | The batch's calling window (the applied business-hours window). `null` if the batch has no calls. |
+| `calling_window` | object | Always present. The calling window applied to this batch (echoes what was set, or the platform default). |
 | `data` | array | Call objects in this page — **same shape** as a [List Calls](list-calls/index.md#response-fields) item. |
-| `pagination` | object | Standard [pagination object](list-calls/filtering-pagination.md#paginated). |
+| `pagination` | object | Standard [pagination object](list-calls/filtering-pagination.md#paginated) — members below. |
+
+**`pagination`**
+
+| Field | Type | Description |
+|---|---|---|
+| `next_cursor` | string \| null | Opaque cursor for the next page. `null` when `has_more` is `false`. |
+| `has_more` | boolean | Whether more pages remain after this one. |
+| `limit` | int | The page size applied to this response. |
 
 **Call object**
 
@@ -122,6 +150,8 @@ This endpoint takes no `date_from` / `date_to` — it's scoped to one batch. Dat
 | Status | Code | Description |
 |---|---|---|
 | `400` | `VALIDATION_FAILED` | `limit` is out of the 1–500 range, or a body field has an invalid type. Unknown/extra fields are **ignored**, not rejected. |
+| `400` | `INVALID_CURSOR` | Cursor is empty or cannot be decoded. |
+| `400` | `MALFORMED_CURSOR` | Cursor can't be parsed, or was issued for a different endpoint or batch. |
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Auth errors. |
 | `404` | `RESOURCE_NOT_FOUND` | Batch not found or belongs to another company. |
 | `429` | `RATE_LIMITED` | Rate limit exceeded (per-minute). Retry after `Retry-After` seconds. |
@@ -144,7 +174,7 @@ If you [cancel the batch](cancel-batch.md), `status` switches to `cancelled` rig
 <TabItem value="curl" label="curl">
 
 ```bash
-curl -X POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/calls \
+curl -X POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/calls \
   -H "Authorization: Bearer $VINDY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"limit": 100}'
@@ -178,7 +208,7 @@ async function getBatchCalls(batchId, cursor) {
   return response.json();
 }
 
-const page = await getBatchCalls("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f");
+const page = await getBatchCalls("84213f7a-58cc-4372-a567-0e02b2c3d479");
 console.log(page?.status, page?.data.length);
 ```
 
@@ -208,7 +238,7 @@ def get_batch_calls(batch_call_id, cursor=None):
         raise RuntimeError(f"{code}: {error.get('message')}")
     return response.json()
 
-page = get_batch_calls("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f")
+page = get_batch_calls("84213f7a-58cc-4372-a567-0e02b2c3d479")
 if page:
     print(page["status"], len(page["data"]))
 ```
@@ -225,7 +255,7 @@ Resend `next_cursor` as `cursor` — with the same `batchId` — until `has_more
 
 ```bash
 # First request (no cursor)
-curl -X POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/calls \
+curl -X POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/calls \
   -H "Authorization: Bearer $VINDY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"limit": 100}'
@@ -233,7 +263,7 @@ curl -X POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3
 # Response: { "status": "...", "data": [100 calls], "pagination": { "next_cursor": "X", "has_more": true } }
 
 # Next request (use next_cursor)
-curl -X POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/calls \
+curl -X POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/calls \
   -H "Authorization: Bearer $VINDY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"limit": 100, "cursor": "X"}'
@@ -278,7 +308,7 @@ async function listAllBatchCalls(batchId) {
   return calls;
 }
 
-const calls = await listAllBatchCalls("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f");
+const calls = await listAllBatchCalls("84213f7a-58cc-4372-a567-0e02b2c3d479");
 console.log(`${calls?.length ?? 0} calls`);
 ```
 
@@ -319,7 +349,7 @@ def list_all_batch_calls(batch_call_id):
 
     return calls
 
-calls = list_all_batch_calls("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f")
+calls = list_all_batch_calls("84213f7a-58cc-4372-a567-0e02b2c3d479")
 print(f"{len(calls) if calls else 0} calls")
 ```
 

@@ -8,7 +8,7 @@ sidebar_position: 8
 
 ## Başka bir şirketin verisini görebilir miyim?
 
-Hayır. Her API anahtarı yalnızca tek bir şirkete bağlıdır ve her istek otomatik olarak o şirkete kapsanır. Başka bir şirketin `call_id` değerini kullandığınızda 404 yanıtı alırsınız ve böyle bir kaydın var olup olmadığını dahi anlayamazsınız. Bkz. [Multi-tenancy](concepts/multi-tenancy.md).
+Hayır. Her API anahtarı yalnızca tek bir şirkete bağlıdır ve her istek otomatik olarak yalnızca o şirketi kapsar. Başka bir şirketin `call_id` değerini kullandığınızda 404 yanıtı alırsınız ve böyle bir kaydın var olup olmadığını dahi anlayamazsınız. Bkz. [Multi-tenancy](concepts/multi-tenancy.md).
 
 ## API anahtarımı kaybettim. Kurtarabilir misiniz?
 
@@ -16,7 +16,7 @@ Hayır. Anahtarın açık metni yalnızca oluşturma anında bir kez gösterilir
 
 ## Bir çağrı neden `POST /v1/calls/list` listesinde görünmüyor?
 
-Bu endpoint yalnızca **sonlanmış** bir duruma ulaşan çağrıları döndürür: `completed` veya `failed`, ve ses kaydı aktarımı sonuçlanmış olanlar. Az önce biten bir çağrının listede görünmesi kısa bir süre alabilir. Hâlâ devam eden çağrılar hiçbir zaman görünmez; tarayıcı (WebRTC) çağrıları ise API'de hiç görünmez. Bkz. [yarım veri döndürülmez](api-reference/list-calls/index.md).
+Bu endpoint yalnızca `completed` veya `failed` durumuna ulaşan ve ses kaydı aktarımı sonuçlanmış olan çağrıları döndürür. Az önce biten bir çağrının listede görünmesi kısa bir süre alabilir. Hâlâ devam eden çağrılar hiçbir zaman görünmez; tarayıcı (WebRTC) çağrıları ise API'de hiç görünmez. Bkz. [yarım veri döndürülmez](api-reference/list-calls/index.md).
 
 ## Bir kayıt Vindy panelinde görünüyor ancak API `available: false` döndürüyor. Bu bir hata mı?
 
@@ -30,7 +30,12 @@ Hayır; bu durum **kalıcıdır**. Ya hiç kayıt üretilmemiştir ya da aktarı
 
 Okumalar için evet. Tüm `GET` endpoint'leri idempotenttir. `POST /v1/calls/list` ise bir gövde kullanmasına karşın **bir değişiklik (mutation) değil, bir sorgudur**; yan etkisi yoktur ve yeniden denenmesi güvenlidir. Kayıtları kendi tarafınızda upsert ettiğinizde (`call_id` üzerinde benzersizlik kısıtı) yeniden denemeler zararsız hâle gelir.
 
-Yazma istekleri farklıdır. `POST /v1/calls/bulk` çağrı oluşturur ve eşzamanlı ya da tekrarlanan bir isteği engelleyen **sunucu tarafında bir kilit yoktur** — ikinci bir isteği "devam eden batch var" gibi bir hatayla reddeden bir mekanizma bulunmaz. Bu nedenle körlemesine yeniden denemek **ikinci bir batch başlatıp kişileri iki kez aratabilir**. Buna karşı kendi tarafınızda önlem alın: bir bulk isteğini yalnızca öncekinin başarısız olduğundan eminken tekrarlayın ve tekilleştirme (dedup) uygulayın (örneğin her batch'i kendi idempotency anahtarınızla etiketleyin ya da numaraların daha önce kabul edilip edilmediğini yeniden göndermeden önce kontrol edin). İptal endpoint'leri ise güvenle tekrar çağrılabilir.
+Yazma istekleri farklıdır. `POST /v1/calls/bulk` çağrı oluşturur ve eşzamanlı ya da tekrarlanan bir isteği engelleyen **sunucu tarafında bir kilit yoktur** — ikinci bir isteği "devam eden toplu arama var" gibi bir hatayla reddeden bir mekanizma bulunmaz. Bu nedenle körlemesine yeniden denemek **ikinci bir toplu arama başlatıp kişileri iki kez aratabilir**. Buna karşı kendi tarafınızda önlem alın:
+
+- Bir toplu arama isteğini yalnızca öncekinin başarısız olduğundan eminken tekrarlayın.
+- Tekilleştirme (dedup) uygulayın — örneğin her toplu aramayı kendi idempotency anahtarınızla etiketleyin ya da numaraların daha önce kabul edilip edilmediğini yeniden göndermeden önce kontrol edin.
+
+İptal endpoint'leri ise güvenle tekrar çağrılabilir.
 
 ## Ne sıklıkla sorgulama yapmalıyım?
 

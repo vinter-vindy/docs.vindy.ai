@@ -75,11 +75,11 @@ You'll get your assistants in a single list. Note the `assistant_id` (a string U
 {
   "data": [
     {
-      "type": "assistant",
       "assistant_id": "8f3a1c20-9d4e-4b2a-b1c7-2e5f6a8b9c01",
       "assistant_name": "Customer Support",
       "assistant_language": "tr",
       "assistant_created_at": "2026-05-01T10:30:00+00:00",
+      "assistant_variables": ["first_name", "appointment_time"],
       "structured_outputs": [ /* ... */ ]
     }
   ],
@@ -141,7 +141,7 @@ Each call includes the transcript, AI-extracted structured data, and — when av
 {
   "data": [
     {
-      "call_id": "sess_a1b2c3d4e5f6",
+      "call_id": "019fb38d-7a1c-7e42-b3c9-2f6a8d4e1b05",
       "call_status": "completed",
       "call_phone_number": "+905551112233",
       "call_started_at": "2026-05-15T10:30:00+00:00",
@@ -154,7 +154,7 @@ Each call includes the transcript, AI-extracted structured data, and — when av
       "call_recording": {
         "available": true,
         "url": "https://...",
-        "expires_at": "2026-05-15T10:35:00+00:00"
+        "expires_at": "2026-05-16T10:31:27+00:00"
       }
     }
   ],
@@ -162,7 +162,7 @@ Each call includes the transcript, AI-extracted structured data, and — when av
 }
 ```
 
-`call_transcript` is a single string; each turn within it is separated by a newline (`\n`). JSON escapes those newlines, so the value above shows on one line. Rendered with real line breaks, the transcript above reads:
+`call_transcript` is a single string; each turn within it is separated by a newline (`\n`). JSON escapes those newlines, so the value above appears on one line. Rendered with real line breaks, the transcript above reads:
 
 ```text
 [10:30:00] Asistan: Hi, this is Vindy, your AI assistant. I'd like to ask a few quick questions for our customer satisfaction survey — is now a good time?
@@ -175,13 +175,13 @@ Each call includes the transcript, AI-extracted structured data, and — when av
 
 ## 4. Download a recording
 
-If `call_recording.available` is `true`, the `url` field is ready to use — issue a plain GET against it (no auth header needed, the signature is in the URL):
+If `call_recording.available` is `true`, the `url` field is ready to use — issue a plain GET against it (no auth header needed — the signature is in the URL):
 
 ```bash
 curl -o call-recording.wav "https://...presigned-url..."
 ```
 
-The URL is valid for about 24 hours (86400 seconds) by default, and configurable. Don't store it — generate a fresh one when needed with [`GET /v1/calls/:callId/recording-url`](api-reference/get-recording-url.md).
+The URL is valid for about 24 hours (86400 seconds) by default, but the lifetime is configurable. Don't store it — generate a fresh one when needed with [`GET /v1/calls/:callId/recording-url`](api-reference/get-recording-url.md).
 
 ---
 

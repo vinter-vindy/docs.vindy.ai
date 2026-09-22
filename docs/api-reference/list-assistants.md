@@ -39,14 +39,26 @@ No query parameters. The response is **not paginated** — every assistant is re
           "name": "Vindy - Asistan",
           "schema": {
             "type": "object",
-            "properties": {
-              "age": { "type": "integer" },
-              "overall_satisfaction": { "type": "integer" },
-              "support_speed": { "type": "integer" },
-              "would_recommend": { "type": "boolean" }
-            },
             "additionalProperties": false,
-            "required": ["overall_satisfaction", "would_recommend"]
+            "required": ["arama_sonucu", "genel_memnuniyet_puani"],
+            "properties": {
+              "arama_sonucu": {
+                "type": "string",
+                "title": "Arama sonucu",
+                "description": "How the conversation ended.",
+                "enum": ["tamamlandi", "yarim_kaldi", "ulasilamadi", "belirsiz"]
+              },
+              "genel_memnuniyet_puani": {
+                "type": "integer",
+                "title": "Overall satisfaction",
+                "description": "Satisfaction score from 1 to 5."
+              },
+              "geri_arama_talebi": { "type": "boolean", "title": "Callback requested" },
+              "ilgilenilen_urunler": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
           }
         }
       ]
@@ -73,16 +85,42 @@ No query parameters. The response is **not paginated** — every assistant is re
 | `assistant_name` | string | Display name. |
 | `assistant_language` | string | Language code (e.g. `tr`, `en`). |
 | `assistant_created_at` | ISO 8601 (UTC) | Creation timestamp, in `+00:00` offset form. |
-| `assistant_variables` | array of string | The **template variable names** this assistant expects — derived from the `{{…}}` placeholders in its prompt and greeting (ordered, deduplicated). Send values for these via `variables` when placing calls with [`POST /v1/calls`](create-call.md) or [`POST /v1/calls/bulk`](bulk-create-calls.md). Empty (`[]`) when the assistant uses no variables. |
-| `structured_outputs` | array | The structured output schema attached to this assistant. Empty (`[]`) when the assistant has none; otherwise exactly **one** entry, whose `id` equals the assistant's `id`. |
+| `assistant_variables` | array of string | The **template variable names** this assistant expects — derived from the `{{…}}` placeholders in its prompt and greeting (ordered, de-duplicated). Send values for these via `variables` when placing calls with [`POST /v1/calls`](create-call.md) or [`POST /v1/calls/bulk`](bulk-create-calls.md). Empty (`[]`) when the assistant uses no variables. |
+| `structured_outputs` | array | The structured output schema attached to this assistant. Empty (`[]`) when the assistant has none; otherwise exactly **one** entry, whose `id` equals `assistant_id`. |
 
 **StructuredOutput object**
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | string (UUID) | Stable id of the structured output — equal to the assistant's `id`. A call's extracted values come back under this `id` in `call_structured_data` on [`POST /v1/calls/list`](list-calls/index.md), so you can line each one up with its schema. |
+| `id` | string (UUID) | Stable ID of the structured output — equal to `assistant_id`. A call's extracted values come back under this `id` in `call_structured_data` on [`POST /v1/calls/list`](list-calls/index.md), so you can line each one up with its schema. |
 | `name` | string | Display name (mirrors the assistant's name). |
-| `schema` | object | The structured output's **JSON Schema** — it describes the shape of the data the AI extracts, and is returned verbatim as it was defined for the assistant. Its core is an object whose `properties` map each field name to its type. Alongside `properties` it may carry any standard JSON Schema keywords — commonly `additionalProperties` (usually `false`, meaning no fields beyond the ones listed) and `required` (the fields that are always present), plus `enum`/`uniqueItems` for choice fields. Treat it as an opaque JSON Schema: read `properties` to know the fields, and don't hard-code an expectation that only `type`/`properties` are present. |
+| `schema` | object | The structured output schema — a standard **JSON Schema**, returned verbatim as defined for the assistant. See [The structured output schema](#the-structured-output-schema) below. |
+
+### The structured output schema {#the-structured-output-schema}
+
+The `schema` field is a standard **JSON Schema** that describes the shape of the data the AI extracts, returned verbatim as it was defined for the assistant. Its root is an object; the members you'll see are:
+
+| Member | Type | Description |
+|---|---|---|
+| `type` | string | Always `"object"` for the schema root. |
+| `properties` | object | Map of field name → its per-property sub-schema (see below). This is the core of the schema. |
+| `required` | array of string | *(optional)* The field names that are always present. Omitted when nothing is marked required. |
+| `additionalProperties` | bool | *(optional)* Usually `false`, meaning no fields beyond the ones listed. |
+
+**Per-property shape.** Each entry under `properties` is itself a standard JSON Schema sub-schema. The common keys are:
+
+| Key | Type | Description |
+|---|---|---|
+| `type` | string | **Always present.** One of `string`, `integer`, `number`, `boolean`, `array`, or `object` (a nested object carries its own `properties`). |
+| `title` | string | *(optional)* Human-readable label for the field. |
+| `description` | string | *(optional)* What the field captures. |
+| `enum` | array | *(optional)* The allowed values, for choice fields. |
+| `items` | object | *(optional)* For `array` types — the sub-schema each element follows. |
+| `uniqueItems` | bool | *(optional)* For `array` types — whether elements must be distinct. |
+
+The optional keys are **omitted when unset, never present as `null`** — for example, a property with no label simply has no `title` key (an injected `null` would make the schema invalid). Read defensively: fall back to the property's key name when `title` is absent, and don't assume `description`, `enum`, or `items` exist.
+
+Treat it as an opaque JSON Schema: read `properties` to know the fields, and don't hard-code an expectation that only `type`/`properties` are present.
 
 ## Errors
 
@@ -94,7 +132,7 @@ No query parameters. The response is **not paginated** — every assistant is re
 ## Notes
 
 - Assistants are ordered by creation time.
-- The list includes both your organization's own assistants **and any assistants shared with you by Vindy** — shared assistants behave like your own here: you can filter their calls in [List Calls](list-calls/index.md) and launch outbound batches with them in [Bulk Create Calls](bulk-create-calls.md).
+- The list includes both your company's own assistants **and any assistants shared with you by Vindy** — shared assistants behave like your own here: you can filter their calls in [List Calls](list-calls/index.md) and launch outbound batches with them in [Bulk Create Calls](bulk-create-calls.md).
 - An assistant with no structured output schema returns `structured_outputs: []`.
 - `assistant_variables` tells you which `variables` keys to send when calling with this assistant. If it uses none, you can omit `variables` entirely.
 - Extracted values come back under the structured output's `id` in `call_structured_data` on [List Calls](list-calls/index.md), so you can line a call's data up with its schema here.

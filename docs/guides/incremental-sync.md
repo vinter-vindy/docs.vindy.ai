@@ -27,7 +27,7 @@ Suggested polling cadence: **no more than once per minute**. More frequent polls
 1. Use a **unique constraint on `call_id`** in your DB and upsert each call.
 2. Track a **`last_synced_date`** on your side — a `YYYY-MM-DD` date in **Europe/Istanbul** (the timezone the API's date filters use). Set it to **the date you start each sync run**, *not* a field from the call object.
 3. On the next sync, query with `date_from=<last_synced_date>`. Re-scanning that boundary day picks up every call that became terminal — and therefore visible — since your last run.
-4. Upsert each page (de-duplicate on `call_id`). Walk the [keyset cursor](../api-reference/list-calls/filtering-pagination.md#cursors) — `(started_at, attempt_id)` — within the session using `pagination.next_cursor` / `pagination.has_more`, and discard the cursor when done (do not persist it long-term).
+4. Upsert each page (de-duplicate on `call_id`). Walk the [keyset cursor](../api-reference/list-calls/filtering-pagination.md#cursors) — `(started_at, call_id)` — within the session using `pagination.next_cursor` / `pagination.has_more`, and discard the cursor when done (do not persist it long-term).
 
 :::info Why a date, not `call_created_at`?
 `date_from` / `date_to` are **date-only** (`YYYY-MM-DD`, no time or timezone in the input) and are interpreted against **Europe/Istanbul** day boundaries — not against a per-call timestamp you control. `call_created_at` is when the call was *queued* (earlier, and unrelated to when it finished), so using it as your watermark can stall the window or re-scan large overlaps. The safe anchor is the **date you started** your previous run: the list only ever shows terminal calls (see below), so re-scanning that day surfaces everything that finished since, and upserting by `call_id` makes the overlap harmless. If your calls can span midnight, subtract an extra day as a safety margin.
@@ -35,8 +35,8 @@ Suggested polling cadence: **no more than once per minute**. More frequent polls
 
 Why this is safe:
 
-- `POST /v1/calls/list` never returns in-progress calls — only **terminal** calls appear, and browser (WebRTC) calls never appear at all. A call that wasn't final during your last run isn't lost; it surfaces on a later run once it's done. See [no half-baked data](../api-reference/list-calls/index.md).
-- The [keyset cursor](../api-reference/list-calls/filtering-pagination.md#cursors) `(started_at, attempt_id)` never repeats a call within a single walk — the next page does **not** re-return the previous page's calls.
+- `POST /v1/calls/list` never returns in-progress calls — only **terminal** calls appear, and browser (WebRTC) calls never appear at all. A call that wasn't final during your last run isn't lost; it surfaces on a later run once it's done. See [why in-progress calls don't appear](../api-reference/list-calls/index.md).
+- The [keyset cursor](../api-reference/list-calls/filtering-pagination.md#cursors) `(started_at, call_id)` never repeats a call within a single walk — the next page does **not** re-return the previous page's calls.
 - `date_from` and `date_to` are **inclusive day boundaries** in Europe/Istanbul, so reusing a boundary day across consecutive windows overlaps on that day. You upsert on `call_id` so that overlap — and any retry of a failed request — can't create duplicates. See [range semantics](../api-reference/list-calls/filtering-pagination.md#range-semantics).
 
 ---

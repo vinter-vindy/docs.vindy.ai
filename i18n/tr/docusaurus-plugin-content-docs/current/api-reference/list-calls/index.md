@@ -9,10 +9,10 @@ import TabItem from '@theme/TabItem';
 
 # `POST /v1/calls/list`
 
-Şirketinizin çağrılarını döndürür; her çağrı kendi dökümü (transcript), structured output'larınızın çıkardığı veriler, eklediğiniz metadata ve hazır olduğunda bir ses kaydı bağlantısıyla birlikte gelir. Sonuçlar opak bir cursor ile sayfa sayfa gelir ve asistan, yön ve bir gün aralığıyla daraltılabilir.
+Şirketinizin çağrılarını döndürür; her çağrı kendi dökümü (transcript), yapısal çıktılarınızın (structured output) çıkardığı veriler, eklediğiniz metadata ve hazır olduğunda bir ses kaydı bağlantısıyla birlikte gelir. Sonuçlar opak bir cursor ile sayfa sayfa gelir ve asistan, yön ve bir gün aralığıyla daraltılabilir.
 
-:::tip Bir toplu aramanın (batch) çağrılarını listeleme
-Belirli bir toplu aramanın (kampanya) çağrılarını listelemek için özel [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint'ini kullanın. Yalnızca sonlanmış çağrıları döndüren bu listenin aksine, batch endpoint'i o toplu aramanın henüz aranmamış, devam eden ve iptal edilmiş çağrılarını da gösterir.
+:::tip Bir toplu aramanın çağrılarını listeleme
+Belirli bir toplu aramanın çağrılarını listelemek için özel [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint'ini kullanın. Yalnızca sonlanmış çağrıları döndüren bu listenin aksine, toplu arama endpoint'i o toplu aramanın henüz aranmamış, devam eden ve iptal edilmiş çağrılarını da gösterir.
 :::
 
 :::info Yarım veri döndürülmez
@@ -24,7 +24,7 @@ Yalnızca **size gösterilmeye hazır** çağrılar döndürülür. Bir çağrı
 gerekir. Hâlâ devam eden çağrılar bu listede **hiçbir zaman** yer almaz; tarayıcı (WebRTC) çağrıları ise API'de hiç görünmez. Bu davranış, senkronizasyon mantığınızın idempotent çalışmasını sağlar.
 :::
 
-Bir çağrı **sona erdikten kısa süre sonra** müsait hâle gelir — ses kaydı kalıcı depolamaya aktarıldığında. Bu genellikle birkaç saniye, uzun kayıtlarda zaman zaman birkaç dakika sürer. Bir çağrı hazır olana dek ne bu listede ne de `call-ended` webhook'unda görünür; bu yüzden az önce biten bir çağrı, hemen ardından attığınız istekte henüz yer almayabilir.
+Bir çağrı **sona erdikten kısa süre sonra** müsait hâle gelir — genellikle birkaç saniye, uzun kayıtlarda zaman zaman birkaç dakika, ses kaydı kalıcı depolamaya aktarıldığında. Bu yüzden az önce biten bir çağrı, hemen ardından attığınız istekte henüz yer almayabilir.
 
 :::tip Pull ve push aynı sinyali paylaşır
 Bu endpoint, [`call-ended` webhook'unun](../webhooks.md) **pull** karşılığıdır: bir çağrı, hazır hâle geldiği anda hem burada görünür hem de o webhook'u tetikler. Anlık teslim için webhook'u; istediğiniz anda çekmek veya kaçırmış olabileceklerinizi tamamlamak için bu endpoint'i kullanın.
@@ -86,8 +86,8 @@ Parametrelerin tam referansı, kabul edilen tarih biçimleri ve hazır reçetele
 {
   "data": [
     {
-      "call_id": "sess_5f3a9c2b1e7d",
-      "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
+      "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f",
+      "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
       "call_status": "completed",
       "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "call_assistant_name": "Vindy - Asistan",
@@ -98,75 +98,77 @@ Parametrelerin tam referansı, kabul edilen tarih biçimleri ve hazır reçetele
       "call_created_at": "2026-05-15T10:29:55+00:00",
       "call_duration_seconds": 87,
       "call_end_reason": "completed",
-      "call_transcript": "[10:30:00] Asistan: Merhaba, ben yapay zeka asistanı Vindy. Müşteri memnuniyeti anketimiz kapsamında size birkaç kısa soru sormak istiyorum — şu an uygun musunuz?\n[10:30:07] Müşteri: Evet, müsaitim.\n[10:30:11] Asistan: Teşekkürler. Öncelikle yaşınızı öğrenebilir miyim?\n[10:30:16] Müşteri: Otuz iki.\n[10:30:21] Asistan: Aldığınız hizmetten genel memnuniyetinizi 1 ile 5 arasında nasıl puanlarsınız?\n[10:30:29] Müşteri: 4 diyebilirim.\n[10:30:34] Asistan: Peki talebinizin ne kadar hızlı çözüldüğünü 1 ile 5 arasında nasıl değerlendirirsiniz?\n[10:30:42] Müşteri: 5.\n[10:30:47] Asistan: Hizmetimizi bir arkadaşınıza veya iş arkadaşınıza tavsiye eder misiniz?\n[10:30:53] Müşteri: Evet, ederim.\n[10:30:58] Asistan: Çok teşekkür ederiz, görüşleriniz bizim için çok değerli. İyi günler dilerim!\n[10:31:05] Müşteri: Rica ederim, size de.",
+      "call_transcript": "[10:30:00] Asistan: Merhaba, ben yapay zeka asistanı Vindy; son siparişinizle ilgili arıyorum. Kısa bir memnuniyet anketi için birkaç dakikanız var mı?\n[10:30:07] Müşteri: Tabii, buyurun.\n[10:30:11] Asistan: Teşekkürler. Genel deneyiminizden memnuniyetinizi 1 ile 5 arasında nasıl puanlarsınız?\n[10:30:18] Müşteri: 4 diyebilirim.\n[10:30:23] Asistan: Duyduğuma sevindim. Siparişinizle ilgili memnun kalmadığınız bir konu oldu mu?\n[10:30:29] Müşteri: Hayır, her şey yolundaydı.\n[10:30:34] Asistan: Harika. Herhangi bir konuda sizi bir temsilcimizin araması gerekir mi?\n[10:30:40] Müşteri: Hayır, gerek yok.\n[10:30:45] Asistan: Zaman ayırdığınız için çok teşekkür ederim, iyi günler dilerim!\n[10:30:50] Müşteri: Size de, teşekkürler.",
       "call_structured_data": {
-        "age": 32,
-        "overall_satisfaction": 4,
-        "support_speed": 5,
-        "would_recommend": true
+        "arama_sonucu": "tamamlandi",
+        "genel_memnuniyet_puani": 4,
+        "geri_arama_talebi": false,
+        "ilgilenilen_urunler": null
       },
-      "call_metadata": { "crm_contact_id": "CNT-90412" },
-      "call_variables": { "first_name": "Batu" },
+      "call_metadata": { "order_id": "ORD-4821" },
+      "call_variables": { "first_name": "Elif" },
       "call_recording": {
         "available": true,
         "url": "https://...",
-        "expires_at": "2026-05-15T10:36:27+00:00"
+        "expires_at": "2026-05-16T10:31:27+00:00"
       }
     },
     {
-      "call_id": "sess_6a4b0d3c2f81",
-      "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
-      "call_status": "completed",
+      "call_id": "019fb39a-2e5f-7c14-9a8b-1d3c5e7f9a20",
+      "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
+      "call_status": "failed",
       "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "call_assistant_name": "Vindy - Asistan",
       "call_phone_number": "+905554445566",
       "call_bound_type": "outbound",
       "call_started_at": "2026-05-15T11:02:10+00:00",
-      "call_ended_at": "2026-05-15T11:02:20+00:00",
+      "call_ended_at": "2026-05-15T11:02:16+00:00",
       "call_created_at": "2026-05-15T11:01:58+00:00",
-      "call_duration_seconds": 10,
-      "call_end_reason": "user_hangup",
-      "call_transcript": "[11:02:10] Asistan: Merhaba, ben Vindy; müşteri memnuniyeti anketi için arıyorum. Şu an uygun musunuz?\n[11:02:16] Müşteri: Pardon, yanlış numara.",
+      "call_duration_seconds": 0,
+      "call_end_reason": "User Busy",
+      "call_transcript": null,
       "call_structured_data": null,
-      "call_metadata": null,
-      "call_variables": { "first_name": "Batu" },
+      "call_metadata": { "order_id": "ORD-4822" },
+      "call_variables": { "first_name": "Deniz" },
       "call_recording": {
         "available": false
       }
     }
   ],
   "pagination": {
-    "next_cursor": "eyJ0IjoiMjAyNi0wNS0xNVQxMTowMjoxMCswMDowMCIsImkiOiJzZXNzXzZhNGIwZDNjMmY4MSJ9",
+    "next_cursor": "eyJ0IjoiMjAyNi0wNS0…",
     "has_more": true,
     "limit": 50
   }
 }
 ```
 
+`pagination.next_cursor` **opak** bir token'dır — sonraki sayfayı almak için olduğu gibi geri gönderin; çözmeyin (bkz. [Filtreleme ve Sayfalama](filtering-pagination.md#cursors)).
+
 `call_transcript` tek bir metin dizesidir; içindeki her konuşma sırası bir satır sonu (`\n`) ile ayrılır. JSON satır sonlarını kaçışlı yazdığı için yukarıdaki değer tek satırda görünür. Gerçek satır sonlarıyla görüntülendiğinde ilk çağrının transcript'i şöyledir:
 
 ```text
-[10:30:00] Asistan: Merhaba, ben yapay zeka asistanı Vindy. Müşteri memnuniyeti anketimiz kapsamında size birkaç kısa soru sormak istiyorum — şu an uygun musunuz?
-[10:30:07] Müşteri: Evet, müsaitim.
-[10:30:11] Asistan: Teşekkürler. Öncelikle yaşınızı öğrenebilir miyim?
-[10:30:16] Müşteri: Otuz iki.
-[10:30:21] Asistan: Aldığınız hizmetten genel memnuniyetinizi 1 ile 5 arasında nasıl puanlarsınız?
-[10:30:29] Müşteri: 4 diyebilirim.
-[10:30:34] Asistan: Peki talebinizin ne kadar hızlı çözüldüğünü 1 ile 5 arasında nasıl değerlendirirsiniz?
-[10:30:42] Müşteri: 5.
-[10:30:47] Asistan: Hizmetimizi bir arkadaşınıza veya iş arkadaşınıza tavsiye eder misiniz?
-[10:30:53] Müşteri: Evet, ederim.
-[10:30:58] Asistan: Çok teşekkür ederiz, görüşleriniz bizim için çok değerli. İyi günler dilerim!
-[10:31:05] Müşteri: Rica ederim, size de.
+[10:30:00] Asistan: Merhaba, ben yapay zeka asistanı Vindy; son siparişinizle ilgili arıyorum. Kısa bir memnuniyet anketi için birkaç dakikanız var mı?
+[10:30:07] Müşteri: Tabii, buyurun.
+[10:30:11] Asistan: Teşekkürler. Genel deneyiminizden memnuniyetinizi 1 ile 5 arasında nasıl puanlarsınız?
+[10:30:18] Müşteri: 4 diyebilirim.
+[10:30:23] Asistan: Duyduğuma sevindim. Siparişinizle ilgili memnun kalmadığınız bir konu oldu mu?
+[10:30:29] Müşteri: Hayır, her şey yolundaydı.
+[10:30:34] Asistan: Harika. Herhangi bir konuda sizi bir temsilcimizin araması gerekir mi?
+[10:30:40] Müşteri: Hayır, gerek yok.
+[10:30:45] Asistan: Zaman ayırdığınız için çok teşekkür ederim, iyi günler dilerim!
+[10:30:50] Müşteri: Size de, teşekkürler.
 ```
 
 :::note Başarısız çağrılar da listede döner
-Liste yalnızca başarılı görüşmeleri değil; `completed` çağrıların yanı sıra `failed` çağrıları da döndürür. Hiç bağlanmamış bir çağrının (örneğin cevapsız bir `failed`) konuşması veya ses kaydı olmaz; bu yüzden zaman temelli alanları `null` olur ve `call_recording.available` `false` döner. Kodunuz bu `null` değerlere dayanıklı olmalıdır:
+Liste yalnızca başarılı görüşmeleri değil; `completed` çağrıların yanı sıra `failed` çağrıları da döndürür. Hiç bağlanmamış bir çağrının (örneğin cevapsız bir `failed`) konuşması veya ses kaydı olmaz; bu yüzden zaman temelli alanları `null` olur ve `call_recording.available` `false` döner. Kodunuz bu `null` değerlere dayanıklı olmalıdır.
+
+`date_from` / `date_to` filtrelerinin çağrının **başlangıç zamanına**, hiç bağlanmamış bir çağrı için **oluşturulma zamanına** göre süzdüğünü unutmayın — böylece `no_answer` / `failed` çağrılar da tarih filtreli sonuçlara **dahil edilir**.
 
 ```json
 {
-  "call_id": "sess_7b5c1e4d3a09",
-  "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
+  "call_id": "019fb3a4-8b6d-7f33-a2e1-4c9f0b2d6e18",
+  "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
   "call_status": "failed",
   "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
   "call_assistant_name": "Vindy - Asistan",
@@ -179,8 +181,8 @@ Liste yalnızca başarılı görüşmeleri değil; `completed` çağrıların ya
   "call_end_reason": "no_answer",
   "call_transcript": null,
   "call_structured_data": null,
-  "call_metadata": { "crm_contact_id": "CNT-90418" },
-  "call_variables": { "first_name": "Batu" },
+  "call_metadata": { "order_id": "ORD-4823" },
+  "call_variables": { "first_name": "Selin" },
   "call_recording": { "available": false }
 }
 ```
@@ -200,21 +202,21 @@ Liste yalnızca başarılı görüşmeleri değil; `completed` çağrıların ya
 | Alan | Tür | Açıklama |
 |---|---|---|
 | `call_id` | string | Çağrının sistemimizdeki kalıcı ve benzersiz kimliği. Bir endpoint `:callId` aldığı her yerde kullanılır — örneğin bu çağrıyı getirmek için [`GET /v1/calls/:callId`](../get-call.md) veya güncel bir kayıt bağlantısı için [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md) — ayrıca çağrıyı [`call-ended` webhook](../webhooks.md) içeriğiyle eşleştirmek için. |
-| `batch_call_id` | string \| null | Bu çağrının ait olduğu batch (kampanya) — [`POST /v1/calls/bulk`](../bulk-create-calls.md)'ın döndürdüğü `batch_call_id` ile aynı. Bir batch'in çağrılarını gruplamak için kullanın (örn. `call-ended` webhook'larını işlerken). Çağrı bir batch'e ait değilse `null`: [`POST /v1/calls`](../create-call.md) ile açılan tekil çağrı veya herhangi bir inbound çağrı. |
+| `batch_call_id` | string \| null | Bu çağrının ait olduğu toplu arama — [`POST /v1/calls/bulk`](../bulk-create-calls.md)'ın döndürdüğü `batch_call_id` ile aynı. Bir toplu aramanın çağrılarını gruplamak için kullanın (örn. `call-ended` webhook'larını işlerken). Çağrı bir toplu aramaya ait değilse `null`: [`POST /v1/calls`](../create-call.md) ile açılan tekil çağrı veya herhangi bir inbound çağrı. |
 | `call_status` | string | `completed` \| `failed`. Devam eden ve kuyrukta iptal edilen çağrılar bu listeye hiç ulaşmaz. |
-| `call_assistant_id` | string (UUID) \| null | Çağrıyı yöneten asistan. |
+| `call_assistant_id` | string (UUID) | Çağrıyı yöneten asistan. |
 | `call_assistant_name` | string \| null | Asistanın görünen adı. |
 | `call_phone_number` | string \| null | Aranan veya arayan numara (mevcut olduğunda E.164 biçiminde). Numara yoksa `null` (örneğin numarasını gizleyen bir gelen arayan). |
-| `call_bound_type` | string \| null | `inbound` \| `outbound` \| `null` |
+| `call_bound_type` | `inbound` \| `outbound` | Çağrının gelen (inbound) mı giden (outbound) mı olduğu. Asla `null` olmaz. |
 | `call_started_at` | ISO 8601 (UTC) \| null | Çağrının fiilen başladığı an, `+00:00` offset biçiminde (örn. `2026-05-15T10:30:00+00:00`). Gerçek bir ISO-8601 ayrıştırıcıyla çözümleyin — `Z` son eki veya sabit milisaniye hassasiyeti varsaymayın. Çağrı hiç bağlanmadıysa `null`. |
 | `call_ended_at` | ISO 8601 (UTC) \| null | Çağrının sona erdiği an, aynı biçimde. Çağrı hiç bağlanmadıysa `null`. |
 | `call_created_at` | ISO 8601 (UTC) | Çağrı kaydını oluşturduğumuz an, aynı biçimde. |
 | `call_duration_seconds` | int \| null | Çağrı süresi (saniye). |
 | `call_end_reason` | string \| null | Serbest biçimli bir string — çağrının sona erme ham nedeni, eşlenmeden döner. Bkz. [Bitiş nedenleri](#end-reasons). |
 | `call_transcript` | string \| null | Görüşmenin düz metin dökümü. Her satır `[HH:MM:SS] Asistan:` (asistan, `Asistan`) veya `[HH:MM:SS] Müşteri:` (arayan, `Müşteri`) biçimindedir — Türkçe rol etiketleri, önlerinde UTC `HH:MM:SS` zaman damgasıyla — ve satırlar `\n` ile ayrılır. Çok kısa veya başarısız çağrılarda boş ya da null olabilir. |
-| `call_structured_data` | object \| null | Yapay zekânın çıkardığı veri; asistanınızın yapısal çıktı şemasının özellikleriyle anahtarlanan düz (flat) bir nesne olarak döner — bkz. [Yapısal veri şekilleri](#structured-data-shapes). Asistanın yapısal çıktı şeması yoksa, hiçbir şey çıkarılamadığında (veya saklanan veri ayrıştırılamadığında) `null`. |
+| `call_structured_data` | object \| null | Yapay zekânın çıkardığı veri; asistanınızın yapısal çıktı şemasının özellikleriyle anahtarlanan düz (flat) bir nesne olarak döner — bkz. [Yapısal veri şekilleri](#structured-data-shapes). Asistanın yapısal çıktı şeması yoksa, hiçbir şey çıkarılamadığında (veya saklanan veri ayrıştırılamadığında) `null`. Nesnenin *içindeki* tekil değerler de, ilgili alan çıkarılamadığında `null` olabilir (nesne var, değer `null`) — savunmacı biçimde ayrıştırın. |
 | `call_metadata` | object \| null | Çağrıyı [`POST /v1/calls/bulk`](../bulk-create-calls.md) ile oluştururken eklediğiniz metadata; korelasyon için size aynen geri döner. Çağrı metadata olmadan oluşturulduysa `null`. Kurallar için bkz. [Metadata](../bulk-create-calls.md#metadata). |
-| `call_variables` | obje \| null | Bu çağrı için gönderilen şablon değişkenleri, aynen geri döner — çağrıyı oluştururken `variables` olarak gönderdiğiniz obje. Gönderilmediyse (ör. inbound çağrılar) `null`. |
+| `call_variables` | object \| null | Bu çağrı için gönderilen şablon değişkenleri, aynen geri döner — çağrıyı oluştururken `variables` olarak gönderdiğiniz nesne. Gönderilmediyse (ör. inbound çağrılar) `null`. |
 | `call_recording` | object | Ses kaydı durumu ve bağlantısı (aşağıda). |
 
 **`call_recording` nesnesi**
@@ -240,13 +242,14 @@ Vindy yönetim paneli, ses kayıtlarını başka kaynaklardan (örneğin geçici
 
 ### Yapısal veri şekilleri {#structured-data-shapes}
 
-`call_structured_data`, yapay zekânın **asistanınızın yapısal çıktı şemasına** göre çıkardığı veridir; anahtarları şemanızın özellikleri (örn. `age`, `would_recommend`) olan **düz (flat) bir nesne** olarak döner. Bir çıktı kimliğiyle anahtarlanmaz ve `name`/`result` sarmalayıcısı **yoktur**. Değerleri, şemanızın tanımladığı biçimde skaler değerler, iç içe nesneler ve diziler (nesne dizileri dahil) tutabilir. Asistanın yapısal çıktı şeması yoksa, hiçbir şey çıkarılamadığında ya da saklanan veri ayrıştırılamadığında `null` olur. Örneğin bir *Order Summary* şeması şöyle dönebilir:
+`call_structured_data`, yapay zekânın **asistanınızın yapısal çıktı şemasına** göre çıkardığı veridir; anahtarları şemanızın özellikleri (örn. `age`, `would_recommend`) olan **düz (flat) bir nesne** olarak döner. Bir çıktı kimliğiyle anahtarlanmaz ve `name`/`result` sarmalayıcısı **yoktur**. Değerleri, şemanızın tanımladığı biçimde skaler değerler, iç içe nesneler ve diziler (nesne dizileri dahil) tutabilir. Asistanın yapısal çıktı şeması yoksa, hiçbir şey çıkarılamadığında ya da saklanan veri ayrıştırılamadığında `null` olur. Bunun ötesinde, nesnenin kendisi bulunsa bile **tekil alanlar `null` dönebilir** — bu, asistanın şemanızı çalıştırdığı ama o belirli değeri çıkaramadığı anlamına gelir; bu yüzden her alanı kullanmadan önce kontrol edin. Örneğin bir *Order Summary* şeması şöyle dönebilir:
 
 ```json
 {
   "call_structured_data": {
     "customer_name": "Jane Doe",
     "callback_requested": false,
+    "coupon_code": null,
     "orders": [
       { "product": "Wireless Keyboard", "quantity": 2, "in_stock": true },
       { "product": "USB-C Cable", "quantity": 5, "in_stock": false }
@@ -291,7 +294,7 @@ Başka değerler de görülebilir; bunlara **ham sağlayıcı/SIP durum metni** 
 | `400` | `INVALID_CURSOR` | Cursor boş veya çözümlenemiyor |
 | `400` | `MALFORMED_CURSOR` | Cursor çözümlenemiyor ya da farklı bir endpoint/filtre içindir |
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları |
-| `429` | `RATE_LIMITED` | Dakikalık hız limiti aşıldı |
+| `429` | `RATE_LIMITED` | Dakika-başı istek limiti aşıldı; `Retry-After` saniye sonra tekrar deneyin. |
 
 ## Örnekler
 
@@ -395,7 +398,7 @@ print(f"{len(calls)} çağrı")
 
 ### Bir toplu aramanın çağrılarını listeleme
 
-Bu endpoint kampanyaya göre filtrelemez. Belirli bir toplu aramanın çağrıları arasında sayfa sayfa gezinmek için özel [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint'ini kullanın — o uç, toplu aramanın henüz aranmamış, devam eden ve iptal edilmiş çağrılarını da içerir.
+Bu endpoint toplu aramaya göre filtrelemez. Belirli bir toplu aramanın çağrıları arasında sayfa sayfa gezinmek için özel [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint'ini kullanın — o endpoint, toplu aramanın henüz aranmamış, devam eden ve iptal edilmiş çağrılarını da içerir.
 
 ### Tarih aralığı — tek gün
 

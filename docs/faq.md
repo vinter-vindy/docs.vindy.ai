@@ -16,7 +16,7 @@ No. The plain key is shown only once at creation. Create a new key and revoke th
 
 ## Why doesn't a call appear in `POST /v1/calls/list`?
 
-The endpoint only returns calls that reached a **terminal** state — `completed` or `failed` — with the recording transfer settled. A call that just ended may take a short while to appear. Calls still in progress never appear, and browser (WebRTC) calls never appear in the API at all. See [no half-baked data](api-reference/list-calls/index.md).
+The endpoint only returns calls that reached a **terminal** state — `completed` or `failed` — with the recording transfer settled. A call that just ended may take a short while to appear. Calls still in progress never appear, and browser (WebRTC) calls never appear in the API at all. See [why in-progress calls don't appear](api-reference/list-calls/index.md).
 
 ## A recording shows in the Vindy panel but the API says `available: false`. Bug?
 
@@ -30,7 +30,12 @@ No — that state is **terminal**. Either no recording was produced, or its tran
 
 Yes for reads. All `GET` endpoints are idempotent, and `POST /v1/calls/list` is a **query, not a mutation** — it has no side effects and is safe to retry. Upsert calls on your side (UNIQUE constraint on `call_id`) and retries become harmless.
 
-Write requests are different. `POST /v1/calls/bulk` creates calls, and there is **no server-side lock** that blocks a concurrent or repeated submission — nothing rejects a second call with a "batch in progress" error. So blindly retrying it can start a **second batch and call people twice**. Guard against this on your side: only retry a bulk request when you're sure the previous one didn't succeed, and deduplicate (for example, key each batch by your own idempotency token, or check whether the numbers were already accepted before resubmitting). The cancel endpoints are safe to call again.
+Write requests are different. `POST /v1/calls/bulk` creates calls, and there is **no server-side lock** that blocks a concurrent or repeated submission — nothing rejects a second call with a "batch in progress" error. So blindly retrying it can start a **second batch and call people twice**. Guard against this on your side:
+
+- Only retry a bulk request when you're sure the previous one didn't succeed.
+- De-duplicate — for example, key each batch by your own idempotency token, or check whether the numbers were already accepted before resubmitting.
+
+The cancel endpoints are safe to call again.
 
 ## How often should I poll?
 

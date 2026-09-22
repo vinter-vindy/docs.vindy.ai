@@ -11,10 +11,10 @@ import TabItem from '@theme/TabItem';
 
 Kuyrukta bekleyen tek bir **giden çağrıyı** iptal eder — hâlâ `pending` veya `scheduled` durumunda olan ve henüz aranmamış bir çağrıyı. Yalnızca kendi şirketinizin çağrılarını iptal edebilirsiniz.
 
-Bir çağrı yalnızca hâlâ kuyrukta beklerken iptal edilebilir. Görev bir kez dağıtıldıktan (aranmaya başlandıktan) veya bittikten sonra artık iptal edilemez.
+Çağrı bir kez dağıtıldıktan (aranmaya başlandıktan) veya bittikten sonra artık iptal edilemez.
 
 :::note `callId` nereden gelir
-Yol, bir **giden kuyruk çağrısının** `call_id` değerini alır — [`POST /v1/calls/bulk`](bulk-create-calls.md) yanıtındaki `calls[]` dizisinde dönen kimliklerden biridir. Yalnızca hâlâ kuyrukta bekleyen çağrılar iptal edilebilir; bir batch'teki kalan tüm çağrıları tek seferde iptal etmek için [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) kullanın.
+Yol, bir **giden kuyruk çağrısının** `call_id` değerini alır. Bir `call_id`'yi [`POST /v1/calls`](create-call.md) (tekil çağrı) yanıtından, bir toplu aramanın çağrılarını [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile listeleyerek ya da [`POST /v1/calls/list`](list-calls/index.md) yanıtından alırsınız — ayrıca kendi `metadata`'nızla eşleştirerek de bir kuyruk çağrısını bulabilirsiniz. Yalnızca hâlâ kuyrukta bekleyen çağrılar iptal edilebilir; bir toplu aramadaki kalan tüm çağrıları tek seferde iptal etmek için [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) kullanın.
 :::
 
 ---
@@ -22,7 +22,7 @@ Yol, bir **giden kuyruk çağrısının** `call_id` değerini alır — [`POST /
 ## İstek
 
 ```http
-POST https://api.vindy.ai/v1/calls/7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b/cancel
+POST https://api.vindy.ai/v1/calls/01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f/cancel
 Authorization: Bearer <api-key>
 ```
 
@@ -32,12 +32,12 @@ Authorization: Bearer <api-key>
 
 | Parametre | Tür | Açıklama |
 |---|---|---|
-| `callId` | string | İptal edilecek kuyruktaki çağrının `call_id` değeri (bulk `calls[]` yanıtından). |
+| `callId` | string | İptal edilecek kuyruktaki çağrının `call_id` değeri. |
 
 ## Yanıt (200 OK)
 
 ```json
-{ "call_id": "7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b", "status": "cancelled" }
+{ "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f", "status": "cancelled" }
 ```
 
 | Alan | Tür | Açıklama |
@@ -51,7 +51,7 @@ Authorization: Bearer <api-key>
 |---|---|---|
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları. |
 | `404` | `RESOURCE_NOT_FOUND` | Böyle bir çağrı yok veya başka bir şirkete ait. |
-| `409` | `ERR_CALL_NOT_CANCELLABLE` | Çağrı iptal edilemez: kuyrukta bekleyen bir giden çağrı değildir. Ya zaten dağıtılmış veya bitmiş, bir yarış koşulu oluşmuş ya da bir **gelen / çoktan başlamış çağrıdır** (bunlar asla iptal edilemez). |
+| `409` | `ERR_CALL_NOT_CANCELLABLE` | Çağrı iptal edilemez: kuyrukta bekleyen bir giden çağrı değildir. Ya zaten dağıtılmış/bitmiştir, ya bir yarış koşulu oluşmuştur ya da **gelen/çoktan başlamış bir çağrıdır** (bunlar asla iptal edilemez). |
 | `429` | `RATE_LIMITED` | Dakika-başı istek limiti aşıldı; `Retry-After` saniye sonra tekrar deneyin. |
 
 :::note İptalin artık mümkün olmadığı durum
@@ -62,7 +62,7 @@ Kuyruktaki bir çağrı, beklemeden aranma durumuna hızla geçer. `409 ERR_CALL
 Bir webhook aboneliğiniz varsa, tekli bir kuyruk çağrısını iptal etmek `call_status: "cancelled"` ve minimal bir gövdeyle (transcript veya kayıt yok) bir [`call-ended`](webhooks.md#call-ended) olayı üretir — iptali eşzamansız olarak böyle doğrularsınız. Bütün bir toplu aramayı iptal etmek ise bunun yerine çağrı başına `call-ended` değil, **tek** bir [`batch-ended`](webhooks.md#batch-ended) olayı üretir.
 :::
 
-:::tip Bütün bir batch'i iptal etme
+:::tip Bütün bir toplu aramayı iptal etme
 Aynı anda çok sayıda kuyruktaki çağrıyı — örneğin bir toplu aramadaki kalan tüm çağrıları — iptal etmek için, her çağrıyı tek tek iptal etmek yerine bulk isteğinizden gelen `batch_call_id` ile [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) endpoint'ini kullanın.
 :::
 
@@ -72,9 +72,9 @@ Aynı anda çok sayıda kuyruktaki çağrıyı — örneğin bir toplu aramadaki
 <TabItem value="curl" label="curl">
 
 ```bash
-curl -X POST https://api.vindy.ai/v1/calls/7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b/cancel \
+curl -X POST https://api.vindy.ai/v1/calls/01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f/cancel \
   -H "Authorization: Bearer $VINDY_API_KEY"
-# → { "call_id": "7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b", "status": "cancelled" }
+# → { "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f", "status": "cancelled" }
 ```
 
 </TabItem>
@@ -102,7 +102,7 @@ async function cancelCall(callId) {
   return status === "cancelled";
 }
 
-await cancelCall("7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b");
+await cancelCall("01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f");
 ```
 
 </TabItem>
@@ -127,7 +127,7 @@ def cancel_call(call_id):
 
     return response.json()["status"] == "cancelled"
 
-cancel_call("7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b")
+cancel_call("01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f")
 ```
 
 </TabItem>

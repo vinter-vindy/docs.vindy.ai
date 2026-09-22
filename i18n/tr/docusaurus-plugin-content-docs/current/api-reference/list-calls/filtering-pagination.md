@@ -8,7 +8,7 @@ sidebar_position: 3
 
 [`POST /v1/calls/list`](index.md) çağrılarını daraltma ve sayfalama ile ilgili her şey: `cursor`, `limit`, `date_from` ve `date_to` parametreleri; ayrıca `assistant_id` ve `call_bound_type` filtreleri.
 
-Çağrılar **en yeniden en eskiye** sırayla döner; sıralama, her çağrının gerçekleştiği ana (başlangıç zamanına) göredir, çağrı kimliği ise eşitlik bozucudur.
+Çağrılar **en yeniden en eskiye** sırayla döner; sıralama, her çağrının gerçekleştiği ana (başlangıç zamanına) göredir, `call_id` ise eşitlik bozucudur.
 
 ---
 
@@ -16,14 +16,14 @@ sidebar_position: 3
 
 | İstek | Ne döner? |
 |---|---|
-| `date_from`, `date_to`, `cursor` ve `limit` yok | Şirketinize ait **en yeni 50** sonlanmış çağrı. Daha fazlası varsa `has_more` `true` olur ve `next_cursor` döner — sonraki 50 için onu geri gönderin. |
+| `date_from`, `date_to`, `cursor` ve `limit` yok | Şirketinize ait **en yeni 200** sonlanmış çağrı. Daha fazlası varsa `has_more` `true` olur ve `next_cursor` döner — sonraki 200 için onu geri gönderin. |
 | Yalnızca `limit` (örn. `500`) | Tek sayfada en yeni *N* çağrı (en çok 500). |
 | Yalnızca `date_from` | O günden itibaren (dahil) çağrılar, en yeniden başlayarak. `cursor` ile devam edin. |
 | Yalnızca `date_to` | O gün dahil olacak şekilde ve öncesindeki çağrılar, en yeniden başlayarak. `cursor` ile devam edin. |
 | `date_from` + `date_to` | İki ucu da dahil gün aralığındaki çağrılar, en yeniden başlayarak. |
 | Yukarıdakilerden herhangi biri **+ `cursor`** | Aynı sorgunun **sonraki sayfası**. Sayfalar arasında diğer tüm parametreleri aynı tutun — yalnızca `cursor` değişir. |
 
-**Diğer filtreler.** `assistant_id` ve `call_bound_type` (`inbound` / `outbound`) kapsamı daha da daraltır ve tarih aralığıyla ve birbirleriyle birlikte çalışır (mantıksal VE). Bir gezinmenin her sayfasında aynı filtreleri gönderin. Bir toplu aramanın çağrılarını listelemek için bunun yerine özel [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint'ini kullanın — bu liste kampanyaya göre filtrelemez.
+**Diğer filtreler.** `assistant_id` ve `call_bound_type` (`inbound` / `outbound`) kapsamı daha da daraltır ve tarih aralığıyla ve birbirleriyle birlikte çalışır (mantıksal VE). Bir gezinmenin her sayfasında aynı filtreleri gönderin. Bir toplu aramanın çağrılarını listelemek için bunun yerine özel [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint'ini kullanın — bu liste toplu aramaya göre filtrelemez.
 
 ---
 
@@ -38,7 +38,7 @@ sidebar_position: 3
 - **İlk** istekte göndermeyin.
 - Her yanıt bir `pagination.next_cursor` döner. `has_more` `true` olduğu sürece bu değeri `cursor` olarak geri gönderip sonraki sayfayı alın.
 - `has_more` `false` olunca durun (bu noktada `next_cursor` `null`'dır).
-- Cursor, **opak** bir base64url anahtarıdır — `(started_at, çağrı kimliği)` üzerinde azalan sıralı bir keyset işaretçisi. Oluşturmayın veya çözmeyin. Cursor ile sayfalarken **aynı `assistant_id`, `call_bound_type`, `date_from` ve `date_to` değerlerini tekrar gönderin**; cursor yalnızca o sorgudaki konumunuzu işaretler. `limit` (sayfa boyutu) sayfalar arasında değişebilir ama filtreler değişemez: bir cursor onu üreten endpoint'e ve filtrelere bağlıdır ve **bir filtreyi değiştirdikten sonra — ya da başka bir endpoint'te (ör. batch çağrı listesi) — kullanmak `400 MALFORMED_CURSOR` ile reddedilir**. Farklı bir kapsam istediğinizde cursor'sız yeni bir gezinme başlatın.
+- Cursor, **opak** bir base64url anahtarıdır — `(başlangıç zamanı, call_id)` üzerinde azalan sıralı bir keyset işaretçisi. Oluşturmayın veya çözmeyin. Cursor ile sayfalarken **aynı `assistant_id`, `call_bound_type`, `date_from` ve `date_to` değerlerini tekrar gönderin**; cursor yalnızca o sorgudaki konumunuzu işaretler. `limit` (sayfa boyutu) sayfalar arasında değişebilir ama filtreler değişemez: bir cursor onu üreten endpoint'e ve filtrelere bağlıdır ve **bir filtreyi değiştirdikten sonra — ya da başka bir endpoint'te (ör. toplu arama çağrı listesi) — kullanmak `400 MALFORMED_CURSOR` ile reddedilir**. Farklı bir kapsam istediğinizde cursor'sız yeni bir gezinme başlatın.
 - Cursor değerlerini uzun süre (örneğin günlerce) saklamayın — tek bir senkronizasyon oturumu içinde kullanın. Düzenli/**artımlı** senkron için çalıştırmalar arasında cursor saklamayın; bunun yerine en son çektiğiniz günü hatırlayıp sonraki çalıştırmada `date_from` olarak gönderin (ve bir gün tam olarak yeniden tarandığından `call_id` üzerinden tekilleştirin). Cursor, *tek bir sorgunun içindeki* konumu işaretler; kalıcı bir watermark değildir. Bkz. [artımlı senkron rehberi](../../guides/incremental-sync.md).
 
 ```bash
@@ -74,7 +74,7 @@ Her sayfa aynı yapıyla sarmalanır:
 {
   "data": [ /* çağrılar */ ],
   "pagination": {
-    "next_cursor": "eyJ0IjoiMjAyNi0wNS0xNVQxMTowMjoxMCswMDowMCIsImkiOiJzZXNzXzZhNGIwZDNjMmY4MSJ9",
+    "next_cursor": "eyJ0IjoiMjAyNi0wNS0…",
     "has_more": true,
     "limit": 50
   }
@@ -100,6 +100,10 @@ Her sayfa aynı yapıyla sarmalanır:
 Günler **Europe/Istanbul** dilimine göre yorumlanır (yıl boyunca sabit UTC+3; yaz/kış saati yoktur). İçeride aralık, İstanbul saatiyle `[date_from 00:00, (date_to + 1 gün) 00:00)`'dır; böylece her iki ucun yerel günü tam olarak kapsanır.
 
 Birini tek başına ya da ikisini birlikte gönderebilir; en baştan taramak için ikisini de boş bırakabilirsiniz. `date_from`'un `date_to`'dan sonra olması `DATE_RANGE_INVALID` (400) ile reddedilir.
+
+:::note Başlangıç zamanı olmayan başarısız çağrılar
+`date_from` / `date_to` filtreleri çağrının **başlangıç zamanına**, hiç bağlanmamış bir çağrı için (bazı `no_answer` / `failed` çağrıların başlangıç zamanı yoktur) **oluşturulma zamanına** göre süzer. Bu çağrılar da tarih filtreli sonuçlara **dahil edilir**; `date_from` ile artımlı senkronizasyon güvenlidir.
+:::
 
 ### Kabul edilen biçim
 

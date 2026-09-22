@@ -24,12 +24,12 @@ Authorization: Bearer <api-key>
 
 ## Rules
 
-- The plain key is visible ONLY at creation time. If lost, generate a new one — recovery is not possible.
-- Revoked keys become invalid immediately → all subsequent requests return 401.
+- The plain key is visible **only** at creation time. If lost, generate a new one — recovery is not possible.
+- Revoked keys become invalid immediately, so all subsequent requests return 401.
 - Expired keys (`expires_at < now()`) are automatically invalid.
-- Each key is bound to a single company → it **cannot** access another customer's data. See [Multi-tenancy](concepts/multi-tenancy.md).
-- Do NOT put keys in logs, source code, or public repositories. Use environment variables or a secret manager.
-- Do NOT share keys over email, Slack, WhatsApp, etc. If a key may be compromised, revoke it immediately and create a new one.
+- Each key is bound to a single company, so it **cannot** access another company's data. See [Multi-tenancy](concepts/multi-tenancy.md).
+- Do **not** put keys in logs, source code, or public repositories. Use environment variables or a secret manager.
+- Do **not** share keys over email, Slack, WhatsApp, etc. If a key may be compromised, revoke it immediately and create a new one.
 
 ---
 

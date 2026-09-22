@@ -11,10 +11,10 @@ import TabItem from '@theme/TabItem';
 
 Cancels a single **queued** outbound call — one that is still `pending` or `scheduled` and has not yet been dialed. You can only cancel your own company's calls.
 
-A call can only be cancelled while it is still waiting in the queue. Once it has been dispatched (is being dialed) or has finished, it can no longer be cancelled.
+Once it has been dispatched (is being dialed) or has finished, it can no longer be cancelled.
 
 :::note Where the `callId` comes from
-The path takes the `call_id` of a **queued outbound** call — one of the ids returned in the `calls[]` array of [`POST /v1/calls/bulk`](bulk-create-calls.md). Only calls still waiting in the queue can be cancelled; to cancel every remaining call in a batch at once, use [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md).
+The path takes the `call_id` of a **queued outbound** call. You get a `call_id` from [`POST /v1/calls`](create-call.md) (a single call), by listing a batch's calls via [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md), or from [`POST /v1/calls/list`](list-calls/index.md) — and you can also find a queued call by correlating your own `metadata`. Only calls still waiting in the queue can be cancelled; to cancel every remaining call in a batch at once, use [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md).
 :::
 
 ---
@@ -22,7 +22,7 @@ The path takes the `call_id` of a **queued outbound** call — one of the ids re
 ## Request
 
 ```http
-POST https://api.vindy.ai/v1/calls/7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b/cancel
+POST https://api.vindy.ai/v1/calls/01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f/cancel
 Authorization: Bearer <api-key>
 ```
 
@@ -32,17 +32,17 @@ No request body.
 
 | Parameter | Type | Description |
 |---|---|---|
-| `callId` | string | The `call_id` of the queued call to cancel (from the bulk `calls[]` response). |
+| `callId` | string | The `call_id` of the queued call to cancel. |
 
 ## Response (200 OK)
 
 ```json
-{ "call_id": "7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b", "status": "cancelled" }
+{ "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f", "status": "cancelled" }
 ```
 
 | Field | Type | Description |
 |---|---|---|
-| `call_id` | string | The id of the cancelled call (the `callId` you passed in). |
+| `call_id` | string | The ID of the cancelled call (the `callId` you passed in). |
 | `status` | string | Always `cancelled` on success. |
 
 ## Errors
@@ -72,9 +72,9 @@ To cancel many queued calls at once — for example every remaining call in a bu
 <TabItem value="curl" label="curl">
 
 ```bash
-curl -X POST https://api.vindy.ai/v1/calls/7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b/cancel \
+curl -X POST https://api.vindy.ai/v1/calls/01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f/cancel \
   -H "Authorization: Bearer $VINDY_API_KEY"
-# → { "call_id": "7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b", "status": "cancelled" }
+# → { "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f", "status": "cancelled" }
 ```
 
 </TabItem>
@@ -102,7 +102,7 @@ async function cancelCall(callId) {
   return status === "cancelled";
 }
 
-await cancelCall("7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b");
+await cancelCall("01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f");
 ```
 
 </TabItem>
@@ -127,7 +127,7 @@ def cancel_call(call_id):
 
     return response.json()["status"] == "cancelled"
 
-cancel_call("7b910f3a-2c4d-4e8b-a1f2-9c3d5e6f7a8b")
+cancel_call("01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f")
 ```
 
 </TabItem>

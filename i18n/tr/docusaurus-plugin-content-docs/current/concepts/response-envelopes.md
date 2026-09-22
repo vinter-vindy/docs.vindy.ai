@@ -6,13 +6,13 @@ sidebar_position: 1
 
 # Yanıt Formatı
 
-Tüm Vindy API yanıtları JSON'dur (`application/json`) ve küçük, öngörülebilir bir yapı kümesine uyar. Bir kez öğrendiğinizde her endpoint tanıdık gelir.
+Tüm Vindy API yanıtları JSON'dur (`application/json`) ve küçük, öngörülebilir bir yapı kümesine uyar.
 
 :::note Bilinmeyen istek alanları yok sayılır
 İstek gövdelerinde, endpoint'in tanımadığı herhangi bir alan **sessizce yok sayılır** — asla hata olmaz. Yanlış yazılmış ya da fazladan bir alan hiçbir etki yapmaz (filtrelemez, değiştirmez, isteği reddetmez). Yalnızca belgelenen alanları gönderin.
 :::
 
-Çoğu liste yanıtı bir sayfalama nesnesiyle sarmalanır — bkz. [Filtreleme ve Sayfalama](../api-reference/list-calls/filtering-pagination.md#paginated). Tek istisna, sayfalama nesnesi yerine `{ data, total }` döndüren [`GET /v1/assistants`](../api-reference/list-assistants.md) endpoint'idir.
+Liste yanıtlarının zarf yapısı ve sayfalama için bkz. [Filtreleme ve Sayfalama](../api-reference/list-calls/filtering-pagination.md#paginated). İki uç bunun istisnasıdır — [`GET /v1/assistants`](../api-reference/list-assistants.md) ve [`GET /v1/phone-numbers`](../api-reference/list-phone-numbers.md) `{ data, total }` döndürür.
 
 ---
 
@@ -61,7 +61,7 @@ Hataya bağlı olarak `extensions`, `code` alanının yanında ek makine-okunabi
 | Hata (kod / durum) | `extensions` içindeki ek alanlar |
 |---|---|
 | `VALIDATION_FAILED` (400) | `validation_errors` — bir obje dizisi |
-| `INVALID_PHONE_NUMBER`, `INVALID_METADATA` (400, `POST /v1/calls/bulk` içinden) | `index` — `calls` içindeki hatalı öğenin 0-tabanlı indeksi |
+| `INVALID_PHONE_NUMBER`, `INVALID_METADATA`, `INVALID_VARIABLES` (400) | `index` — `calls` dizisindeki hatalı öğenin 0-tabanlı indeksi (toplu istek); tekli çağrı hataları `index: 0` bildirir (toplu istekte istek düzeyindeki bir `variables` ihlali `-1` bildirir) |
 | `RATE_LIMITED` (429) | `retry_after` (saniye), `limit` |
 
 ### Doğrulama hataları

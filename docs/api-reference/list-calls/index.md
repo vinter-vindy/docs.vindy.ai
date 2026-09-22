@@ -12,10 +12,10 @@ import TabItem from '@theme/TabItem';
 Returns your company's calls — each with its transcript, the data your structured outputs extracted, any metadata you attached, and a recording link when one is ready. Results come back a page at a time via an opaque cursor, and you can narrow them by assistant, direction, and a range of days.
 
 :::tip Listing one batch's calls
-To list the calls of a specific batch (campaign), use the dedicated [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint. Unlike this list — which returns only finalized calls — the batch endpoint also shows a batch's not-yet-dialed, in-progress, and cancelled calls.
+To list the calls of a specific batch, use the dedicated [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint. Unlike this list — which returns only finalized calls — the batch endpoint also shows a batch's not-yet-dialed, in-progress, and cancelled calls.
 :::
 
-:::info No half-baked data
+:::info Only finalized calls are returned
 Only calls that are **ready to be shown to you** are returned. A call is ready when:
 
 - It reached a **terminal** state — `completed` or `failed` — AND
@@ -24,7 +24,7 @@ Only calls that are **ready to be shown to you** are returned. A call is ready w
 Calls still in progress are **never** included, and browser (WebRTC) calls never appear in the API at all. This makes your sync logic idempotent.
 :::
 
-A call becomes available **shortly after it ends** — once its recording has finished transferring to durable storage. This typically takes a few seconds, and occasionally up to a few minutes for longer recordings. Until a call is ready it appears in neither this list nor the `call-ended` webhook, so a call that just ended may not show up on your very next request.
+A call becomes available **shortly after it ends** — typically a few seconds, and occasionally up to a few minutes for longer recordings, once its recording has finished transferring to durable storage. So a call that just ended may not show up on your very next request.
 
 :::tip Pull and push share the same signal
 This endpoint is the **pull** counterpart of the [`call-ended` webhook](../webhooks.md): a call surfaces here and fires that webhook at the same moment it becomes ready. Use the webhook for real-time delivery, and this endpoint to fetch on demand or back-fill anything you may have missed.
@@ -86,8 +86,8 @@ The full parameter reference, accepted date formats, and copy-paste recipes live
 {
   "data": [
     {
-      "call_id": "sess_5f3a9c2b1e7d",
-      "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
+      "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f",
+      "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
       "call_status": "completed",
       "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "call_assistant_name": "Vindy - Asistan",
@@ -98,75 +98,77 @@ The full parameter reference, accepted date formats, and copy-paste recipes live
       "call_created_at": "2026-05-15T10:29:55+00:00",
       "call_duration_seconds": 87,
       "call_end_reason": "completed",
-      "call_transcript": "[10:30:00] Asistan: Hi, this is Vindy, your AI assistant. I'd like to ask a few quick questions for our customer satisfaction survey — is now a good time?\n[10:30:07] Müşteri: Sure, go ahead.\n[10:30:11] Asistan: Thank you. First, may I ask your age?\n[10:30:16] Müşteri: Thirty-two.\n[10:30:21] Asistan: How would you rate your overall satisfaction with our service, on a scale of 1 to 5?\n[10:30:29] Müşteri: I'd say a four.\n[10:30:34] Asistan: And how would you rate how quickly our team resolved your request, from 1 to 5?\n[10:30:42] Müşteri: Five.\n[10:30:47] Asistan: Would you recommend us to a friend or colleague?\n[10:30:53] Müşteri: Yes, I would.\n[10:30:58] Asistan: Thank you so much — your feedback means a lot to us. Have a great day!\n[10:31:05] Müşteri: You're welcome, you too.",
+      "call_transcript": "[10:30:00] Asistan: Hi, this is Vindy, your AI assistant, calling about your recent order. Do you have a moment for a short satisfaction survey?\n[10:30:07] Müşteri: Sure, go ahead.\n[10:30:11] Asistan: Thank you. On a scale of 1 to 5, how satisfied were you with your overall experience?\n[10:30:18] Müşteri: I'd say a four.\n[10:30:23] Asistan: Glad to hear it. Is there anything about your order you weren't happy with?\n[10:30:29] Müşteri: No, everything was fine.\n[10:30:34] Asistan: Great. Would you like a representative to call you back about anything?\n[10:30:40] Müşteri: No, that won't be necessary.\n[10:30:45] Asistan: Thank you so much for your time — have a great day!\n[10:30:50] Müşteri: You too, thanks.",
       "call_structured_data": {
-        "age": 32,
-        "overall_satisfaction": 4,
-        "support_speed": 5,
-        "would_recommend": true
+        "arama_sonucu": "tamamlandi",
+        "genel_memnuniyet_puani": 4,
+        "geri_arama_talebi": false,
+        "ilgilenilen_urunler": null
       },
-      "call_metadata": { "crm_contact_id": "CNT-90412" },
-      "call_variables": { "first_name": "Batu" },
+      "call_metadata": { "order_id": "ORD-4821" },
+      "call_variables": { "first_name": "Elif" },
       "call_recording": {
         "available": true,
         "url": "https://...",
-        "expires_at": "2026-05-15T10:36:27+00:00"
+        "expires_at": "2026-05-16T10:31:27+00:00"
       }
     },
     {
-      "call_id": "sess_6a4b0d3c2f81",
-      "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
-      "call_status": "completed",
+      "call_id": "019fb39a-2e5f-7c14-9a8b-1d3c5e7f9a20",
+      "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
+      "call_status": "failed",
       "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "call_assistant_name": "Vindy - Asistan",
       "call_phone_number": "+905554445566",
       "call_bound_type": "outbound",
       "call_started_at": "2026-05-15T11:02:10+00:00",
-      "call_ended_at": "2026-05-15T11:02:20+00:00",
+      "call_ended_at": "2026-05-15T11:02:16+00:00",
       "call_created_at": "2026-05-15T11:01:58+00:00",
-      "call_duration_seconds": 10,
-      "call_end_reason": "user_hangup",
-      "call_transcript": "[11:02:10] Asistan: Hi, this is Vindy calling about our customer satisfaction survey. Is now a good time?\n[11:02:16] Müşteri: Sorry, wrong number.",
+      "call_duration_seconds": 0,
+      "call_end_reason": "User Busy",
+      "call_transcript": null,
       "call_structured_data": null,
-      "call_metadata": null,
-      "call_variables": { "first_name": "Batu" },
+      "call_metadata": { "order_id": "ORD-4822" },
+      "call_variables": { "first_name": "Deniz" },
       "call_recording": {
         "available": false
       }
     }
   ],
   "pagination": {
-    "next_cursor": "eyJ0IjoiMjAyNi0wNS0xNVQxMTowMjoxMCswMDowMCIsImkiOiJzZXNzXzZhNGIwZDNjMmY4MSJ9",
+    "next_cursor": "eyJ0IjoiMjAyNi0wNS0…",
     "has_more": true,
     "limit": 50
   }
 }
 ```
 
+`pagination.next_cursor` is an **opaque** token — send it back verbatim to fetch the next page; don't decode it (see [Filtering & Pagination](filtering-pagination.md#cursors)).
+
 `call_transcript` is a single string; each turn within it is separated by a newline (`\n`). JSON escapes those newlines, so the value above shows on one line. Rendered with real line breaks, the first call's transcript reads:
 
 ```text
-[10:30:00] Asistan: Hi, this is Vindy, your AI assistant. I'd like to ask a few quick questions for our customer satisfaction survey — is now a good time?
+[10:30:00] Asistan: Hi, this is Vindy, your AI assistant, calling about your recent order. Do you have a moment for a short satisfaction survey?
 [10:30:07] Müşteri: Sure, go ahead.
-[10:30:11] Asistan: Thank you. First, may I ask your age?
-[10:30:16] Müşteri: Thirty-two.
-[10:30:21] Asistan: How would you rate your overall satisfaction with our service, on a scale of 1 to 5?
-[10:30:29] Müşteri: I'd say a four.
-[10:30:34] Asistan: And how would you rate how quickly our team resolved your request, from 1 to 5?
-[10:30:42] Müşteri: Five.
-[10:30:47] Asistan: Would you recommend us to a friend or colleague?
-[10:30:53] Müşteri: Yes, I would.
-[10:30:58] Asistan: Thank you so much — your feedback means a lot to us. Have a great day!
-[10:31:05] Müşteri: You're welcome, you too.
+[10:30:11] Asistan: Thank you. On a scale of 1 to 5, how satisfied were you with your overall experience?
+[10:30:18] Müşteri: I'd say a four.
+[10:30:23] Asistan: Glad to hear it. Is there anything about your order you weren't happy with?
+[10:30:29] Müşteri: No, everything was fine.
+[10:30:34] Asistan: Great. Would you like a representative to call you back about anything?
+[10:30:40] Müşteri: No, that won't be necessary.
+[10:30:45] Asistan: Thank you so much for your time — have a great day!
+[10:30:50] Müşteri: You too, thanks.
 ```
 
 :::note Failed calls are included too
-The list returns `failed` calls as well as `completed` ones — not only successful conversations. A call that never connected (for example a `failed` no-answer) has no conversation or audio, so its time-based fields are `null` and `call_recording.available` is `false`. Your code should tolerate these nulls:
+The list returns `failed` calls as well as `completed` ones — not only successful conversations. A call that never connected (for example a `failed` no-answer) has no conversation or audio, so its time-based fields are `null` and `call_recording.available` is `false`. Your code should tolerate these nulls.
+
+Note that `date_from` / `date_to` match on a call's **start time**, falling back to its **creation time** for a call that never connected — so `no_answer` / `failed` calls are **included** in date-filtered results too.
 
 ```json
 {
-  "call_id": "sess_7b5c1e4d3a09",
-  "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
+  "call_id": "019fb3a4-8b6d-7f33-a2e1-4c9f0b2d6e18",
+  "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
   "call_status": "failed",
   "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
   "call_assistant_name": "Vindy - Asistan",
@@ -179,8 +181,8 @@ The list returns `failed` calls as well as `completed` ones — not only success
   "call_end_reason": "no_answer",
   "call_transcript": null,
   "call_structured_data": null,
-  "call_metadata": { "crm_contact_id": "CNT-90418" },
-  "call_variables": { "first_name": "Batu" },
+  "call_metadata": { "order_id": "ORD-4823" },
+  "call_variables": { "first_name": "Selin" },
   "call_recording": { "available": false }
 }
 ```
@@ -200,19 +202,19 @@ The list returns `failed` calls as well as `completed` ones — not only success
 | Field | Type | Description |
 |---|---|---|
 | `call_id` | string | The call's stable, unique identifier in our system. Use it wherever an endpoint takes a `:callId` — for example [`GET /v1/calls/:callId`](../get-call.md) to fetch this call or [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md) for a fresh recording link — and to correlate the call with its [`call-ended` webhook](../webhooks.md) payload. |
-| `batch_call_id` | string \| null | The batch (campaign) this call belongs to — the same `batch_call_id` returned by [`POST /v1/calls/bulk`](../bulk-create-calls.md). Use it to group a batch's calls (e.g. when handling `call-ended` webhooks). `null` when the call is not part of a batch: a single call from [`POST /v1/calls`](../create-call.md), or any inbound call. |
+| `batch_call_id` | string \| null | The batch this call belongs to — the same `batch_call_id` returned by [`POST /v1/calls/bulk`](../bulk-create-calls.md). Use it to group a batch's calls (e.g. when handling `call-ended` webhooks). `null` when the call is not part of a batch: a single call from [`POST /v1/calls`](../create-call.md), or any inbound call. |
 | `call_status` | string | `completed` \| `failed`. Ongoing and cancelled-in-queue calls never reach this list. |
-| `call_assistant_id` | string (UUID) \| null | Assistant that handled the call. |
+| `call_assistant_id` | string (UUID) | Assistant that handled the call. |
 | `call_assistant_name` | string \| null | Display name of the assistant. |
 | `call_phone_number` | string \| null | Phone number called or calling (E.164 format when available). `null` when the number is unavailable (e.g. an anonymous inbound caller). |
-| `call_bound_type` | string \| null | `inbound` \| `outbound` \| `null` |
-| `call_started_at` | ISO 8601 (UTC) \| null | When the call actually started, in `+00:00` offset form (e.g. `2026-05-15T10:30:00+00:00`). Parse it with a real ISO-8601 parser — don't assume a `Z` suffix or fixed millisecond precision. `null` if the call never connected. |
+| `call_bound_type` | `inbound` \| `outbound` | Whether the call was inbound (received) or outbound (placed). Never `null`. |
+| `call_started_at` | ISO 8601 (UTC) \| null | When the call actually started, in `+00:00` offset form (e.g. `2026-05-15T10:30:00+00:00`). Parse it with a real ISO 8601 parser — don't assume a `Z` suffix or fixed millisecond precision. `null` if the call never connected. |
 | `call_ended_at` | ISO 8601 (UTC) \| null | When the call ended, same format. `null` if the call never connected. |
 | `call_created_at` | ISO 8601 (UTC) | When we created the call record, same format. |
 | `call_duration_seconds` | int \| null | Call duration in seconds. |
 | `call_end_reason` | string \| null | A free-form string — the raw reason the call ended, returned unmapped. See [End reasons](#end-reasons) below. |
 | `call_transcript` | string \| null | Plain-text transcript of the conversation. Each line is `[HH:MM:SS] Asistan:` (assistant, `Asistan`) or `[HH:MM:SS] Müşteri:` (caller, `Müşteri`) — Turkish role labels prefixed with a UTC `HH:MM:SS` timestamp — separated by newlines (`\n`). May be empty or null for very short or failed calls. |
-| `call_structured_data` | object \| null | AI-extracted data, returned as a flat object whose keys are your assistant's structured output schema properties — see [Structured data shapes](#structured-data-shapes). `null` when the assistant has no structured output schema or nothing could be extracted (or the stored data couldn't be parsed). |
+| `call_structured_data` | object \| null | AI-extracted data, returned as a flat object whose keys are your assistant's structured output schema properties — see [Structured data shapes](#structured-data-shapes). `null` when the assistant has no structured output schema or nothing could be extracted (or the stored data couldn't be parsed). Individual values *inside* the object may themselves be `null` when a particular field couldn't be extracted (the object is present, the value is `null`) — parse defensively. |
 | `call_metadata` | object \| null | The metadata you attached when creating the call via [`POST /v1/calls/bulk`](../bulk-create-calls.md), returned to you verbatim for correlation. `null` if the call was created without metadata. See [Metadata](../bulk-create-calls.md#metadata) for the rules. |
 | `call_variables` | object \| null | The template variables sent for this call, echoed back verbatim — the same object you passed as `variables` when creating the call. `null` when none were sent (e.g. inbound calls). |
 | `call_recording` | object | Recording availability + URL (below). |
@@ -240,13 +242,14 @@ The Vindy admin panel may display recordings from other sources (e.g., a tempora
 
 ### Structured data shapes {#structured-data-shapes}
 
-`call_structured_data` is the data the AI extracted according to **your assistant's structured output schema**, returned as a **flat object** whose keys are your schema's properties (e.g. `age`, `would_recommend`). It is **not** keyed by an output id and has no `name`/`result` wrapper. Its values can hold scalars, nested objects, and arrays — including arrays of objects — exactly as your schema defines them. It is `null` when the assistant has no structured output schema, when nothing could be extracted, or when the stored data couldn't be parsed. For example, an *Order Summary* schema might return:
+`call_structured_data` is the data the AI extracted according to **your assistant's structured output schema**, returned as a **flat object** whose keys are your schema's properties (e.g. `age`, `would_recommend`). It is **not** keyed by an output ID and has no `name`/`result` wrapper. Its values can hold scalars, nested objects, and arrays — including arrays of objects — exactly as your schema defines them. It is `null` when the assistant has no structured output schema, when nothing could be extracted, or when the stored data couldn't be parsed. Beyond that, **individual fields can come back `null`** even when the object itself is present — that means the assistant ran your schema but couldn't extract that particular value, so check each field before you use it. For example, an *Order Summary* schema might return:
 
 ```json
 {
   "call_structured_data": {
     "customer_name": "Jane Doe",
     "callback_requested": false,
+    "coupon_code": null,
     "orders": [
       { "product": "Wireless Keyboard", "quantity": 2, "in_stock": true },
       { "product": "USB-C Cable", "quantity": 5, "in_stock": false }
@@ -395,7 +398,7 @@ print(f"{len(calls)} calls")
 
 ### List one batch's calls
 
-This endpoint does not filter by campaign. To page through the calls of a specific batch, use the dedicated [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint — it also includes the batch's not-yet-dialed, in-progress, and cancelled calls.
+This endpoint does not filter by batch. To page through the calls of a specific batch, use the dedicated [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint — it also includes the batch's not-yet-dialed, in-progress, and cancelled calls.
 
 ### Date range — single day
 

@@ -8,7 +8,7 @@ sidebar_position: 3
 
 Everything about narrowing and paging through [`POST /v1/calls/list`](index.md): the `cursor`, `limit`, `date_from`, and `date_to` parameters, plus the `assistant_id` and `call_bound_type` filters.
 
-Calls are returned **newest first**, ordered by when each call took place (its start time), with the call id as a tiebreaker.
+Calls are returned **newest first**, ordered by when each call took place (its start time), with `call_id` as a tiebreaker.
 
 ---
 
@@ -16,14 +16,14 @@ Calls are returned **newest first**, ordered by when each call took place (its s
 
 | Request | What you get |
 |---|---|
-| No `date_from`, `date_to`, `cursor`, or `limit` | The **newest 50** terminal calls for your company. If more exist, `has_more` is `true` and `next_cursor` is set — send it back to get the next 50. |
+| No `date_from`, `date_to`, `cursor`, or `limit` | The **newest 200** terminal calls for your company. If more exist, `has_more` is `true` and `next_cursor` is set — send it back to get the next 200. |
 | `limit` only (e.g. `500`) | The newest *N* calls in a single page (max 500). |
 | `date_from` only | Calls on or after that day, newest first. Continue with `cursor`. |
 | `date_to` only | Calls up to and including that day, newest first. Continue with `cursor`. |
 | `date_from` + `date_to` | Calls inside the inclusive day range, newest first. |
 | Any of the above **+ `cursor`** | The **next page** of that same query. Keep every other parameter identical across pages — only `cursor` changes. |
 
-**Other filters.** `assistant_id` and `call_bound_type` (`inbound` / `outbound`) narrow the scope further and combine with the date range and with each other (logical AND). Send the same filters on every page of a walk. To list the calls of one batch, use the dedicated [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint instead — this list does not filter by campaign.
+**Other filters.** `assistant_id` and `call_bound_type` (`inbound` / `outbound`) narrow the scope further and combine with the date range and with each other (logical AND). Send the same filters on every page of a walk. To list the calls of one batch, use the dedicated [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint instead — this list does not filter by batch.
 
 ---
 
@@ -38,8 +38,8 @@ Calls are returned **newest first**, ordered by when each call took place (its s
 - Omit it on the **first** request.
 - Every response returns `pagination.next_cursor`. While `has_more` is `true`, send that value back as `cursor` to fetch the next page.
 - Stop when `has_more` is `false` (at that point `next_cursor` is `null`).
-- The cursor is an **opaque** base64url token — a keyset marker over `(started_at, call id)` in descending order. Don't build or decode it. When you page with a cursor, **resend the same `assistant_id`, `call_bound_type`, `date_from`, and `date_to`**; the cursor only marks your position within that exact query. `limit` (page size) may change between pages, but the filters may not: a cursor is bound to the endpoint and filters that issued it, and **reusing it after changing a filter — or on a different endpoint (e.g. the batch-calls list) — is rejected with `400 MALFORMED_CURSOR`**. When you want a different scope, start a fresh walk with no cursor.
-- Don't persist cursors long-term (e.g. for days) — use them within a single sync session. For ongoing **incremental** sync, don't save a cursor between runs; instead remember the latest day you've already pulled and pass it as `date_from` on the next run (and deduplicate on `call_id`, since a day is re-scanned in full). A cursor marks a position *inside one query*, not a durable watermark. See the [incremental sync guide](../../guides/incremental-sync.md).
+- The cursor is an **opaque** base64url token — a keyset marker over `(started_at, call_id)` in descending order. Don't build or decode it. When you page with a cursor, **resend the same `assistant_id`, `call_bound_type`, `date_from`, and `date_to`**; the cursor only marks your position within that exact query. `limit` (page size) may change between pages, but the filters may not: a cursor is bound to the endpoint and filters that issued it, and **reusing it after changing a filter — or on a different endpoint (e.g. the batch-calls list) — is rejected with `400 MALFORMED_CURSOR`**. When you want a different scope, start a fresh walk with no cursor.
+- Don't persist cursors long-term (e.g. for days) — use them within a single sync session. For ongoing **incremental** sync, don't save a cursor between runs; instead remember the latest day you've already pulled and pass it as `date_from` on the next run (and de-duplicate on `call_id`, since a day is re-scanned in full). A cursor marks a position *inside one query*, not a durable watermark. See the [incremental sync guide](../../guides/incremental-sync.md).
 
 ```bash
 # First request (no cursor)
@@ -74,7 +74,7 @@ Every page is wrapped in the same shape:
 {
   "data": [ /* calls */ ],
   "pagination": {
-    "next_cursor": "eyJ0IjoiMjAyNi0wNS0xNVQxMTowMjoxMCswMDowMCIsImkiOiJzZXNzXzZhNGIwZDNjMmY4MSJ9",
+    "next_cursor": "eyJ0IjoiMjAyNi0wNS0…",
     "has_more": true,
     "limit": 50
   }
@@ -100,6 +100,10 @@ Both parameters are **date-only** `YYYY-MM-DD` values, and both are **inclusive 
 Days are interpreted in **Europe/Istanbul** (UTC+3, fixed year-round; no daylight saving). Internally the range is `[date_from 00:00, (date_to + 1 day) 00:00)` in Istanbul time, so both endpoints' full local days are covered.
 
 Send either one alone, or both together; omit both to scan from the very beginning. `date_from` after `date_to` is rejected with `DATE_RANGE_INVALID` (400).
+
+:::note Failed calls without a start time
+`date_from` / `date_to` match on a call's **start time**, falling back to its **creation time** for a call that never connected (some `no_answer` / `failed` calls have no start time). Such calls are therefore **included** in date-filtered results, so a date window is safe for incremental sync.
+:::
 
 ### Accepted format
 

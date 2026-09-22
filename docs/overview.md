@@ -6,7 +6,7 @@ sidebar_position: 1
 
 # Overview
 
-The Vindy API gives you **programmatic access** to your Vindy data from your own systems. You can retrieve assistant definitions, call records, transcripts, AI-extracted structured data, and audio recordings over HTTP. Beyond reading, you can start batches of outbound calls and cancel pending ones — a single call or an entire batch. You can also opt in to **webhooks** — Vindy notifies your endpoint the moment a call ends, and when a batch finishes, so you can react in near-real-time instead of polling. See [Webhooks](api-reference/webhooks.md).
+The Vindy API gives you **programmatic access** to your Vindy data from your own systems. You can retrieve assistant definitions, call records, transcripts, AI-extracted structured data, and audio recordings over HTTP. Beyond reading, you can start batches of outbound calls and cancel pending ones — a single call or an entire batch. You can also opt in to **webhooks**. Vindy then notifies your endpoint the moment a call ends or a batch finishes, so you can react in near real time instead of polling. See [Webhooks](api-reference/webhooks.md).
 
 **At a glance:**
 
@@ -49,4 +49,4 @@ The Vindy API gives you **programmatic access** to your Vindy data from your own
 
 ## Your data stays yours
 
-Every API key belongs to exactly one company. All endpoints automatically return only that company's data, so you only ever see your own — another company's id returns `404`. See [Multi-tenancy](concepts/multi-tenancy.md) for details.
+Every API key belongs to exactly one company. All endpoints automatically return only that company's data, so you only ever see your own — another company's ID returns `404`. See [Multi-tenancy](concepts/multi-tenancy.md) for details.

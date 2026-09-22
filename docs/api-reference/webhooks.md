@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # Webhooks (Event Delivery)
 
-Vindy sends events via **HTTP POST** to the webhook URL configured for your account, so you can react in near-real-time instead of continuously polling [`POST /v1/calls/list`](list-calls/index.md). There are **two event types**:
+Vindy sends events via **HTTP POST** to the webhook URL configured for your company, so you can react in near-real-time instead of continuously polling [`POST /v1/calls/list`](list-calls/index.md). There are **two event types**:
 
 | `event_type` | Fires when | `data` is |
 |---|---|---|
@@ -27,7 +27,7 @@ Webhook endpoints are configured **by the Vindy team**. To enable webhooks, cont
 
 - **URL** — must be a public `https://` endpoint (plain `http`, private, loopback, and cloud-metadata addresses are rejected).
 - **Custom headers (optional)** — a free-form map of HTTP headers, sent **verbatim** on every delivery. Use them to authenticate the request on your side, e.g. `{"X-API-Key": "<your-secret>"}` or `{"Authorization": "Bearer <your-token>"}`. Vindy's own canonical headers (`Content-Type`, `User-Agent`, `X-Vindy-*`) always take precedence and cannot be overridden.
-- **Events** — which events to receive: `call.ended`, `campaign.ended`, or both.
+- **Events** — which events to receive: `call.ended`, `campaign.ended` (the batch-ended event), or both.
 :::
 
 ## Request headers
@@ -39,13 +39,13 @@ Vindy sends the same set of headers on every delivery, for both event types:
 | `Content-Type` | `application/json` | |
 | `User-Agent` | `Vindy-Webhooks/1.0` | Identifies Vindy's delivery agent. |
 | `X-Vindy-Event` | `call.ended` \| `campaign.ended` | The internal event name — **dotted**, and deliberately different from the hyphenated `event_type` in the body. `call.ended` maps to body `call-ended`; `campaign.ended` maps to body `batch-ended`. Route on whichever you prefer. |
-| `X-Vindy-Delivery-Id` | `<uuid>` | Stable id for this delivery — **identical across every retry** of the same event. Use it as your idempotency / de-duplication key. Also present in the body as `delivery_id`. |
+| `X-Vindy-Delivery-Id` | `<uuid>` | Stable ID for this delivery — **identical across every retry** of the same event. Use it as your idempotency / de-duplication key. Also present in the body as `delivery_id`. |
 | _custom headers_ | as configured | Any custom headers you registered — sent verbatim. Vindy's canonical headers above always win and cannot be overridden. |
 
 ## The `call-ended` event {#call-ended}
 
 :::caution When a cancelled call fires `call-ended` — and when it doesn't
-`call-ended` fires when a real call reaches a terminal state (`completed` or `failed`), and **also** when you cancel a **single** queued call via [`POST /v1/calls/:callId/cancel`](cancel-call.md) — that delivery carries `call_status: "cancelled"` and a **minimal** body (transcript, structured data, and recording fields are `null`). The exception: calls stopped as part of a **batch** cancel ([`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md)) do **not** each fire a `call-ended` — they roll up into a single [`batch-ended`](#batch-ended) event instead, to avoid a flood on large batches.
+`call-ended` fires when a real call reaches a terminal state (`completed` or `failed`), and **also** when you cancel a **single** queued call via [`POST /v1/calls/:callId/cancel`](cancel-call.md) — that delivery carries `call_status: "cancelled"` and a **minimal** body (transcript, structured data, and recording fields are `null`). Calls stopped by a **batch** cancel are the exception — they do not each fire `call-ended`; see [how cancellations map to webhooks](#batch-ended).
 :::
 
 Vindy sends an HTTP `POST` with a JSON body. The body is a **top-level object** (`event_type`, `delivery_id`, `call_id`) that wraps `data` — the **complete call object**, byte-for-byte the same shape returned by [`GET /v1/calls/:callId`](get-call.md) and by each item in [`POST /v1/calls/list`](list-calls/index.md).
@@ -63,10 +63,10 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
 {
   "event_type": "call-ended",
   "delivery_id": "0190aa00-1c5a-7000-8000-abc123def456",
-  "call_id": "sess_9f2c8a10b3d4",
+  "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f",
   "data": {
-    "call_id": "sess_9f2c8a10b3d4",
-    "batch_call_id": "842f6b10-9c3d-7e22-a1b8-5f6e7d8c9a0b",
+    "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f",
+    "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
     "call_status": "completed",
     "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
     "call_assistant_name": "Vindy - Asistan",
@@ -79,13 +79,13 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
     "call_end_reason": "completed",
     "call_transcript": "[10:30:00] Asistan: Hi, this is Vindy, your AI assistant. I'd like to ask a few quick questions for our customer satisfaction survey — is now a good time?\n[10:30:07] Müşteri: Sure, go ahead.\n[10:30:11] Asistan: Thank you. First, may I ask your age?\n[10:30:16] Müşteri: Thirty-two.",
     "call_structured_data": {
-      "age": 32,
-      "overall_satisfaction": 4,
-      "support_speed": 5,
-      "would_recommend": true
+      "arama_sonucu": "tamamlandi",
+      "genel_memnuniyet_puani": 4,
+      "geri_arama_talebi": false,
+      "ilgilenilen_urunler": null
     },
-    "call_metadata": { "crm_contact_id": "CNT-90412" },
-    "call_variables": { "first_name": "Batu" },
+    "call_metadata": { "order_id": "ORD-4821" },
+    "call_variables": { "first_name": "Elif" },
     "call_recording": {
       "available": true,
       "url": "https://your-bucket.s3.eu-central-1.amazonaws.com/call-records/...wav?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=86400&X-Amz-Signature=...",
@@ -95,22 +95,19 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
 }
 ```
 
-`data.call_transcript` is a single string; each turn within it is separated by a newline (`\n`). JSON escapes those newlines, so the value above shows on one line. Rendered with real line breaks, the transcript above reads:
+`data.call_transcript` is a single string whose turns are separated by newlines (`\n`), so the escaped value above shows on one line. For the transcript format and a rendered example, see [List Calls](list-calls/index.md).
 
-```text
-[10:30:00] Asistan: Hi, this is Vindy, your AI assistant. I'd like to ask a few quick questions for our customer satisfaction survey — is now a good time?
-[10:30:07] Müşteri: Sure, go ahead.
-[10:30:11] Asistan: Thank you. First, may I ask your age?
-[10:30:16] Müşteri: Thirty-two.
-```
+:::note Field ordering and encoding
+The JSON we actually deliver has its keys sorted **alphabetically**, and any non-ASCII characters are sent as raw UTF-8 (not `\u`-escaped). The examples on this page use a readable field order for clarity — don't depend on field ordering; address fields by name.
+:::
 
 ### Top-level fields
 
 | Field | Type | Description |
 |---|---|---|
 | `event_type` | string | `call-ended` for this event. |
-| `delivery_id` | string (UUID) | Stable id for this delivery. It stays the same across every retry attempt of the same event, so you can de-duplicate on it (also sent as the `X-Vindy-Delivery-Id` header). |
-| `call_id` | string \| null | The call's stable id (a string). For an **outbound** call it's the id you received in the [`POST /v1/calls/bulk`](bulk-create-calls.md) `calls[]` response; for an **inbound** call it's the call's own id. Stable across the call's whole life and across delivery retries. Duplicated at the top level so you can de-duplicate and route without parsing `data`. `null` in the rare case the call has no id. |
+| `delivery_id` | string (UUID) | Stable ID for this delivery. It stays the same across every retry attempt of the same event, so you can de-duplicate on it (also sent as the `X-Vindy-Delivery-Id` header). |
+| `call_id` | string \| null | The call's stable ID (a string). For an **outbound** call it's the ID from [`POST /v1/calls`](create-call.md) (a single call), from listing the batch's calls via [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md), or from [`POST /v1/calls/list`](list-calls/index.md); for an **inbound** call it's the call's own ID. Stable across the call's whole life and across delivery retries. Duplicated at the top level so you can de-duplicate and route without parsing `data`. `null` in the rare case the call has no ID. |
 | `data` | object \| null | The complete call object — all fields below. `null` if the source record can't be projected. |
 
 ### `data` — the call object
@@ -119,20 +116,20 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
 
 | Field | Type | Description |
 |---|---|---|
-| `call_id` | string | Stable call id (same value as the top-level `call_id`). |
-| `batch_call_id` | string \| null | The batch (campaign) this call belongs to — the same `batch_call_id` returned by [`POST /v1/calls/bulk`](bulk-create-calls.md). Use it to group a batch's `call-ended` events. `null` when the call is not part of a batch: a single call from [`POST /v1/calls`](create-call.md), or any inbound call. |
-| `call_status` | string | `completed` \| `failed` \| `cancelled`. `cancelled` appears only when you cancelled this as a **single** queued call — that delivery carries a minimal body (see [above](#a-cancelled-single-call)). Physical calls are only ever `completed` or `failed`. |
+| `call_id` | string | Stable call ID (same value as the top-level `call_id`). |
+| `batch_call_id` | string \| null | The batch this call belongs to — the same `batch_call_id` returned by [`POST /v1/calls/bulk`](bulk-create-calls.md). Use it to group a batch's `call-ended` events. `null` when the call is not part of a batch: a single call from [`POST /v1/calls`](create-call.md), or any inbound call. |
+| `call_status` | string | `completed` \| `failed` \| `cancelled`. `cancelled` appears only when you cancelled this as a **single** queued call — that delivery carries a minimal body (see [below](#a-cancelled-single-call)). Physical calls are only ever `completed` or `failed`. |
 | `call_assistant_id` | string (UUID) \| null | Assistant that handled the call. `null` if unknown. |
 | `call_assistant_name` | string \| null | Human-readable assistant name. |
 | `call_phone_number` | string \| null | Phone number called or calling (E.164 format when available). `null` when unknown. |
 | `call_bound_type` | string \| null | `inbound` \| `outbound` \| `null`. |
-| `call_started_at` | ISO 8601 (UTC) \| null | When the call actually started — an ISO-8601 timestamp in **UTC**, written with a `+00:00` offset. There is **no** guaranteed `Z` suffix or fixed millisecond precision, so parse it with a real ISO-8601 parser and convert to your local timezone for display. `null` if the call never connected. |
-| `call_ended_at` | ISO 8601 (UTC) \| null | When the call ended, in the same ISO-8601 UTC format. `null` if the call never connected. |
-| `call_created_at` | ISO 8601 (UTC) | When we created the call record in our system, in the same ISO-8601 UTC format. |
+| `call_started_at` | ISO 8601 (UTC) \| null | When the call actually started — an ISO 8601 timestamp in **UTC**, written with a `+00:00` offset. There is **no** guaranteed `Z` suffix or fixed millisecond precision, so parse it with a real ISO 8601 parser and convert to your local timezone for display. `null` if the call never connected. |
+| `call_ended_at` | ISO 8601 (UTC) \| null | When the call ended, in the same ISO 8601 UTC format. `null` if the call never connected. |
+| `call_created_at` | ISO 8601 (UTC) | When we created the call record in our system, in the same ISO 8601 UTC format. |
 | `call_duration_seconds` | int \| null | Call duration in seconds. |
 | `call_end_reason` | string \| null | Free-form string — the raw reason the call ended, returned unmapped. See [End reasons](list-calls/index.md#end-reasons); treat it as opaque and don't fail on unknown values. |
 | `call_transcript` | string \| null | Plain-text transcript. Each line is `[HH:MM:SS] Asistan:` (assistant, `Asistan`) or `[HH:MM:SS] Müşteri:` (caller, `Müşteri`) — Turkish role labels prefixed with a UTC `HH:MM:SS` timestamp — separated by newlines (`\n`). May be empty or `null` for very short or failed calls. |
-| `call_structured_data` | object \| null | AI-extracted data, returned as a flat object whose keys are your assistant's structured output schema properties. `null` when the assistant has no structured output schema or nothing could be extracted — see [Structured data shapes](list-calls/index.md#structured-data-shapes). |
+| `call_structured_data` | object \| null | AI-extracted data — usually a flat object keyed by your assistant's structured output schema properties. It's returned verbatim, so in principle it could be another JSON shape (e.g. an array). `null` when the assistant has no structured output schema or nothing could be extracted — see [Structured data shapes](list-calls/index.md#structured-data-shapes). |
 | `call_metadata` | object \| null | The opaque metadata you sent via [`POST /v1/calls/bulk`](bulk-create-calls.md), echoed back verbatim for correlation. `null` if the call wasn't created with metadata. |
 | `call_variables` | object \| null | The template variables sent for this call, echoed back verbatim — the same object you passed as `variables` when creating the call. `null` when none were sent (e.g. inbound calls). |
 | `call_recording` | object | Recording availability + URL — fields below. |
@@ -146,12 +143,12 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
 | `expires_at` | ISO string \| absent | When the URL expires (UTC, `+00:00`). Present **only** when `available: true`. |
 
 :::info The recording URL is long-lived and generated at send time
-`data.call_recording.url` is valid for about **~24 hours** (default 86400 seconds, configurable) **from the moment the webhook was sent**, so it comfortably survives normal processing delays and webhook retries (which happen within about an hour). Only if you process an event **more than ~24 hours late** will the URL have expired — in that case fetch a fresh one via [`GET /v1/calls/:callId`](get-call.md). Either way, don't persist the URL: store the `call_id` and fetch on demand. When `available` is `false`, no durable recording exists for the call — see [what that means](list-calls/index.md#recording-not-available).
+`data.call_recording.url` is valid for about **~24 hours** from the moment the webhook was sent, so it comfortably survives normal processing delays and retries. Don't persist it — store the `call_id` and fetch a fresh URL on demand; for the full rules see [Get a Recording URL](get-recording-url.md). When `available` is `false`, no durable recording exists for the call — see [what that means](list-calls/index.md#recording-not-available).
 :::
 
 ### A cancelled single call {#a-cancelled-single-call}
 
-When you cancel a **single** queued call via [`POST /v1/calls/:callId/cancel`](cancel-call.md), a `call-ended` event still fires — but with `call_status: "cancelled"` and a **minimal** `data` object: the call never happened, so the conversation, structured data, and timing fields are `null`, `call_end_reason` is `"cancelled"`, and `call_recording.available` is `false`. Your `call_metadata` is still echoed back so you can correlate it. Calls stopped as part of a **batch** cancel do not each send this — see [`batch-ended`](#batch-ended).
+When you cancel a **single** queued call via [`POST /v1/calls/:callId/cancel`](cancel-call.md), a `call-ended` event still fires — but with `call_status: "cancelled"` and a **minimal** `data` object: the call never happened, so the conversation, structured data, and timing fields are `null`, `call_end_reason` is `"cancelled"`, and `call_recording.available` is `false`. Your `call_metadata` and `call_variables` are still echoed back so you can correlate it. Calls stopped as part of a **batch** cancel do not each send this — see [`batch-ended`](#batch-ended).
 
 ```json
 {
@@ -173,8 +170,8 @@ When you cancel a **single** queued call via [`POST /v1/calls/:callId/cancel`](c
     "call_end_reason": "cancelled",
     "call_transcript": null,
     "call_structured_data": null,
-    "call_metadata": { "crm_contact_id": "CNT-90412" },
-    "call_variables": { "first_name": "Batu" },
+    "call_metadata": { "order_id": "ORD-4821" },
+    "call_variables": { "first_name": "Elif" },
     "call_recording": { "available": false }
   }
 }
@@ -198,9 +195,9 @@ The top-level object differs from `call-ended`: it carries `batch_call_id` (**no
 {
   "event_type": "batch-ended",
   "delivery_id": "0a61f9bd-2e77-4c8a-9d31-6b0f5a2c1e84",
-  "batch_call_id": "842f7c19-3b6d-4e02-a5c8-9f1d2e3a4b50",
+  "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
   "data": {
-    "batch_call_id": "842f7c19-3b6d-4e02-a5c8-9f1d2e3a4b50",
+    "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
     "status": "completed",
     "total_count": 200,
     "counts": {
@@ -220,15 +217,15 @@ The top-level object differs from `call-ended`: it carries `batch_call_id` (**no
 | Field | Type | Description |
 |---|---|---|
 | `event_type` | string | `batch-ended` for this event. |
-| `delivery_id` | string (UUID) | Stable id for this delivery — the same across every retry attempt. De-duplicate on it or on `batch_call_id`. |
-| `batch_call_id` | string | The batch's id, duplicated at the top level for convenience. Use it to de-duplicate and to fetch the batch's calls via [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md). |
+| `delivery_id` | string (UUID) | Stable ID for this delivery — the same across every retry attempt. De-duplicate on it or on `batch_call_id`. |
+| `batch_call_id` | string | The batch's ID, duplicated at the top level for convenience. Use it to de-duplicate and to fetch the batch's calls via [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md). |
 | `data` | object \| null | The batch summary — fields below. `null` if the source record can't be projected. |
 
 ### `data` — the batch summary
 
 | Field | Type | Description |
 |---|---|---|
-| `batch_call_id` | string | The batch's id (same value as the top-level `batch_call_id`). |
+| `batch_call_id` | string | The batch's ID (same value as the top-level `batch_call_id`). |
 | `status` | string | The batch's final status — `completed`, or `cancelled` when the batch was cancelled. |
 | `total_count` | int | Total number of calls in the batch. |
 | `counts` | object | Per-status breakdown of the batch's calls. |
@@ -240,7 +237,7 @@ The top-level object differs from `call-ended`: it carries `batch_call_id` (**no
 |---|---|---|
 | `completed` | int | Calls that finished successfully. |
 | `failed` | int | Calls that ended in failure. |
-| `cancelled` | int | Calls that were cancelled from the queue before dialing. Calls stopped as part of a **batch** cancel are summarized here and do **not** each emit a `call-ended`; a **single**-call cancel emits its own [`call-ended`](#call-ended) with `call_status: "cancelled"`. |
+| `cancelled` | int | Calls that were cancelled from the queue before dialing. See [how cancellations map to webhooks](#batch-ended). |
 | `pending` | int | Calls not yet started. `0` for a completed batch. |
 | `processing` | int | Calls still in progress. `0` for a completed batch. |
 
@@ -255,8 +252,8 @@ The top-level object differs from `call-ended`: it carries `batch_call_id` (**no
 - **At-least-once delivery** — under adverse network conditions the same event may arrive more than once. **De-duplicate** on `delivery_id` (stable across retries; also in the `X-Vindy-Delivery-Id` header) — or on `call_id` for `call-ended` and `batch_call_id` for `batch-ended`.
 - **No ordering guarantee** — events may arrive in a different order than the calls ended in.
 - **Public HTTPS only** — the webhook endpoint must be a public `https` URL; private, loopback, and cloud-metadata addresses are rejected (SSRF protection).
-- **Recording URL freshness** — `data.call_recording.url` is a ~24-hour URL generated at send time, so it comfortably survives normal processing and retries. Only if you process an event more than ~24 hours late will it have expired — then fetch a fresh one via [`GET /v1/calls/:callId`](get-call.md).
-- **PII** — the payload may contain phone numbers and transcripts, so your endpoint must be `https`.
+- **Recording URL freshness** — `data.call_recording.url` is a ~24-hour URL generated at send time. Don't persist it; fetch a fresh one on demand — see [Get a Recording URL](get-recording-url.md).
+- **PII** — the payload may contain phone numbers and transcripts; handle and store it accordingly.
 
 :::tip Acknowledge fast, process later
 Return `2xx` as soon as you've safely stored the event, then do the heavy work (downloading recordings, updating your systems) asynchronously. This keeps you within the ~15s window and avoids unnecessary retries.

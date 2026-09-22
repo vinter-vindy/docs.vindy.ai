@@ -16,7 +16,7 @@ Generates a presigned (time-limited) download URL for a specific call's recordin
 ## Request
 
 ```http
-GET https://api.vindy.ai/v1/calls/sess_a1b2c3d4e5f6/recording-url
+GET https://api.vindy.ai/v1/calls/01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f/recording-url
 Authorization: Bearer <api-key>
 ```
 
@@ -30,8 +30,8 @@ Authorization: Bearer <api-key>
 
 ```json
 {
-  "url": "https://...?X-Amz-Algorithm=...&X-Amz-Signature=...",
-  "expires_at": "2026-06-04T12:39:56+00:00"
+  "url": "https://storage.vindy.ai/recordings/01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f.wav?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=vindy%2F20260607%2Feu-central-1%2Fs3%2Faws4_request&X-Amz-Date=20260607T120000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=8f2b1c4d5e6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
+  "expires_at": "2026-06-08T12:00:00+00:00"
 }
 ```
 
@@ -46,15 +46,15 @@ Authorization: Bearer <api-key>
 |---|---|---|
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Auth errors. |
 | `404` | `RESOURCE_NOT_FOUND` | Call not found, a browser (WebRTC) call, or not in your company. |
-| `404` | `RECORDING_NOT_AVAILABLE` | The call exists, but no recording was ever produced for it. **Terminal** — retrying does not help. |
+| `404` | `RECORDING_NOT_AVAILABLE` | The call exists, but no recording is available — either none was ever produced, or the recording permanently failed or was disabled. **Terminal** — retrying does not help. |
 | `409` | `RECORDING_NOT_READY` | A recording exists but is not downloadable yet. Rare race condition — retry in a few minutes. |
 | `429` | `RATE_LIMITED` | Rate limit exceeded (per-minute). Retry after `Retry-After` seconds. |
 
-**404 example — no recording was produced (terminal):**
+**404 example — no recording available (terminal):**
 
 ```json
 {
-  "message": "No recording was produced for this call. This is permanent — there is nothing to retrieve, and retrying will not help.",
+  "message": "No recording is available for this call.",
   "extensions": {
     "code": "RECORDING_NOT_AVAILABLE"
   }
@@ -65,7 +65,7 @@ Authorization: Bearer <api-key>
 
 ```json
 {
-  "message": "Recording is not ready yet. Retry in a few minutes.",
+  "message": "The recording is not ready yet.",
   "extensions": {
     "code": "RECORDING_NOT_READY"
   }
@@ -80,7 +80,6 @@ For `call_id`s obtained from [`POST /v1/calls/list`](list-calls/index.md), you w
 
 - **Do NOT cache the URL**: it expires after ~24 hours. Storing it in your DB leads to stale URLs. Generate on demand and download to your own storage.
 - **Multiple downloads**: you can issue multiple GETs against the same URL within its validity window. If forwarding to different users, **generate a fresh URL per user**.
-- **Terminal vs. rare race**: for `call_id`s obtained from [`POST /v1/calls/list`](list-calls/index.md), a not-ready response is almost always terminal — a `404 RECORDING_NOT_AVAILABLE`, where retrying does not help. In rare race conditions you might see a `409 RECORDING_NOT_READY`; in that case retry after a few minutes.
 - **Format**: audio files are `.wav` (mono, 8kHz or 16kHz). Some recordings may use a different codec; check the `Content-Type` header.
 - **Size**: typically 1–10 MB; can reach 30 MB for long calls.
 
@@ -92,7 +91,7 @@ For `call_id`s obtained from [`POST /v1/calls/list`](list-calls/index.md), you w
 ```bash
 # 1. Get URL
 curl -H "Authorization: Bearer $VINDY_API_KEY" \
-  https://api.vindy.ai/v1/calls/sess_a1b2c3d4e5f6/recording-url
+  https://api.vindy.ai/v1/calls/01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f/recording-url
 # → { "url": "https://...call.wav?X-Amz-...", "expires_at": "..." }
 
 # 2. Download immediately (quote the URL — query string is long)
@@ -135,7 +134,7 @@ async function downloadRecording(callId) {
   return `call-${callId}.wav`;
 }
 
-await downloadRecording("sess_a1b2c3d4e5f6");
+await downloadRecording("01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f");
 ```
 
 </TabItem>
@@ -175,7 +174,7 @@ def download_recording(call_id):
         f.write(audio.content)
     return path
 
-download_recording("sess_a1b2c3d4e5f6")
+download_recording("01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f")
 ```
 
 </TabItem>

@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `GET /v1/assistants`
 
-Şirketinizin asistanlarını **tek bir liste** hâlinde döndürür. Her öğe asistanın temel bilgilerini ve varsa o asistana bağlı **structured output şemasını** taşır.
+Şirketinizin asistanlarını **tek bir liste** hâlinde döndürür. Her öğe asistanın temel bilgilerini ve varsa o asistana bağlı **yapısal çıktı (structured output) şemasını** taşır.
 
 ---
 
@@ -39,14 +39,26 @@ Sorgu parametresi yoktur. Yanıt **sayfalanmaz** — tüm asistanlar tek çağr�
           "name": "Vindy - Asistan",
           "schema": {
             "type": "object",
-            "properties": {
-              "age": { "type": "integer" },
-              "overall_satisfaction": { "type": "integer" },
-              "support_speed": { "type": "integer" },
-              "would_recommend": { "type": "boolean" }
-            },
             "additionalProperties": false,
-            "required": ["overall_satisfaction", "would_recommend"]
+            "required": ["arama_sonucu", "genel_memnuniyet_puani"],
+            "properties": {
+              "arama_sonucu": {
+                "type": "string",
+                "title": "Arama sonucu",
+                "description": "Görüşmenin nasıl sonuçlandığı.",
+                "enum": ["tamamlandi", "yarim_kaldi", "ulasilamadi", "belirsiz"]
+              },
+              "genel_memnuniyet_puani": {
+                "type": "integer",
+                "title": "Genel memnuniyet",
+                "description": "1-5 arası memnuniyet puanı."
+              },
+              "geri_arama_talebi": { "type": "boolean", "title": "Geri arama talebi" },
+              "ilgilenilen_urunler": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
           }
         }
       ]
@@ -74,15 +86,41 @@ Sorgu parametresi yoktur. Yanıt **sayfalanmaz** — tüm asistanlar tek çağr�
 | `assistant_language` | string | Dil kodu (örneğin `tr`, `en`). |
 | `assistant_created_at` | ISO 8601 (UTC) | Oluşturulma zamanı, `+00:00` offset biçiminde. |
 | `assistant_variables` | array of string | Bu asistanın beklediği **şablon değişken adları** — prompt ve karşılama (greeting) metnindeki `{{…}}` yer tutucularından türetilir (sıralı, tekilleştirilmiş). Çağrı yaparken bu değerleri [`POST /v1/calls`](create-call.md) veya [`POST /v1/calls/bulk`](bulk-create-calls.md) ile `variables` üzerinden gönderin. Asistan hiç değişken kullanmıyorsa boştur (`[]`). |
-| `structured_outputs` | array | Bu asistana bağlı structured output şeması. Asistanın şeması yoksa boştur (`[]`); varsa `id` değeri asistanın `id` değerine eşit olan **tek** bir giriş bulunur. |
+| `structured_outputs` | array | Bu asistana bağlı yapısal çıktı şeması. Asistanın şeması yoksa boştur (`[]`); varsa `id` değeri `assistant_id` değerine eşit olan **tek** bir giriş bulunur. |
 
 **StructuredOutput nesnesi**
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `id` | string (UUID) | Structured output'un kalıcı kimliği — asistanın `id` değerine eşittir. Bir çağrının çıkarılan değerleri, [`POST /v1/calls/list`](list-calls/index.md) yanıtındaki `call_structured_data` içinde bu `id` altında döner; böylece her birini şemasıyla eşleştirebilirsiniz. |
+| `id` | string (UUID) | Yapısal çıktının kalıcı kimliği — `assistant_id` değerine eşittir. Bir çağrının çıkarılan değerleri, [`POST /v1/calls/list`](list-calls/index.md) yanıtındaki `call_structured_data` içinde bu `id` altında döner; böylece her birini şemasıyla eşleştirebilirsiniz. |
 | `name` | string | Görünen ad (asistanın adını yansıtır). |
-| `schema` | object | Structured output'un **JSON Schema**'sı — yapay zekânın çıkardığı verinin yapısını tanımlar ve asistan için tanımlandığı haliyle aynen döner. Çekirdeği, her alan adını türüyle eşleyen bir `properties` nesnesidir. `properties` yanında herhangi bir standart JSON Schema anahtarı taşıyabilir — sık görülenler: `additionalProperties` (genelde `false`; listelenenler dışında alan yok demektir) ve `required` (her zaman bulunan alanlar), ayrıca seçim alanları için `enum`/`uniqueItems`. Bunu opak bir JSON Schema olarak ele alın: alanları öğrenmek için `properties`'i okuyun ve yalnızca `type`/`properties` bulunacağını varsaymayın. |
+| `schema` | object | Yapısal çıktının, asistan için tanımlandığı haliyle aynen dönen **JSON Schema**'sı. Bkz. aşağıdaki [Yapısal çıktı şeması](#structured-output-schema). |
+
+### Yapısal çıktı şeması {#structured-output-schema}
+
+`schema` alanı, yapay zekânın çıkardığı verinin yapısını tanımlayan ve asistan için tanımlandığı haliyle aynen dönen standart bir **JSON Schema**'dır. Kökü bir nesnedir; göreceğiniz üyeler şunlardır:
+
+| Üye | Tür | Açıklama |
+|---|---|---|
+| `type` | string | Şema kökü için her zaman `"object"`. |
+| `properties` | object | Alan adı → o alanın alt şeması eşlemesi (aşağıya bakın). Şemanın çekirdeği budur. |
+| `required` | array of string | *(opsiyonel)* Her zaman bulunan alan adları. Hiçbir alan zorunlu değilse atlanır. |
+| `additionalProperties` | bool | *(opsiyonel)* Genelde `false`; listelenenler dışında alan yok demektir. |
+
+**Alan-başına yapı.** `properties` altındaki her giriş kendisi standart bir JSON Schema alt şemasıdır. Sık görülen anahtarlar:
+
+| Anahtar | Tür | Açıklama |
+|---|---|---|
+| `type` | string | **Her zaman bulunur.** `string`, `integer`, `number`, `boolean`, `array` veya `object`'ten biri (iç içe bir nesne kendi `properties`'ini taşır). |
+| `title` | string | *(opsiyonel)* Alanın okunabilir etiketi. |
+| `description` | string | *(opsiyonel)* Alanın neyi yakaladığı. |
+| `enum` | array | *(opsiyonel)* Seçim alanları için izin verilen değerler. |
+| `items` | object | *(opsiyonel)* `array` türleri için — her elemanın izlediği alt şema. |
+| `uniqueItems` | bool | *(opsiyonel)* `array` türleri için — elemanların benzersiz olması gerekip gerekmediği. |
+
+Opsiyonel anahtarlar **ayarlanmadığında atlanır, asla `null` olarak bulunmaz** — örneğin etiketi olmayan bir alanın `title` anahtarı hiç yer almaz (enjekte edilen bir `null` şemayı geçersiz kılardı). Savunmacı okuyun: `title` yoksa alanın anahtar adına geri dönün ve `description`, `enum` veya `items`'ın var olduğunu varsaymayın.
+
+Bunu opak bir JSON Schema olarak ele alın: alanları öğrenmek için `properties`'i okuyun ve yalnızca `type`/`properties` bulunacağını varsaymayın.
 
 ## Hatalar
 
@@ -94,10 +132,10 @@ Sorgu parametresi yoktur. Yanıt **sayfalanmaz** — tüm asistanlar tek çağr�
 ## Notlar
 
 - Asistanlar oluşturulma zamanına göre sıralanır.
-- Liste, kendi organizasyonunuzun asistanlarını **ve Vindy tarafından sizinle paylaşılan asistanları** birlikte içerir — paylaşılan asistanlar burada kendi asistanlarınız gibi davranır: [Çağrıları Listele](list-calls/index.md)'de onların çağrılarını filtreleyebilir, [Toplu Çağrı Oluştur](bulk-create-calls.md) ile onlarla giden çağrı başlatabilirsiniz.
-- Structured output şeması olmayan bir asistan `structured_outputs: []` döndürür.
+- Liste, kendi şirketinizin asistanlarını **ve Vindy tarafından sizinle paylaşılan asistanları** birlikte içerir — paylaşılan asistanlar burada kendi asistanlarınız gibi davranır: [Çağrıları Listele](list-calls/index.md)'de onların çağrılarını filtreleyebilir, [Toplu Arama Oluştur](bulk-create-calls.md) ile onlarla giden çağrı başlatabilirsiniz.
+- Yapısal çıktı şeması olmayan bir asistan `structured_outputs: []` döndürür.
 - `assistant_variables`, bu asistanla arama yaparken hangi `variables` anahtarlarını göndereceğinizi söyler. Asistan hiç değişken kullanmıyorsa `variables`'ı tümüyle atlayabilirsiniz.
-- Çıkarılan değerler, [Çağrıları Listele](list-calls/index.md) yanıtındaki `call_structured_data` içinde structured output'un `id` değeri altında döner; böylece bir çağrının verisini buradaki şemayla eşleştirebilirsiniz.
+- Çıkarılan değerler, [Çağrıları Listele](list-calls/index.md) yanıtındaki `call_structured_data` içinde yapısal çıktının `id` değeri altında döner; böylece bir çağrının verisini buradaki şemayla eşleştirebilirsiniz.
 
 ## Örnekler
 

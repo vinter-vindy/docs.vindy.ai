@@ -11,12 +11,12 @@ import TabItem from '@theme/TabItem';
 
 Tek bir toplu aramaya — [`POST /v1/calls/bulk`](bulk-create-calls.md) yanıtındaki `batch_call_id` değerine — ait çağrıları cursor tabanlı sayfalama ile döndürür. Her çağrı nesnesi, [`POST /v1/calls/list`](list-calls/index.md) içindeki bir öğeyle **aynı yapıdadır**.
 
-Bu uç, toplu aramadaki **her çağrıyı** döndürür — hangi aşamada olursa olsun, yalnızca bitenleri değil. Henüz aranmamış çağrılar kuyruk `call_status`'üyle (`pending`, `scheduled`, `in_progress` ya da `cancelled`) ve `null` konuşma/kayıt/zaman alanlarıyla; biten çağrılar ise tam nesneyle (`completed` veya `failed`) görünür. Böylece bu ucu yoklayarak (poll) bir toplu aramanın sıradan bitişe ilerleyişini izleyebilirsiniz.
+Bu endpoint, toplu aramadaki **her çağrıyı**, hangi aşamada olursa olsun döndürür — yalnızca bitenleri değil — böylece bu endpoint'i yoklayarak (poll) bir toplu aramanın sıradan bitişe ilerleyişini izleyebilirsiniz.
 
 Çağrıları Listele gibi bu da küçük bir JSON gövdesiyle yapılan bir `POST` isteğidir: cursor opak olduğundan query string yerine gövdede taşınır. Çağrıları Listele'den farklı olarak **tarih filtresi almaz** — tek bir toplu aramayla sınırlıdır ve kendi cursor'una sahiptir. Çağrılar tamamlandıkça sonuçları sayfalamak ya da toplu arama bittikten sonra tüm kümeyi çekmek için kullanın.
 
 :::info Çağrıları Listele'den daha geniş görünürlük
-[`POST /v1/calls/list`](list-calls/index.md) yalnızca **sonlanmış** çağrıları (`completed` veya `failed`) döndürürken, bu uç toplu aramadaki **her çağrıyı, hangi aşamada olursa olsun** döndürür. Kuyruktaki ve devam eden çağrılar kuyruk `call_status`'üyle (`pending`, `scheduled`, `in_progress` ya da `cancelled`) ve `null` konuşma/kayıt/zaman alanlarıyla; sonlanmış çağrılar ise tam nesneyle döner. Sonuçlar **en yeniden başlayarak** (oluşturulma zamanına göre) sıralanır. Bir toplu aramayı sıradan bitişe kadar yoklayabilmenizi (poll) sağlayan da budur.
+[`POST /v1/calls/list`](list-calls/index.md) yalnızca **sonlanmış** çağrıları (`completed` veya `failed`) döndürürken, bu endpoint toplu aramadaki **her çağrıyı, hangi aşamada olursa olsun** döndürür. Kuyruktaki ve devam eden çağrılar kuyruk `call_status`'üyle (`pending`, `scheduled`, `in_progress` ya da `cancelled`) ve `null` konuşma/kayıt/zaman alanlarıyla; sonlanmış çağrılar ise tam nesneyle döner. Sonuçlar **en yeniden başlayarak** (oluşturulma zamanına göre) sıralanır. Bir toplu aramayı sıradan bitişe kadar yoklayabilmenizi (poll) sağlayan da budur.
 :::
 
 ---
@@ -24,7 +24,7 @@ Bu uç, toplu aramadaki **her çağrıyı** döndürür — hangi aşamada olurs
 ## İstek
 
 ```http
-POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/calls
+POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/calls
 Authorization: Bearer <api-key>
 Content-Type: application/json
 
@@ -53,12 +53,13 @@ Gövde opsiyoneldir — ilk sayfayı varsayılan limitle almak için `{}` (veya 
 
 ```json
 {
-  "batch_call_id": "842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f",
+  "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
   "status": "completed",
   "calling_window": { "timezone": "Europe/Istanbul", "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] },
   "data": [
     {
-      "call_id": "sess_a1b2c3d4e5f6",
+      "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f",
+      "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
       "call_status": "completed",
       "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
       "call_assistant_name": "Vindy - Asistan",
@@ -71,18 +72,37 @@ Gövde opsiyoneldir — ilk sayfayı varsayılan limitle almak için `{}` (veya 
       "call_end_reason": "completed",
       "call_transcript": "[23:40:10] Asistan: Merhaba, ben yapay zeka asistanı Vindy. Müşteri memnuniyeti anketimiz kapsamında size birkaç kısa soru sormak istiyorum — şu an uygun musunuz?\n[23:40:16] Müşteri: Evet, müsaitim.",
       "call_structured_data": {
-        "age": 32,
-        "overall_satisfaction": 4,
-        "support_speed": 5,
-        "would_recommend": true
+        "arama_sonucu": "tamamlandi",
+        "genel_memnuniyet_puani": 4,
+        "geri_arama_talebi": false,
+        "ilgilenilen_urunler": null
       },
-      "call_metadata": { "crm_contact_id": "CNT-90412" },
-      "call_variables": { "first_name": "Batu" },
+      "call_metadata": { "order_id": "ORD-4821" },
+      "call_variables": { "first_name": "Elif" },
       "call_recording": {
         "available": true,
         "url": "https://...?X-Amz-...",
-        "expires_at": "2026-06-09T23:46:40+00:00"
+        "expires_at": "2026-06-10T23:41:37+00:00"
       }
+    },
+    {
+      "call_id": "01a0c8d0-5f2b-7a41-bc03-1e2d3c4b5a69",
+      "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
+      "call_status": "failed",
+      "call_assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
+      "call_assistant_name": "Vindy - Asistan",
+      "call_phone_number": "+905553334455",
+      "call_bound_type": "outbound",
+      "call_started_at": "2026-06-09T23:40:10+00:00",
+      "call_ended_at": "2026-06-09T23:40:16+00:00",
+      "call_created_at": "2026-06-09T23:39:20+00:00",
+      "call_duration_seconds": 0,
+      "call_end_reason": "User Busy",
+      "call_transcript": null,
+      "call_structured_data": null,
+      "call_metadata": { "order_id": "ORD-4822" },
+      "call_variables": { "first_name": "Deniz" },
+      "call_recording": { "available": false }
     }
   ],
   "pagination": {
@@ -101,16 +121,24 @@ Gövde opsiyoneldir — ilk sayfayı varsayılan limitle almak için `{}` (veya 
 |---|---|---|
 | `batch_call_id` | string | Sorguladığınız toplu arama (yolda gönderdiğiniz `batchId`). |
 | `status` | string | Toplu aramanın güncel durumu — `active`, `completed` veya `cancelled`. |
-| `calling_window` | object \| null | Toplu aramanın arama penceresi (uygulanan mesai penceresi). Batch'in hiç çağrısı yoksa `null`. |
+| `calling_window` | object | Her zaman bulunur. Bu toplu aramaya uygulanan arama penceresi (ayarlanan değeri ya da platform varsayılanını yansıtır). |
 | `data` | array | Bu sayfadaki çağrı nesneleri — bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı yapı**. |
-| `pagination` | object | Standart [sayfalama nesnesi](list-calls/filtering-pagination.md#paginated). |
+| `pagination` | object | Standart [sayfalama nesnesi](list-calls/filtering-pagination.md#paginated) — üyeleri aşağıda. |
+
+**`pagination`**
+
+| Alan | Tür | Açıklama |
+|---|---|---|
+| `next_cursor` | string \| null | Sonraki sayfa için opak cursor. `has_more` `false` iken `null`. |
+| `has_more` | boolean | Bu sayfadan sonra başka sayfa kalıp kalmadığı. |
+| `limit` | int | Bu yanıta uygulanan sayfa boyutu. |
 
 **Çağrı nesnesi**
 
 `data` içindeki her öğe, bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı alanlara** sahiptir — `call_id` (bir dize), `call_status` (sonlanmış çağrılar için `completed` veya `failed`, henüz bitmemiş çağrılar için `pending`/`scheduled`/`in_progress`/`cancelled` gibi bir kuyruk durumu), `call_transcript`, `call_structured_data`, `call_metadata`, `call_recording`, serbest biçimli `call_end_reason` dizesi ve diğerleri. Kuyruktaki ve devam eden çağrılar sonlanana dek konuşma/kayıt/zaman alanları için `null` taşır. Bu alanları burada yeniden okumak yerine tam [Çağrıları Listele alan referansına](list-calls/index.md#yanıt-alanları) bakabilirsiniz.
 
 :::note Cursor opaktır — aynı `batchId` ile sayfalayın
-`cursor` opaktır: onu oluşturmayın veya değiştirmeyin. Sonraki sayfayı almak için **aynı `batchId` ile** gövdede `cursor` olarak geri gönderin. `has_more` `false` olduğunda durun (o noktada `next_cursor` `null` olur). Bu cursor hem bu endpoint'e **hem de** bu toplu aramaya özeldir: [`POST /v1/calls/list`](list-calls/index.md) cursor'ını ya da başka bir batch'in cursor'ını burada kullanmak `400 MALFORMED_CURSOR` ile reddedilir — bunun yerine yeni bir gezinme başlatın.
+`cursor` opaktır: onu oluşturmayın veya değiştirmeyin. Sonraki sayfayı almak için **aynı `batchId` ile** gövdede `cursor` olarak geri gönderin. `has_more` `false` olduğunda durun (o noktada `next_cursor` `null` olur). Bu cursor hem bu endpoint'e **hem de** bu toplu aramaya özeldir: [`POST /v1/calls/list`](list-calls/index.md) cursor'ını ya da başka bir toplu aramanın cursor'ını burada kullanmak `400 MALFORMED_CURSOR` ile reddedilir — bunun yerine yeni bir gezinme başlatın.
 :::
 
 :::note Burada tarih filtresi yok
@@ -122,6 +150,8 @@ Bu endpoint `date_from` / `date_to` almaz — tek bir toplu aramayla sınırlıd
 | Durum | Kod | Açıklama |
 |---|---|---|
 | `400` | `VALIDATION_FAILED` | `limit` 1–500 aralığının dışında ya da bir gövde alanı geçersiz tipte. Bilinmeyen/fazla alanlar **yok sayılır**, reddedilmez. |
+| `400` | `INVALID_CURSOR` | Cursor boş veya çözümlenemiyor. |
+| `400` | `MALFORMED_CURSOR` | Cursor çözümlenemiyor ya da farklı bir endpoint veya toplu arama için üretilmiş. |
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları. |
 | `404` | `RESOURCE_NOT_FOUND` | Toplu arama bulunamadı veya başka bir şirkete ait. |
 | `429` | `RATE_LIMITED` | Dakika-başı istek limiti aşıldı; `Retry-After` saniye sonra tekrar deneyin. |
@@ -144,7 +174,7 @@ Toplu aramayı [iptal ederseniz](cancel-batch.md) `status` hemen `cancelled` olu
 <TabItem value="curl" label="curl">
 
 ```bash
-curl -X POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/calls \
+curl -X POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/calls \
   -H "Authorization: Bearer $VINDY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"limit": 100}'
@@ -178,7 +208,7 @@ async function getBatchCalls(batchId, cursor) {
   return response.json();
 }
 
-const page = await getBatchCalls("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f");
+const page = await getBatchCalls("84213f7a-58cc-4372-a567-0e02b2c3d479");
 console.log(page?.status, page?.data.length);
 ```
 
@@ -208,7 +238,7 @@ def get_batch_calls(batch_call_id, cursor=None):
         raise RuntimeError(f"{code}: {error.get('message')}")
     return response.json()
 
-page = get_batch_calls("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f")
+page = get_batch_calls("84213f7a-58cc-4372-a567-0e02b2c3d479")
 if page:
     print(page["status"], len(page["data"]))
 ```
@@ -225,7 +255,7 @@ if page:
 
 ```bash
 # İlk istek (cursor yok)
-curl -X POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/calls \
+curl -X POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/calls \
   -H "Authorization: Bearer $VINDY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"limit": 100}'
@@ -233,7 +263,7 @@ curl -X POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3
 # Yanıt: { "status": "...", "data": [100 çağrı], "pagination": { "next_cursor": "X", "has_more": true } }
 
 # Sonraki istek (next_cursor kullanın)
-curl -X POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/calls \
+curl -X POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/calls \
   -H "Authorization: Bearer $VINDY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"limit": 100, "cursor": "X"}'
@@ -278,7 +308,7 @@ async function listAllBatchCalls(batchId) {
   return calls;
 }
 
-const calls = await listAllBatchCalls("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f");
+const calls = await listAllBatchCalls("84213f7a-58cc-4372-a567-0e02b2c3d479");
 console.log(`${calls?.length ?? 0} çağrı`);
 ```
 
@@ -319,7 +349,7 @@ def list_all_batch_calls(batch_call_id):
 
     return calls
 
-calls = list_all_batch_calls("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f")
+calls = list_all_batch_calls("84213f7a-58cc-4372-a567-0e02b2c3d479")
 print(f"{len(calls) if calls else 0} çağrı")
 ```
 
@@ -327,5 +357,5 @@ print(f"{len(calls) if calls else 0} çağrı")
 </Tabs>
 
 :::note İlgili
-Bu endpoint, [`POST /v1/calls/bulk`](bulk-create-calls.md) ile oluşturulan bir toplu aramanın çağrıları arasında sayfalama yapar. Kuyruktaki çağrıları durdurmak için bkz. [Toplu Çağrıyı İptal Et](cancel-batch.md). Toplu aramanın tamamı bittiğinde haberdar olmak için bkz. [`batch-ended` webhook'u](webhooks.md#batch-ended).
+Bu endpoint, [`POST /v1/calls/bulk`](bulk-create-calls.md) ile oluşturulan bir toplu aramanın çağrıları arasında sayfalama yapar. Kuyruktaki çağrıları durdurmak için bkz. [Toplu Aramayı İptal Et](cancel-batch.md). Toplu aramanın tamamı bittiğinde haberdar olmak için bkz. [`batch-ended` webhook'u](webhooks.md#batch-ended).
 :::

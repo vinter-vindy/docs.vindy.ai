@@ -6,7 +6,7 @@ sidebar_position: 1
 
 # Genel Bakış
 
-Vindy API, Vindy verilerinize kendi sistemleriniz üzerinden programatik erişim sağlar. Asistan tanımlarınıza, çağrı kayıtlarınıza, transcript'lere, yapay zekânın çıkardığı yapısal verilere ve ses kayıtlarına HTTP üzerinden erişebilirsiniz. Veri okumanın ötesinde, giden çağrılardan oluşan toplu aramalar oluşturabilir; henüz aranmamış çağrıları tek tek veya toplu arama düzeyinde iptal edebilirsiniz. Dilerseniz **webhook**'ları da kullanabilirsiniz: Vindy, bir çağrı sona erdiği anda — ve bir toplu arama tamamlandığında — endpoint'inize bildirim gönderir; böylece sürekli sorgulamak (polling) yerine neredeyse anında tepki verebilirsiniz. Bkz. [Webhooks](api-reference/webhooks.md).
+Vindy API, Vindy verilerinize kendi sistemlerinizden programatik erişim sağlar. Asistan tanımlarınıza, çağrı kayıtlarınıza, transcript'lere, yapay zekânın çıkardığı yapısal verilere ve ses kayıtlarına HTTP üzerinden erişebilirsiniz. Veri okumanın ötesinde, toplu giden aramalar başlatabilir; henüz aranmamış çağrıları tek tek veya toplu arama düzeyinde iptal edebilirsiniz. Dilerseniz **webhook**'ları da kullanabilirsiniz. Vindy, bir çağrı sona erdiği anda veya bir toplu arama tamamlandığında endpoint'inize bildirim gönderir; böylece sürekli sorgulamak (polling) yerine neredeyse anında tepki verebilirsiniz. Bkz. [Webhooks](api-reference/webhooks.md).
 
 **Genel özellikler:**
 
@@ -14,7 +14,7 @@ Vindy API, Vindy verilerinize kendi sistemleriniz üzerinden programatik erişim
 - Bearer token ile kimlik doğrulama (API anahtarı)
 - Tüm endpoint'ler `/v1/` ön eki altında
 - Yanıtlar `application/json` biçiminde
-- Büyük listelerde cursor tabanlı pagination
+- Büyük listelerde cursor tabanlı sayfalama (pagination)
 - `call-ended` ve `batch-ended` olayları için isteğe bağlı **webhook** teslimatı
 
 ---
@@ -40,7 +40,7 @@ Vindy API, Vindy verilerinize kendi sistemleriniz üzerinden programatik erişim
 
 - **[Hızlı Başlangıç](quickstart.md)** — ilk isteğinizi beş dakikada gönderin.
 - **[Kimlik Doğrulama](authentication.md)** — API anahtarlarının biçimi, kuralları ve sık karşılaşılan hatalar.
-- **[Kavramlar](category/concepts)** — yanıt formatı, multi-tenancy ve kişisel veriler. Bu bölümü bir kez okumanız, diğer tüm konuların temelini oluşturur.
+- **[Kavramlar](category/concepts)** — yanıt formatı, multi-tenancy ve kişisel veriler. Bu bölümü bir kez okumak, diğer tüm konuları anlamanızın temelini oluşturur.
 - **[API Referansı](category/api-reference)** — her endpoint'in istek/yanıt ayrıntıları ile curl, Node.js ve Python örnekleri.
 - **[Hata Kodları](errors.md)** — makine tarafından okunabilir hata kodlarının tam kataloğu.
 - **[Rehberler](category/guides)** — sık yapılan işlemler için hazır kullanım örnekleri: artımlı senkronizasyon, kayıt indirme ve tarih aralığı sorguları.

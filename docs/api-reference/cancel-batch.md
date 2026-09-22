@@ -18,7 +18,7 @@ The `batchId` is the `batch_call_id` returned in the bulk response.
 ## Request
 
 ```http
-POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/cancel
+POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/cancel
 Authorization: Bearer <api-key>
 ```
 
@@ -28,7 +28,7 @@ No request body.
 
 | Parameter | Type | Description |
 |---|---|---|
-| `batchId` | string | The batch's id — the `batch_call_id` from [`POST /v1/calls/bulk`](bulk-create-calls.md). |
+| `batchId` | string | The batch's ID — the `batch_call_id` from [`POST /v1/calls/bulk`](bulk-create-calls.md). |
 
 ## Response (200 OK)
 
@@ -36,7 +36,7 @@ Returns the batch summary, plus `cancelled_now` — how many queued calls this r
 
 ```json
 {
-  "batch_call_id": "842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f",
+  "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
   "status": "cancelled",
   "total_count": 200,
   "counts": {
@@ -53,10 +53,10 @@ Returns the batch summary, plus `cancelled_now` — how many queued calls this r
 
 | Field | Type | Description |
 |---|---|---|
-| `batch_call_id` | string | The cancelled batch's id (the `batchId` you passed in the request). |
+| `batch_call_id` | string | The cancelled batch's ID (the `batchId` you passed in the request). |
 | `status` | string | The batch's status after cancellation. |
 | `total_count` | int | Total number of calls in the batch. |
-| `counts` | object | Per-status breakdown: `completed`, `failed`, `cancelled`, `pending`, `processing`. |
+| `counts` | object | Per-status breakdown; each value is an integer: `completed`, `failed`, `cancelled`, `pending`, `processing`. (`pending` = scheduled + pending, `processing` = in_progress.) |
 | `created_at` | ISO string | When the batch was created (UTC, `+00:00`). |
 | `cancelled_now` | int | How many queued calls this request just cancelled. |
 
@@ -82,9 +82,9 @@ If you have a webhook subscription, cancelling a batch emits a single [`batch-en
 <TabItem value="curl" label="curl">
 
 ```bash
-curl -X POST https://api.vindy.ai/v1/calls/batches/842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f/cancel \
+curl -X POST https://api.vindy.ai/v1/calls/batches/84213f7a-58cc-4372-a567-0e02b2c3d479/cancel \
   -H "Authorization: Bearer $VINDY_API_KEY"
-# → { "batch_call_id": "842f1e9a-...", "status": "cancelled", "cancelled_now": 37, ... }
+# → { "batch_call_id": "84213f7a-...", "status": "cancelled", "cancelled_now": 37, ... }
 ```
 
 </TabItem>
@@ -113,7 +113,7 @@ async function cancelBatch(batchId) {
   return summary;
 }
 
-await cancelBatch("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f");
+await cancelBatch("84213f7a-58cc-4372-a567-0e02b2c3d479");
 ```
 
 </TabItem>
@@ -140,7 +140,7 @@ def cancel_batch(batch_call_id):
     print(f"Cancelled {summary['cancelled_now']} queued calls")
     return summary
 
-cancel_batch("842f1e9a-3b7c-4d21-9e08-1a2b3c4d5e6f")
+cancel_batch("84213f7a-58cc-4372-a567-0e02b2c3d479")
 ```
 
 </TabItem>

@@ -11,7 +11,7 @@ import TabItem from '@theme/TabItem';
 
 Returns the **caller lines** registered to your company — the phone numbers a batch of outbound calls can be placed **from**. Pick one and pass its `phone_number_id` as the caller when you launch calls with [`POST /v1/calls/bulk`](bulk-create-calls.md).
 
-Only numbers that are **usable for outbound** (provisioned and ready to dial) are returned. A number that exists in your account but isn't yet provisioned won't appear here.
+Only numbers that are **usable for outbound** (provisioned and ready to dial) are returned. A number that exists in your company but isn't yet provisioned won't appear here.
 
 ---
 
@@ -31,11 +31,14 @@ No query parameters. The response is **not paginated** — every usable caller l
   "data": [
     {
       "phone_number_id": "2a80da64-32dc-4837-b880-e6dc9ccd632d",
-      "phone_number": "+902323323389",
-      "label": "3389"
+      "phone_number": "+902323323389"
+    },
+    {
+      "phone_number_id": "d7c4a1b2-9e3f-4a5b-8c6d-0e1f2a3b4c5d",
+      "phone_number": "+902123320000"
     }
   ],
-  "total": 1
+  "total": 2
 }
 ```
 
@@ -52,9 +55,8 @@ No query parameters. The response is **not paginated** — every usable caller l
 
 | Field | Type | Description |
 |---|---|---|
-| `phone_number_id` | string | Stable, opaque id of the caller line. Pass it as `phone_number_id` when launching a batch of outbound calls with [`POST /v1/calls/bulk`](bulk-create-calls.md). |
+| `phone_number_id` | string | Stable, opaque ID of the caller line. Pass it as `phone_number_id` when launching a batch of outbound calls with [`POST /v1/calls/bulk`](bulk-create-calls.md). |
 | `phone_number` | string | The line in E.164 form (e.g. `+902323323389`). |
-| `label` | string \| null | A human-friendly name for the line, or `null` when none is set. |
 
 ## Errors
 
@@ -100,7 +102,7 @@ const { data, total } = await response.json();
 console.log(`${total} phone numbers`);
 
 for (const line of data) {
-  console.log(`${line.phone_number_id}: ${line.phone_number} (${line.label ?? "no label"})`);
+  console.log(`${line.phone_number_id}: ${line.phone_number}`);
 }
 ```
 
@@ -123,7 +125,7 @@ body = response.json()
 print(f"{body['total']} phone numbers")
 
 for line in body["data"]:
-    print(f"{line['phone_number_id']}: {line['phone_number']} ({line['label'] or 'no label'})")
+    print(f"{line['phone_number_id']}: {line['phone_number']}")
 ```
 
 </TabItem>

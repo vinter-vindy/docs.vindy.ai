@@ -6,19 +6,19 @@ sidebar_position: 1
 
 # Response Format
 
-All Vindy API responses are JSON (`application/json`) and follow a small set of predictable shapes. Learn them once and every endpoint feels familiar.
+All Vindy API responses are JSON (`application/json`) and follow a small set of predictable shapes.
 
 :::note Unknown request fields are ignored
 On request bodies, any field the endpoint doesn't recognize is **silently ignored** — it is never an error. A typo'd or extra field simply has no effect (it won't filter, change, or reject the request). Send only the documented fields.
 :::
 
-Most list responses are wrapped in a pagination object — see [Filtering & Pagination](../api-reference/list-calls/filtering-pagination.md#paginated). The one exception is [`GET /v1/assistants`](../api-reference/list-assistants.md), which returns `{ data, total }` instead.
+For the list-response envelope and pagination, see [Filtering & Pagination](../api-reference/list-calls/filtering-pagination.md#paginated). Two endpoints are exceptions — [`GET /v1/assistants`](../api-reference/list-assistants.md) and [`GET /v1/phone-numbers`](../api-reference/list-phone-numbers.md) return `{ data, total }`.
 
 ---
 
 ## Dates and times {#timestamps}
 
-Every timestamp the API **returns** is **UTC**, in ISO 8601 / RFC 3339 form with an explicit `+00:00` offset — for example `2026-05-15T10:30:00+00:00`. Parse it with a real ISO-8601 parser; **do not** assume a `Z` suffix or a fixed number of fractional-second digits. This holds for every date-time field in every response — `call_started_at`, `call_ended_at`, `call_created_at`, a recording's `expires_at`, and the timestamps in [webhook](../api-reference/webhooks.md) payloads.
+Every timestamp the API **returns** is **UTC**, in ISO 8601 / RFC 3339 form with an explicit `+00:00` offset — for example `2026-05-15T10:30:00+00:00`. Parse it with a real ISO 8601 parser; **do not** assume a `Z` suffix or a fixed number of fractional-second digits. This holds for every date-time field in every response — `call_started_at`, `call_ended_at`, `call_created_at`, a recording's `expires_at`, and the timestamps in [webhook](../api-reference/webhooks.md) payloads.
 
 Date **inputs** work differently, and there are two kinds:
 
@@ -61,7 +61,7 @@ Depending on the error, `extensions` carries extra machine-readable fields along
 | Error (code / status) | Extra fields in `extensions` |
 |---|---|
 | `VALIDATION_FAILED` (400) | `validation_errors` — an array of objects |
-| `INVALID_PHONE_NUMBER`, `INVALID_METADATA` (400, from `POST /v1/calls/bulk`) | `index` — the 0-based index of the offending item in `calls` |
+| `INVALID_PHONE_NUMBER`, `INVALID_METADATA`, `INVALID_VARIABLES` (400) | `index` — the 0-based index of the offending entry in the `calls` array (bulk); single-call errors report `index: 0` (a bulk request-level `variables` violation reports `-1`) |
 | `RATE_LIMITED` (429) | `retry_after` (seconds), `limit` |
 
 ### Validation errors

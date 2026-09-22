@@ -33,8 +33,8 @@ Content-Type: application/json
   "scheduled_at": "2026-06-10T09:00:00+03:00",
   "calling_window": { "timezone": "Europe/Istanbul", "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] },
   "calls": [
-    { "phone_number": "+905551112233", "variables": { "first_name": "Ahmet" }, "metadata": { "crm_contact_id": "CNT-90412" } },
-    { "phone_number": "+905554445566", "variables": { "first_name": "Ayşe" }, "metadata": { "crm_contact_id": "CNT-90413" } }
+    { "phone_number": "+905551112233", "variables": { "first_name": "Elif" }, "metadata": { "order": { "id": "ORD-4821", "items": [{ "sku": "A", "qty": 2 }] }, "tags": ["vip"], "priority": 1 } },
+    { "phone_number": "+905551112244", "variables": { "first_name": "Mehmet" }, "metadata": { "order_id": "ORD-4822" } }
   ]
 }
 ```
@@ -72,19 +72,21 @@ Accepted numbers are stored and dialed in their normalized form; you see that va
 
 ### Metadata {#metadata}
 
-`metadata` is a free-form key-value object that belongs entirely to **you**. Vindy treats it as an opaque payload: we **never read, parse, validate, or act on its contents**, and it has **no effect** on how a call is placed, routed, or processed. We simply store it and return it to you unchanged on every view of that call — in [`POST /v1/calls/list`](list-calls/index.md), in [`GET /v1/calls/:callId`](get-call.md), and in [webhook events](webhooks.md).
+`metadata` is a free-form key-value object that belongs entirely to **you**. Vindy treats it as an opaque payload — it is **never read, parsed, validated, or acted on**, and it has **no effect** on how a call is placed, routed, or processed. Vindy simply stores it and returns it to you unchanged on every view of that call — in [`POST /v1/calls/list`](list-calls/index.md), in [`GET /v1/calls/:callId`](get-call.md), and in [webhook events](webhooks.md).
 
 Its only job is **correlation on your side**. Attach whatever identifiers your own systems need to tie a call back to your data — a CRM contact ID, an order number, a campaign tag, your internal request ID, and so on. When the result comes back, you read those same keys off `call_metadata` and route the outcome straight into your CRM, database, or workflow — no need to keep a separate phone-number-to-record mapping.
 
-The only rules are structural, so that we can store and echo it reliably:
+You can send **structured** metadata — not just flat key-value pairs. Values may be scalars *or* nested objects and arrays, so you can mirror the shape of your own records. The only rules are structural, so that Vindy can store and return it reliably:
 
 | Limit | Value |
 |---|---|
-| Max keys | 50 |
+| Value types | `string`, `number`, `boolean`, `null`, and nested objects and arrays |
+| Max keys per object | 50 (top-level and each nested object) |
 | Max key length | 40 |
-| Max value length | 500 |
-| Value types | `string`, `number`, `boolean` |
-| Nested objects / arrays / `null` | Not allowed |
+| Max string value length | 500 |
+| Max nesting depth | 5 |
+| Max total entries | 200 (all scalars and containers combined) |
+| Max serialized size | 32 KB (JSON, UTF-8) |
 
 :::caution Use it for your own keys — and keep PII out
 Because Vindy never interprets `metadata`, it is the right place for **your** correlation keys (e.g. `crm_contact_id`, `orderId`, `campaign`). It is **not** the place for personal data (names, phone numbers, ID numbers) — keep those in your own systems and reference them by key instead.
@@ -103,7 +105,7 @@ Two levels, merged per call (the per-call value wins on key conflicts):
 | Request | `variables` | Every call (a shared base — e.g. `{ "company": "Vindy" }`). |
 | Per call | `calls[].variables` | That one call (e.g. `{ "first_name": "Ahmet" }`), overriding the request-level base. |
 
-Which names an assistant expects is listed in `assistant_variables` on [`GET /v1/assistants`](list-assistants.md) (derived from the `{{…}}` in its prompt and greeting). A placeholder you don't supply is rendered as **empty** — no `{{…}}` ever leaks into speech. Structural limits match `metadata`:
+Which names an assistant expects is listed in `assistant_variables` on [`GET /v1/assistants`](list-assistants.md) (derived from the `{{…}}` in its prompt and greeting). A placeholder you don't supply is rendered as **empty** — no `{{…}}` ever leaks into speech. The key and length limits match `metadata` (≤50 keys, key ≤40, value ≤500), but — unlike `metadata` — variables are **scalar-only**: no nested objects or arrays:
 
 | Limit | Value |
 |---|---|
@@ -112,6 +114,8 @@ Which names an assistant expects is listed in `assistant_variables` on [`GET /v1
 | Max value length | 500 |
 | Value types | `string`, `number`, `boolean` (numbers/booleans are stringified) |
 | Nested objects / arrays / `null` | Not allowed |
+
+Unlike `metadata` — where an empty key is tolerated — a `variables` **key must be non-empty**: it must be 1–40 characters. An empty key is rejected.
 
 A violation returns **`400 INVALID_VARIABLES`**; for a per-call `variables` the offending array position is in `extensions.index` (a request-level violation reports `index: -1`).
 
@@ -176,17 +180,17 @@ An invalid `calling_window` (bad timezone, `start ≥ end`, empty or out-of-rang
 
 | Field | Type | Description |
 |---|---|---|
-| `batch_call_id` | string (UUID) | Identifier of the created batch (campaign). **Always present** — `/v1/calls/bulk` always creates a batch, even for a single number. **Keep it** to cancel the batch later via [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) or to list its calls via [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md). For a one-off call with no batch, use [`POST /v1/calls`](create-call.md) instead. |
+| `batch_call_id` | string (UUID) | Identifier of the created batch. **Always present** — `/v1/calls/bulk` always creates a batch, even for a single number. **Keep it** to cancel the batch later via [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) or to list its calls via [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md). For a one-off call with no batch, use [`POST /v1/calls`](create-call.md) instead. |
 | `accepted` | int | Number of calls queued. |
 | `calling_window` | object | The calling window **applied** to this batch — your normalized window, or the platform default if you didn't send one. **Always present.** See [Calling window](#calling-window). |
 
 :::info Correlating results — no per-call ids are returned
 By design, the bulk response returns **only** `batch_call_id` and `accepted` — it does **not** list a `call_id` for each queued call (returning up to 1000 ids on every batch is unnecessary overhead). You correlate results in one of two ways:
 
-- **By your `metadata`** (recommended): attach your own identifier (e.g. `crm_contact_id`) to each call. Every outcome — via [`POST /v1/calls/list`](list-calls/index.md) and the [`call-ended` webhook](webhooks.md) — echoes it back as `call_metadata`, so you can route each result without ever needing our `call_id`.
+- **By your `metadata`** (recommended): attach your own identifier (e.g. `crm_contact_id`) to each call. Every outcome — via [`POST /v1/calls/list`](list-calls/index.md) and the [`call-ended` webhook](webhooks.md) — echoes it back as `call_metadata`, so you can route each result without ever needing Vindy's `call_id`.
 - **By listing the batch's calls**: page through the batch with [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md), which returns each call (with its `call_id`, phone number, and current status).
 
-For a one-off call where you *do* want the id back immediately, use the single-call endpoint [`POST /v1/calls`](create-call.md) instead — it returns that call's `call_id`.
+For a one-off call where you *do* want the ID back immediately, use the single-call endpoint [`POST /v1/calls`](create-call.md) instead — it returns that call's `call_id`.
 :::
 
 Calls are queued and run in the background. Results (transcript, recording, structured data) become available as each call completes.
@@ -214,8 +218,8 @@ When a `batch_call_id` was returned (a multi-call batch), page through its calls
 If **any** number or metadata in the request is invalid, **no calls are created** — the whole request is rejected. Fix the offending entry (see `extensions.index`) and resubmit.
 :::
 
-:::warning No dedup on our side
-There is no server-side lock against concurrent or repeated submissions — a second identical request simply creates a **second batch** and calls everyone again. Retry only when you're sure the previous request didn't succeed, and deduplicate on your side. See the [FAQ](../faq.md#is-it-safe-to-retry-requests).
+:::warning No server-side de-duplication
+There is no server-side lock against concurrent or repeated submissions — a second identical request simply creates a **second batch** and calls everyone again. Retry only when you're sure the previous request didn't succeed, and de-duplicate on your side. See the [FAQ](../faq.md#is-it-safe-to-retry-requests).
 :::
 
 ## Examples
@@ -231,11 +235,11 @@ curl -X POST https://api.vindy.ai/v1/calls/bulk \
     "assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
     "phone_number_id": "2a80da64-32dc-4837-b880-e6dc9ccd632d",
     "calls": [
-      { "phone_number": "+905551112233", "metadata": { "crm_contact_id": "CNT-90412" } },
-      { "phone_number": "+905554445566", "metadata": { "crm_contact_id": "CNT-90413" } }
+      { "phone_number": "+905551112233", "metadata": { "order_id": "ORD-4821" } },
+      { "phone_number": "+905551112244", "metadata": { "order_id": "ORD-4822" } }
     ]
   }'
-# → { "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479", "accepted": 2 }
+# → { "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479", "accepted": 2, "calling_window": { "timezone": "Europe/Istanbul", "start": "09:00", "end": "18:00", "days": [1, 2, 3, 4, 5] } }
 ```
 
 </TabItem>
@@ -271,8 +275,8 @@ await createBulkCalls(
   "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
   "2a80da64-32dc-4837-b880-e6dc9ccd632d",
   [
-    { phone_number: "+905551112233", metadata: { crm_contact_id: "CNT-90412" } },
-    { phone_number: "+905554445566", metadata: { crm_contact_id: "CNT-90413" } },
+    { phone_number: "+905551112233", metadata: { order_id: "ORD-4821" } },
+    { phone_number: "+905551112244", metadata: { order_id: "ORD-4822" } },
   ],
 );
 ```
@@ -305,8 +309,8 @@ create_bulk_calls(
     "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
     "2a80da64-32dc-4837-b880-e6dc9ccd632d",
     [
-        {"phone_number": "+905551112233", "metadata": {"crm_contact_id": "CNT-90412"}},
-        {"phone_number": "+905554445566", "metadata": {"crm_contact_id": "CNT-90413"}},
+        {"phone_number": "+905551112233", "metadata": {"order_id": "ORD-4821"}},
+        {"phone_number": "+905551112244", "metadata": {"order_id": "ORD-4822"}},
     ],
 )
 ```

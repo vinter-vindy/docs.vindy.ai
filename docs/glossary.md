@@ -8,7 +8,7 @@ sidebar_position: 9
 
 | Term | Definition |
 |---|---|
-| **API Key** | Customer credential in `<keyId>.<secret>` format |
+| **API Key** | Company credential in `<keyId>.<secret>` format |
 | **keyId** | The portion of the API key before the dot (UUID) |
 | **Plain Key** | Full API key string — only visible at creation |
 | **Cursor** | Opaque base64 value for pagination |

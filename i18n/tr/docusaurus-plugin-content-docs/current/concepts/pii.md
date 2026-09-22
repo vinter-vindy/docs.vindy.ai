@@ -15,7 +15,7 @@ Vindy API, çağrı verisini olduğu gibi döndürür. Bu verinin kendi tarafın
 | Alan | İçerik |
 |---|---|
 | `call_phone_number` | Genellikle **E.164 biçiminde** ham telefon numarası (örneğin `+905551112233`). Maskelenmez. |
-| `call_transcript` | Müşteriyle yapılan görüşmenin dökümü; kişisel bilgi içerebilir. |
+| `call_transcript` | Müşteriyle yapılan görüşme; kişisel bilgi içerebilir. |
 | `call_structured_data` | Asistanınızın çıkardığı yapısal veri; hangi alanları yapılandırdıysanız onları içerir. |
 
 ---
@@ -28,5 +28,5 @@ Kendi sistemlerinize kopyaladığınız verilere ilişkin saklama, silme ve anon
 
 - Yalnızca gerçekten ihtiyaç duyduğunuz alanları senkronize etmeniz önerilir.
 - İndirdiğiniz transcript'lere ve ses kayıtlarına kendi saklama politikanızı uygulamanız önerilir.
-- Kayıt indirme bağlantıları geçicidir — varsayılan olarak yaklaşık 24 saat (86400 saniye) geçerlidir ve yapılandırılabilir. Bağlantıyı değil, indirdiğiniz ses dosyasını saklayın.
+- Kayıt indirme bağlantıları geçicidir — varsayılan olarak yaklaşık 24 saat geçerlidir; bağlantıyı değil, indirdiğiniz ses dosyasını saklayın ve gerektiğinde taze bir bağlantı oluşturun. Bkz. [Ses Kaydı Bağlantısı Al](../api-reference/get-recording-url.md).
 - Ses kayıtlarını kendi kullanıcılarınıza iletecekseniz, tek bir bağlantıyı paylaşmak yerine her kullanıcı için ayrı bir indirme bağlantısı oluşturun; bkz. [kayıt indirme rehberi](../guides/recording-retrieval.md).
