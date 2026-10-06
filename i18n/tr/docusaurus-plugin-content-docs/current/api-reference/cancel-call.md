@@ -9,12 +9,12 @@ import TabItem from '@theme/TabItem';
 
 # `POST /v1/calls/:callId/cancel`
 
-Kuyrukta bekleyen tek bir **giden çağrıyı** iptal eder — hâlâ `pending` veya `scheduled` durumunda olan ve henüz aranmamış bir çağrıyı. Yalnızca kendi şirketinizin çağrılarını iptal edebilirsiniz.
+Hâlâ `pending` ya da `scheduled` durumunda olan, yani henüz aranmamış ve kuyrukta bekleyen tek bir **giden çağrıyı** iptal eder. Yalnızca kendi şirketinizin çağrılarını iptal edebilirsiniz.
 
 Çağrı bir kez dağıtıldıktan (aranmaya başlandıktan) veya bittikten sonra artık iptal edilemez.
 
 :::note `callId` nereden gelir
-Yol, bir **giden kuyruk çağrısının** `call_id` değerini alır. Bir `call_id`'yi [`POST /v1/calls`](create-call.md) (tekil çağrı) yanıtından, bir toplu aramanın çağrılarını [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile listeleyerek ya da [`POST /v1/calls/list`](list-calls/index.md) yanıtından alırsınız — ayrıca kendi `metadata`'nızla eşleştirerek de bir kuyruk çağrısını bulabilirsiniz. Yalnızca hâlâ kuyrukta bekleyen çağrılar iptal edilebilir; bir toplu aramadaki kalan tüm çağrıları tek seferde iptal etmek için [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) kullanın.
+Yol, bir **giden kuyruk çağrısının** `call_id` değerini alır. Bir `call_id`'yi [`POST /v1/calls`](create-call.md) (tekil çağrı) yanıtından, bir toplu aramanın çağrılarını [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile listeleyerek ya da [`POST /v1/calls/list`](list-calls/index.md) yanıtından alırsınız. Ayrıca kendi `metadata`'nızla eşleştirerek de bir kuyruk çağrısını bulabilirsiniz. Yalnızca hâlâ kuyrukta bekleyen çağrılar iptal edilebilir; bir toplu aramadaki kalan tüm çağrıları tek seferde iptal etmek için [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) kullanın.
 :::
 
 ---
@@ -32,7 +32,7 @@ Authorization: Bearer <api-key>
 
 | Parametre | Tür | Açıklama |
 |---|---|---|
-| `callId` | string | İptal edilecek kuyruktaki çağrının `call_id` değeri. |
+| `callId` | string | İptal etmek istediğiniz, kuyrukta bekleyen çağrının `call_id` değerini buraya yazarsınız. |
 
 ## Yanıt (200 OK)
 
@@ -42,16 +42,16 @@ Authorization: Bearer <api-key>
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `call_id` | string | İptal edilen çağrının kimliği (gönderdiğiniz `callId`). |
-| `status` | string | Başarıda daima `cancelled`. |
+| `call_id` | string | İptal edilen çağrının kimliğini verir; gönderdiğiniz `callId` değeridir. |
+| `status` | string | İşlem başarılı olduğunda her zaman `cancelled` döner. |
 
 ## Hatalar
 
 | Durum | Kod | Açıklama |
 |---|---|---|
-| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları. |
-| `404` | `RESOURCE_NOT_FOUND` | Böyle bir çağrı yok veya başka bir şirkete ait. |
-| `409` | `ERR_CALL_NOT_CANCELLABLE` | Çağrı iptal edilemez: kuyrukta bekleyen bir giden çağrı değildir. Ya zaten dağıtılmış/bitmiştir, ya bir yarış koşulu oluşmuştur ya da **gelen/çoktan başlamış bir çağrıdır** (bunlar asla iptal edilemez). |
+| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | İsteğin kimlik doğrulaması başarısız oldu. |
+| `404` | `RESOURCE_NOT_FOUND` | Böyle bir çağrı yok ya da başka bir şirkete aittir. |
+| `409` | `ERR_CALL_NOT_CANCELLABLE` | Çağrı iptal edilemez: kuyrukta bekleyen bir giden çağrı değildir. Ya zaten dağıtılmış/bitmiştir, ya tam siz iptal ederken çağrı aranmaya başlamıştır ya da **gelen/çoktan başlamış bir çağrıdır** (bunlar asla iptal edilemez). |
 | `429` | `RATE_LIMITED` | Dakika-başı istek limiti aşıldı; `Retry-After` saniye sonra tekrar deneyin. |
 
 :::note İptalin artık mümkün olmadığı durum
@@ -59,11 +59,11 @@ Kuyruktaki bir çağrı, beklemeden aranma durumuna hızla geçer. `409 ERR_CALL
 :::
 
 :::note İptal edilen bir çağrı `call-ended` webhook'u üretir
-Bir webhook aboneliğiniz varsa, tekli bir kuyruk çağrısını iptal etmek `call_status: "cancelled"` ve minimal bir gövdeyle (transcript veya kayıt yok) bir [`call-ended`](webhooks.md#call-ended) olayı üretir — iptali eşzamansız olarak böyle doğrularsınız. Bütün bir toplu aramayı iptal etmek ise bunun yerine çağrı başına `call-ended` değil, **tek** bir [`batch-ended`](webhooks.md#batch-ended) olayı üretir.
+Bir webhook aboneliğiniz varsa, tekli bir kuyruk çağrısını iptal etmek `call_status: "cancelled"` ve minimal bir gövdeyle (transcript veya kayıt yok) bir [`call-ended`](webhooks.md#call-ended) olayı üretir; iptali eşzamansız olarak böyle doğrularsınız. Bütün bir toplu aramayı iptal etmek ise durdurulan **her kuyruk çağrısı için bir `call-ended`** (her biri `call_status: "cancelled"` ve `call_metadata`'nız geri yansıtılmış) **artı** en son gelen tek bir [`batch-ended`](webhooks.md#batch-ended) üretir. Toplama (roll-up) yoktur.
 :::
 
 :::tip Bütün bir toplu aramayı iptal etme
-Aynı anda çok sayıda kuyruktaki çağrıyı — örneğin bir toplu aramadaki kalan tüm çağrıları — iptal etmek için, her çağrıyı tek tek iptal etmek yerine bulk isteğinizden gelen `batch_call_id` ile [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) endpoint'ini kullanın.
+Aynı anda çok sayıda kuyruktaki çağrıyı (örneğin bir toplu aramadaki kalan tüm çağrıları) iptal etmek için, her çağrıyı tek tek iptal etmek yerine toplu arama isteğinizden gelen `batch_call_id` ile [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) endpoint'ini kullanın.
 :::
 
 ## Örnekler

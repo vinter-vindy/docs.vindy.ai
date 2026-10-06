@@ -11,7 +11,7 @@ import TabItem from '@theme/TabItem';
 
 Returns a single call by its stable `call_id`. The response is **identical to a call object** in [`POST /v1/calls/list`](list-calls/index.md) — transcript, structured data, metadata, and (if ready) a fresh recording URL included.
 
-Use it whenever you have a `call_id` — from [List Calls](list-calls/index.md), a [webhook](webhooks.md), or your own records — to pull the call on demand. After a webhook you already have the full object; the usual reason to call this afterward is to refresh a recording URL that has expired. Recording URLs are long-lived (~24 hours) and generated fresh on each request, so a URL you received earlier will usually still work — but if you're pulling a call more than ~24 hours after that URL was issued, fetch it here to get a fresh one.
+Reach for it whenever you have a `call_id` — from [List Calls](list-calls/index.md), a [`call-ended` webhook](webhooks.md), or your own records — and want that one call's current state without listing. You get the same full object you'd see in List Calls, fetched fresh at request time.
 
 :::info Visibility
 Terminal calls — status `completed` or `failed` — return the full object below. You can also fetch an **outbound call you created** — its `call_id` returned by [`POST /v1/calls`](create-call.md), or obtained by [listing a batch's calls](get-batch-calls.md) — at **any** point in its lifecycle. While it has not yet reached a terminal state it returns a minimal object whose `call_status` is `pending`, `scheduled`, `in_progress`, or `cancelled`, with the conversation and recording fields `null`; those fill in once the call reaches a terminal state. Inbound calls still in progress, and browser (WebRTC) calls, are never returned; they respond `404`.
@@ -30,7 +30,7 @@ Authorization: Bearer <api-key>
 
 | Parameter | Type | Description |
 |---|---|---|
-| `callId` | string | The call's stable string ID — from [`POST /v1/calls`](create-call.md) (a single call), [`POST /v1/calls/list`](list-calls/index.md), [listing a batch's calls](get-batch-calls.md), or a [webhook event](webhooks.md). |
+| `callId` | string | Identifies the call with its stable string ID, which you get from [`POST /v1/calls`](create-call.md) (a single call), [`POST /v1/calls/list`](list-calls/index.md), [listing a batch's calls](get-batch-calls.md), or a [webhook event](webhooks.md). |
 
 ## Response (200 OK)
 
@@ -125,11 +125,11 @@ The call object has the **same fields** as a [List Calls](list-calls/index.md#re
 
 | Field | Type | Description |
 |---|---|---|
-| `call_id` | string | The call's stable string ID — the same value you pass in the path. |
-| `batch_call_id` | string \| null | The batch this call belongs to — the same `batch_call_id` returned by [`POST /v1/calls/bulk`](bulk-create-calls.md). Use it to group a batch's calls (e.g. when handling `call-ended` webhooks). `null` when the call is not part of a batch: a single call from [`POST /v1/calls`](create-call.md), or any inbound call. |
-| `call_status` | string | For a terminal call, `completed` or `failed`. For an outbound call fetched while still queued or in progress, this is the queue status instead: `pending`, `scheduled`, `in_progress`, or `cancelled`. A physical call is never `cancelled` — a cancelled queued call simply never becomes one. When `call_status` is `cancelled`, `call_end_reason` is the string `"cancelled"`; for `pending`, `scheduled`, or `in_progress` it is `null`. |
-| `call_metadata` | object \| null | The metadata you sent via [`POST /v1/calls/bulk`](bulk-create-calls.md), echoed back verbatim. `null` if the call wasn't created with metadata. |
-| `call_variables` | object \| null | The template variables sent for this call, echoed back verbatim — the same object you passed as `variables` when creating the call. `null` when none were sent (e.g. inbound calls). |
+| `call_id` | string | Holds the call's stable string ID, the same value you pass in the path. |
+| `batch_call_id` | string \| null | Identifies the batch this call belongs to, matching the `batch_call_id` returned by [`POST /v1/calls/bulk`](bulk-create-calls.md); use it to group a batch's calls, for example while handling `call-ended` webhooks. It is `null` when the call isn't part of a batch — a single call from [`POST /v1/calls`](create-call.md), or any inbound call. |
+| `call_status` | string | Gives the call's status. For a terminal call it is `completed` or `failed`; for an outbound call fetched while still queued or in progress, it is the queue status instead — `pending`, `scheduled`, `in_progress`, or `cancelled`. A physical call is never `cancelled` — a cancelled queued call simply never becomes one. When `call_status` is `cancelled`, `call_end_reason` is the string `"cancelled"`; for `pending`, `scheduled`, or `in_progress` it is `null`. |
+| `call_metadata` | object \| null | Returns, verbatim, the metadata you sent via [`POST /v1/calls`](create-call.md) or [`POST /v1/calls/bulk`](bulk-create-calls.md). It is `null` if the call wasn't created with metadata. |
+| `call_variables` | object \| null | Returns, verbatim, the template variables sent for this call — the same object you passed as `variables` when you created it. It is `null` when none were sent, as with inbound calls. |
 
 All timestamp fields — `call_started_at`, `call_ended_at`, `call_created_at`, and `call_recording.expires_at` — are **UTC** in ISO 8601 `+00:00` form (e.g. `2026-06-08T10:30:00+00:00`); parse them with a real ISO 8601 parser and don't assume a `Z` suffix. See [Response Format → Dates and times](../concepts/response-envelopes.md#timestamps).
 
@@ -143,9 +143,9 @@ The `call_recording.url` here is generated fresh at request time and is valid fo
 
 | Status | Code | Description |
 |---|---|---|
-| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Auth errors. |
-| `404` | `RESOURCE_NOT_FOUND` | Call not found, an inbound call still in progress, a browser (WebRTC) call, or belongs to another company. (An outbound call you created returns `200` even while queued — see Visibility above.) |
-| `429` | `RATE_LIMITED` | Rate limit exceeded (per-minute). Retry after `Retry-After` seconds. |
+| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | The request's authentication failed. |
+| `404` | `RESOURCE_NOT_FOUND` | The call doesn't exist, is an inbound call still in progress, is a browser (WebRTC) call, or belongs to another company. (An outbound call you created returns `200` even while queued — see Visibility above.) |
+| `429` | `RATE_LIMITED` | You've exceeded the per-minute rate limit; retry after the `Retry-After` seconds. |
 
 :::note Existence is not leaked
 A `call_id` that belongs to another company returns the same `404 RESOURCE_NOT_FOUND` as one that does not exist — see [Multi-tenancy](../concepts/multi-tenancy.md).

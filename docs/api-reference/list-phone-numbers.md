@@ -9,9 +9,11 @@ import TabItem from '@theme/TabItem';
 
 # `GET /v1/phone-numbers`
 
-Returns the **caller lines** registered to your company — the phone numbers a batch of outbound calls can be placed **from**. Pick one and pass its `phone_number_id` as the caller when you launch calls with [`POST /v1/calls/bulk`](bulk-create-calls.md).
+Returns the **caller numbers** registered to your company: the phone numbers you can place outbound calls **from**. Each one is the number that shows up on the recipient's phone when Vindy dials them on your behalf.
 
-Only numbers that are **usable for outbound** (provisioned and ready to dial) are returned. A number that exists in your company but isn't yet provisioned won't appear here.
+When you launch a call — a single call with [`POST /v1/calls`](create-call.md) or a batch with [`POST /v1/calls/bulk`](bulk-create-calls.md) — you pick one of these and pass its `phone_number_id` to set the caller number for that call.
+
+Only numbers that are **ready for outbound** (provisioned and able to dial) appear here. A number that exists in your company but hasn't been provisioned yet won't be listed.
 
 ---
 
@@ -22,7 +24,7 @@ GET https://api.vindy.ai/v1/phone-numbers
 Authorization: Bearer <api-key>
 ```
 
-No query parameters. The response is **not paginated** — every usable caller line is returned in one call (up to 1000).
+This endpoint takes no query parameters, and the response is **not paginated**: it returns every usable caller number in a single call, up to a maximum of 1000.
 
 ## Response (200 OK)
 
@@ -48,15 +50,15 @@ No query parameters. The response is **not paginated** — every usable caller l
 
 | Field | Type | Description |
 |---|---|---|
-| `data` | array | Phone number items. |
-| `total` | int | Size of the `data` array. |
+| `data` | array | Lists your company's caller numbers, one object per number. |
+| `total` | int | Tells you how many items `data` holds. |
 
 **Phone number item**
 
 | Field | Type | Description |
 |---|---|---|
-| `phone_number_id` | string | Stable, opaque ID of the caller line. Pass it as `phone_number_id` when launching a batch of outbound calls with [`POST /v1/calls/bulk`](bulk-create-calls.md). |
-| `phone_number` | string | The line in E.164 form (e.g. `+902323323389`). |
+| `phone_number_id` | string | Identifies the caller number with a stable, opaque ID. Pass it as `phone_number_id` when placing outbound calls, whether single ([`POST /v1/calls`](create-call.md)) or batch ([`POST /v1/calls/bulk`](bulk-create-calls.md)). |
+| `phone_number` | string | Gives the number itself, in international E.164 form (for example `+902323323389`); this is what shows on the recipient's phone. |
 
 ## Errors
 
@@ -68,11 +70,12 @@ No query parameters. The response is **not paginated** — every usable caller l
 ## Notes
 
 :::info Inbound assignment does not restrict outbound
-A phone number may be assigned to an assistant for **inbound** routing (so calls to that number reach that assistant). That assignment has **no bearing on outbound**: **any** number returned here can be used as the caller for a bulk call, with **any** of your assistants. Choose the caller line and the assistant independently.
+A phone number may be assigned to an assistant for **inbound** routing (so calls to that number reach that assistant). That assignment has **no bearing on outbound**: **any** number returned here can be used as the caller for an outbound call (single or batch), with **any** of your assistants. Choose the caller number and the assistant independently.
 :::
 
-- Only outbound-usable (provisioned and ready) numbers are returned. If a line you expect is missing, it isn't provisioned for outbound yet.
-- The `phone_number_id` is what [`POST /v1/calls/bulk`](bulk-create-calls.md) expects in its **required** `phone_number_id` field. A `phone_number_id` that is unknown or not in your company is rejected there with `404 PHONE_NUMBER_NOT_FOUND`; one that exists but isn't ready for outbound with `400 PHONE_NUMBER_NOT_USABLE`.
+- Numbers are ordered newest first.
+- Only outbound-ready (provisioned and able to dial) numbers are returned. If a number you expect is missing, it isn't provisioned for outbound yet.
+- The `phone_number_id` is what both [`POST /v1/calls`](create-call.md) and [`POST /v1/calls/bulk`](bulk-create-calls.md) expect in their **required** `phone_number_id` field. A `phone_number_id` that is unknown or not in your company is rejected there with `404 PHONE_NUMBER_NOT_FOUND`; one that exists but isn't ready for outbound with `400 PHONE_NUMBER_NOT_USABLE`.
 - Treat `phone_number_id` as an opaque string — don't parse it or derive the number from it; read the number from `phone_number`.
 
 ## Examples

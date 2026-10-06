@@ -24,12 +24,9 @@ Authorization: Bearer <api-key>
 
 ## Kurallar
 
-- Anahtarın açık metni yalnızca oluşturma anında görüntülenir. Kaybedilmesi durumunda kurtarma imkânı yoktur; yeni bir anahtar oluşturmanız gerekir.
-- İptal edilen anahtarlar anında geçersiz hâle gelir; bu noktadan sonraki tüm istekler 401 döndürür.
-- Süresi dolan anahtarlar (`expires_at < now()`) otomatik olarak geçersizdir.
-- Her anahtar yalnızca tek bir şirkete bağlıdır ve başka bir müşterinin verisine erişemez. Ayrıntılar için [Multi-tenancy](concepts/multi-tenancy.md) bölümüne bakabilirsiniz.
-- Anahtarları log'lara, kaynak koda veya herkese açık depolara yazmaktan kaçının. Bunun yerine ortam değişkenleri ya da bir secret manager kullanabilirsiniz.
-- Anahtarları e-posta, Slack, WhatsApp gibi kanallar üzerinden paylaşmaktan kaçının. Bir anahtarın ele geçirilmiş olabileceğinden şüpheleniyorsanız, anahtarı derhâl iptal edip yenisini oluşturun.
+- Anahtarın açık metni **yalnızca** oluşturma anında görüntülenir. Kaybedilmesi durumunda kurtarma imkânı yoktur; yeni bir anahtar oluşturmanız gerekir.
+- Bir anahtarın süresi **dolmaz**; iptal edene kadar geçerli kalır. İptal edilen anahtarlar anında geçersiz hâle gelir; bu noktadan sonraki tüm istekler 401 döndürür.
+- Her anahtar yalnızca tek bir şirkete bağlıdır ve başka bir şirketin verisine **erişemez**. Ayrıntılar için [Multi-tenancy](concepts/multi-tenancy.md) bölümüne bakabilirsiniz.
 
 ---
 
@@ -39,7 +36,7 @@ Authorization: Bearer <api-key>
 |---|---|---|
 | `401` | `MISSING_AUTH_HEADER` | `Authorization` header'ı eksik |
 | `401` | `INVALID_AUTH_FORMAT` | `Bearer <api-key>` biçimine uymuyor |
-| `401` | `INVALID_API_KEY` | Anahtar geçersiz, süresi dolmuş veya iptal edilmiş |
+| `401` | `INVALID_API_KEY` | Anahtar geçersiz veya iptal edilmiş |
 
 Tüm hata yanıtları aynı JSON yapısını paylaşır; ayrıntılar için [Yanıt Formatı](concepts/response-envelopes.md#error-envelope) bölümüne bakabilirsiniz.
 
@@ -51,7 +48,7 @@ curl -i https://api.vindy.ai/v1/assistants
 
 ```json
 {
-  "message": "Authorization header is missing.",
+  "message": "Authorization header is required.",
   "extensions": {
     "code": "MISSING_AUTH_HEADER"
   }

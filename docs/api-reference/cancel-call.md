@@ -32,7 +32,7 @@ No request body.
 
 | Parameter | Type | Description |
 |---|---|---|
-| `callId` | string | The `call_id` of the queued call to cancel. |
+| `callId` | string | Pass the `call_id` of the queued call you want to cancel. |
 
 ## Response (200 OK)
 
@@ -42,24 +42,24 @@ No request body.
 
 | Field | Type | Description |
 |---|---|---|
-| `call_id` | string | The ID of the cancelled call (the `callId` you passed in). |
-| `status` | string | Always `cancelled` on success. |
+| `call_id` | string | Gives the ID of the cancelled call, echoing the `callId` you passed in. |
+| `status` | string | Reads `cancelled` when the cancellation succeeds. |
 
 ## Errors
 
 | Status | Code | Description |
 |---|---|---|
-| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Auth errors. |
-| `404` | `RESOURCE_NOT_FOUND` | No such call, or it belongs to another company. |
-| `409` | `ERR_CALL_NOT_CANCELLABLE` | The call cannot be cancelled: it is not a queued outbound call. Either it has already been dispatched or finished, a race occurred, or it is an **inbound / already-started call** (which can never be cancelled). |
-| `429` | `RATE_LIMITED` | Rate limit exceeded (per-minute). Retry after `Retry-After` seconds. |
+| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | The request's authentication failed. |
+| `404` | `RESOURCE_NOT_FOUND` | No such call exists, or it belongs to another company. |
+| `409` | `ERR_CALL_NOT_CANCELLABLE` | The call cannot be cancelled: it is not a queued outbound call. Either it has already been dispatched or finished, the call started dialing at the same moment you cancelled, or it is an **inbound / already-started call** (which can never be cancelled). |
+| `429` | `RATE_LIMITED` | You've exceeded the per-minute rate limit; retry after the `Retry-After` seconds. |
 
 :::note When cancellation is no longer possible
 A queued call moves quickly from waiting to being dialed. If you receive `409 ERR_CALL_NOT_CANCELLABLE`, the call has already left the queue and cannot be stopped via the API. Once it ends you'll see its outcome through [`POST /v1/calls/list`](list-calls/index.md), [`GET /v1/calls/:callId`](get-call.md), or a [webhook event](webhooks.md).
 :::
 
 :::note A cancelled call emits a `call-ended` webhook
-If you have a webhook subscription, cancelling a single queued call emits a [`call-ended`](webhooks.md#call-ended) event with `call_status: "cancelled"` and a minimal body (no transcript or recording) — this is how you confirm the cancellation asynchronously. Cancelling a whole batch instead emits **one** [`batch-ended`](webhooks.md#batch-ended) event, not a `call-ended` per call.
+If you have a webhook subscription, cancelling a single queued call emits a [`call-ended`](webhooks.md#call-ended) event with `call_status: "cancelled"` and a minimal body (no transcript or recording) — this is how you confirm the cancellation asynchronously. Cancelling a whole batch emits **one `call-ended` per stopped queued call** (each with `call_status: "cancelled"` and your `call_metadata` echoed back) **plus** a single [`batch-ended`](webhooks.md#batch-ended) that always arrives last — there is no roll-up.
 :::
 
 :::tip Cancelling a whole batch

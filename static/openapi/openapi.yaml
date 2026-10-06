@@ -94,7 +94,7 @@ paths:
       tags: [PhoneNumbers]
       summary: List phone numbers
       description: >
-        Returns the caller lines (outbound "from" numbers) registered to the
+        Returns the caller numbers (outbound "from" numbers) registered to the
         company that are usable for outbound — provisioned and ready to dial.
         Each item's phone_number_id is what POST /v1/calls/bulk expects in its
         required phone_number_id field. An inbound assignment to an assistant
@@ -641,7 +641,7 @@ components:
         phone_number_id:
           type: string
           description: >
-            Stable, opaque id of the caller line. Pass it as phone_number_id in
+            Stable, opaque id of the caller number. Pass it as phone_number_id in
             POST /v1/calls/bulk.
         phone_number:
           type: string
@@ -959,7 +959,7 @@ components:
         phone_number_id:
           type: string
           description: >
-            The caller line the calls are placed from (the outbound caller/CLI).
+            The caller number the calls are placed from (the number shown on the recipient's phone).
             Must be a phone_number_id returned by GET /v1/phone-numbers — i.e. it
             belongs to your company and is provisioned for outbound. Any usable
             number works with any assistant; an inbound assignment does not

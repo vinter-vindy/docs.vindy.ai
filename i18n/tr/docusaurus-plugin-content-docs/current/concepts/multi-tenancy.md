@@ -6,28 +6,27 @@ sidebar_position: 3
 
 # Multi-tenancy
 
-**"Başka bir şirketin verisini görebilir miyim?" sorusunun kısa yanıtı: Hayır. Aynı şekilde başkaları da sizin verinizi göremez.**
+**Başka bir şirketin verisini görebilir misiniz? Hayır. Sizin verinizi de kimse göremez.**
 
-Her API anahtarı yalnızca tek bir şirkete bağlıdır. Tüm endpoint'ler otomatik olarak yalnızca o şirketin verisini döndürür; yani yalnızca kendi verinizi görürsünüz:
+Her API anahtarı tek bir şirkete aittir ve o anahtarın nelere erişebileceğini tek başına bu bağ belirler. Hiçbir "tenant" parametresi göndermezsiniz, hiçbir ayar yapmazsınız: Vindy her isteği sizin yerinize şirketinizle sınırlar.
 
-- Her veritabanı sorgusu, yalnızca sizin şirketinizi kapsayacak biçimde sınırlandırılır.
-- Başka bir şirkete ait `call_id` değerini kullandığınızda 404 (`RESOURCE_NOT_FOUND`) yanıtı alırsınız; kaydın var olup olmadığı bilgisi dışarıya sızdırılmaz. Böyle bir çağrının var olup olmadığını dahi anlayamazsınız.
-- Bu kontrat, **garanti edilen bir davranıştır** ve test edilmiştir.
+Bunun pratikte üç sonucu vardır:
 
----
+- Vindy'nin sizin için çalıştırdığı her sorgu kendi şirketinizin içinde kalır; bu yüzden bir liste ya da sorgu size ancak kendi çağrılarınızı, toplu aramalarınızı ve asistanlarınızı döndürebilir.
+- Size ait olmayan bir şey istediğinizde (örneğin başka bir şirkete ait bir `call_id`), Vindy `404 RESOURCE_NOT_FOUND` yanıtı verir; bu, hiç var olmamış bir kimlik için vereceği yanıtın tıpatıp aynısıdır. Kaydın var olup olmadığını size hiçbir zaman söylemez; böylece şirketler arasında hiçbir bilgi sızmaz.
+- Bu, "elimizden geleni yaparız" meselesi değildir. Sözleşmenin garanti edilen bir parçasıdır ve bunu güvence altına alan testlerimiz vardır.
 
-## Bunun pratikteki anlamı
+## Pratikte ne anlama gelir?
 
-| Senaryo | Sonuç |
+| İsteğiniz | Aldığınız yanıt |
 |---|---|
-| Kendinize ait bir çağrıyı sorgularsınız | Çağrı verisiyle birlikte `200` |
-| Var olmayan bir çağrı kimliğini sorgularsınız | `404 RESOURCE_NOT_FOUND` |
-| Başka bir şirkete ait bir çağrı kimliğini sorgularsınız | `404 RESOURCE_NOT_FOUND` — "var olmayan" durumdan ayırt edilemez |
+| Kendi çağrınız | Çağrı verisiyle birlikte `200` |
+| Var olmayan bir çağrı kimliği | `404 RESOURCE_NOT_FOUND` |
+| Başka bir şirkete ait bir çağrı kimliği | `404 RESOURCE_NOT_FOUND` ("var olmayan" ile aynı) |
 
-İletmeniz gereken bir tenant parametresi ya da yapmanız gereken bir yapılandırma yoktur. Kapsamı, anahtarın kendisi belirler.
+Yani size ait olmayan bir çağrı, hiç oluşturulmamış bir çağrıyla tıpatıp aynı davranır:
 
 ```bash
-# Size ait olmayan bir çağrı, var olmayan bir çağrıyla tıpatıp aynı şekilde davranır:
 curl -H "Authorization: Bearer $VINDY_API_KEY" \
   https://api.vindy.ai/v1/calls/019fb3a4-8b6d-7f33-a2e1-4c9f0b2d6e18/recording-url
 ```

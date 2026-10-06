@@ -29,6 +29,7 @@ Authorization: Bearer <api-key>
 Content-Type: application/json
 
 {
+  "status": "completed",
   "limit": 100,
   "cursor": null
 }
@@ -38,16 +39,30 @@ Content-Type: application/json
 
 | Parameter | Type | Description |
 |---|---|---|
-| `batchId` | string | The batch's ID — the `batch_call_id` from [`POST /v1/calls/bulk`](bulk-create-calls.md). |
+| `batchId` | string | Identifies the batch — the `batch_call_id` that [`POST /v1/calls/bulk`](bulk-create-calls.md) returned. |
 
 ## Body parameters
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | int | no | `200` | Maximum items in this page. Range: 1–500. Send `null` or omit it to use the default. |
-| `cursor` | string | no | — | Opaque cursor from a previous `next_cursor`. Omit on the first request. |
+| `limit` | int | no | `200` | Sets how many calls you get back in this page (1–500). Omit it or send `null` to use the default (200). |
+| `cursor` | string | no | — | Send back the opaque `next_cursor` from your previous page to fetch the next one. Omit it on the first request. |
+| `status` | string | no | — | Returns only the calls with this `call_status`. Because this endpoint returns a batch's calls at **any** stage, all six values work: `completed`, `failed`, `cancelled`, `pending`, `scheduled`, `in_progress`. It filters by the call's displayed `call_status` — a call that ran but failed is `failed`, not `completed`, even though it left the queue. Omit it for no status filter. An invalid value returns `400 VALIDATION_FAILED`. |
 
 The body is optional — send `{}` (or nothing) to get the first page with the default limit.
+
+:::note Filtering by status
+`status` narrows the page to one `call_status`; the cursor is bound to it, so keep `status` unchanged while paging (changing it, like changing any filter, needs a fresh walk — see the cursor note below). The `counts` in the [batch summary](get-batch.md) tell you how many to expect for each status.
+
+Each `call_status` value means:
+
+- `completed` — the call connected and finished successfully.
+- `failed` — the call ran but did not succeed (no answer, busy, rejected, or an error).
+- `cancelled` — the call was cancelled from the queue before it was dialed.
+- `pending` — queued, waiting its turn to be dialed.
+- `scheduled` — queued for a future `scheduled_at` time, not yet due.
+- `in_progress` — currently being dialed or in conversation.
+:::
 
 ## Response (200 OK)
 
@@ -119,26 +134,26 @@ The body is optional — send `{}` (or nothing) to get the first page with the d
 
 | Field | Type | Description |
 |---|---|---|
-| `batch_call_id` | string | The batch you queried (the `batchId` you passed in the path). |
-| `status` | string | The batch's current status — `active`, `completed`, or `cancelled`. |
-| `calling_window` | object | Always present. The calling window applied to this batch (echoes what was set, or the platform default). |
-| `data` | array | Call objects in this page — **same shape** as a [List Calls](list-calls/index.md#response-fields) item. |
-| `pagination` | object | Standard [pagination object](list-calls/filtering-pagination.md#paginated) — members below. |
+| `batch_call_id` | string | Identifies the batch you queried, echoing the `batchId` you passed in the path. |
+| `status` | string | Gives the batch's current status: `active`, `completed`, or `cancelled`. |
+| `calling_window` | object | Shows the calling window applied to this batch. It is `null` for batches created before calling windows existed, or when the page has no calls. |
+| `data` | array | Holds this page's call objects, each with the **same shape** as a [List Calls](list-calls/index.md#response-fields) item. |
+| `pagination` | object | Carries the standard [pagination object](list-calls/filtering-pagination.md#paginated), with the members listed below. |
 
 **`pagination`**
 
 | Field | Type | Description |
 |---|---|---|
-| `next_cursor` | string \| null | Opaque cursor for the next page. `null` when `has_more` is `false`. |
-| `has_more` | boolean | Whether more pages remain after this one. |
-| `limit` | int | The page size applied to this response. |
+| `next_cursor` | string \| null | Holds the opaque cursor for the next page. It is `null` when `has_more` is `false`. |
+| `has_more` | boolean | Tells you whether more pages remain after this one. |
+| `limit` | int | Tells you the page size applied to this response. |
 
 **Call object**
 
 Each item in `data` has the **same fields** as a [List Calls](list-calls/index.md#response-fields) item — `call_id` (a string), `call_status` (`completed` or `failed` for terminal calls, or a queue status — `pending`, `scheduled`, `in_progress`, `cancelled` — for calls not yet finished), `call_transcript`, `call_structured_data`, `call_metadata`, `call_recording`, the free-form `call_end_reason` string, and the rest. Queued and in-progress calls carry `null` for the conversation, recording, and timing fields until they reach a terminal state. See the full [List Calls field reference](list-calls/index.md#response-fields) rather than re-reading them here.
 
 :::note Cursor is opaque — page with the same `batchId`
-The `cursor` is opaque: don't build or change it. To get the next page, send it back as `cursor` in the body **with the same `batchId`**. Stop when `has_more` is `false` (at that point `next_cursor` is `null`). This cursor is specific to this endpoint **and** to this batch: reusing a cursor from [`POST /v1/calls/list`](list-calls/index.md), or from a different batch, is rejected with `400 MALFORMED_CURSOR` — start a fresh walk instead.
+The `cursor` is opaque: don't build or change it. To get the next page, send it back as `cursor` in the body **with the same `batchId`**. Stop when `has_more` is `false` (at that point `next_cursor` is `null`). This cursor is specific to this endpoint, to this batch, **and** to the `status` filter you used: reusing a cursor from [`POST /v1/calls/list`](list-calls/index.md), from a different batch, or after changing `status`, is rejected with `400 MALFORMED_CURSOR` — start a fresh walk instead.
 :::
 
 :::note No date filter here
@@ -151,10 +166,10 @@ This endpoint takes no `date_from` / `date_to` — it's scoped to one batch. Dat
 |---|---|---|
 | `400` | `VALIDATION_FAILED` | `limit` is out of the 1–500 range, or a body field has an invalid type. Unknown/extra fields are **ignored**, not rejected. |
 | `400` | `INVALID_CURSOR` | Cursor is empty or cannot be decoded. |
-| `400` | `MALFORMED_CURSOR` | Cursor can't be parsed, or was issued for a different endpoint or batch. |
-| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Auth errors. |
-| `404` | `RESOURCE_NOT_FOUND` | Batch not found or belongs to another company. |
-| `429` | `RATE_LIMITED` | Rate limit exceeded (per-minute). Retry after `Retry-After` seconds. |
+| `400` | `MALFORMED_CURSOR` | Cursor can't be parsed, or was issued for a different endpoint, batch, or `status` filter. |
+| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | The request's authentication failed. |
+| `404` | `RESOURCE_NOT_FOUND` | The batch doesn't exist, or it belongs to another company. |
+| `429` | `RATE_LIMITED` | You've exceeded the per-minute rate limit; retry after the `Retry-After` seconds. |
 
 :::note Existence is not leaked
 A `batchId` that belongs to another company returns the same `404 RESOURCE_NOT_FOUND` as one that does not exist — the same rule as [`GET /v1/calls/:callId`](get-call.md). See [Multi-tenancy](../concepts/multi-tenancy.md).
@@ -163,7 +178,7 @@ A `batchId` that belongs to another company returns the same `404 RESOURCE_NOT_F
 :::tip Knowing when the whole batch is done
 When a batch **finishes on its own**, `status` reads `completed` — every call has reached a terminal state. Use the [`batch-ended` webhook](webhooks.md#batch-ended) for a per-status breakdown, or poll `status` here until it reads `completed`.
 
-If you [cancel the batch](cancel-batch.md), `status` switches to `cancelled` right away (calls already in progress still run to completion). Cancelling the batch sends a single [`batch-ended` webhook](webhooks.md#batch-ended) with `status: "cancelled"`; the batch's individual calls are **not** each reported via `call-ended`, so reconcile them by paging through this endpoint or via the summary's `counts.cancelled`.
+If you [cancel the batch](cancel-batch.md), `status` switches to `cancelled` right away (calls already in progress still run to completion). Cancelling the batch emits one [`call-ended` webhook](webhooks.md#call-ended) per stopped queued call (each `call_status: "cancelled"`, with your `call_metadata` echoed back) plus a single [`batch-ended` webhook](webhooks.md#batch-ended) with `status: "cancelled"` that always arrives last. You can also see each cancelled call here (filter with `status: "cancelled"`), or read the summary's `counts.cancelled`.
 :::
 
 ## Examples

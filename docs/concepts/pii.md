@@ -14,9 +14,11 @@ The Vindy API returns call data **as-is** — it is your responsibility to handl
 
 | Field | Content |
 |---|---|
-| `call_phone_number` | Raw phone number, typically in **E.164 format** (e.g., `+905551112233`). **Not masked.** |
-| `call_transcript` | The customer's conversation — may include personal information. |
-| `call_structured_data` | Structured data your assistant extracted — whatever fields you configured. |
+| `call_phone_number` | Holds the other party's phone number, returned raw: the number dialed on an outbound call, or the caller's number on an inbound one, typically in **E.164 format** (for example `+905551112233`). **It is not masked.** |
+| `call_transcript` | Carries the full transcript of the conversation. Because the customer speaks freely, it can contain names, addresses, ID numbers, and other personal details. |
+| `call_structured_data` | Holds the structured data your assistant extracted from the call. It contains only the fields you defined, so you control what personal data ends up in it. |
+| `call_variables` | Echoes back, verbatim, the template variables you sent — for example `{"first_name": "..."}`. **They are not masked.** |
+| `call_metadata` | Echoes back your opaque metadata verbatim. **It is not masked.** |
 
 ---
 

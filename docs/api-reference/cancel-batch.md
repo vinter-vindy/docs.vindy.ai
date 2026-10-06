@@ -28,7 +28,7 @@ No request body.
 
 | Parameter | Type | Description |
 |---|---|---|
-| `batchId` | string | The batch's ID — the `batch_call_id` from [`POST /v1/calls/bulk`](bulk-create-calls.md). |
+| `batchId` | string | Identifies the batch — the `batch_call_id` that [`POST /v1/calls/bulk`](bulk-create-calls.md) returned. |
 
 ## Response (200 OK)
 
@@ -53,27 +53,27 @@ Returns the batch summary, plus `cancelled_now` — how many queued calls this r
 
 | Field | Type | Description |
 |---|---|---|
-| `batch_call_id` | string | The cancelled batch's ID (the `batchId` you passed in the request). |
-| `status` | string | The batch's status after cancellation. |
-| `total_count` | int | Total number of calls in the batch. |
-| `counts` | object | Per-status breakdown; each value is an integer: `completed`, `failed`, `cancelled`, `pending`, `processing`. (`pending` = scheduled + pending, `processing` = in_progress.) |
-| `created_at` | ISO string | When the batch was created (UTC, `+00:00`). |
-| `cancelled_now` | int | How many queued calls this request just cancelled. |
+| `batch_call_id` | string | Identifies the cancelled batch, echoing the `batchId` you passed in the request. |
+| `status` | string | Gives the batch's status after the cancel. It reads `cancelled` when the batch was still running; a batch that had already `completed` stays `completed`. |
+| `total_count` | int | Tells you the total number of calls in the batch. |
+| `counts` | object | Breaks the batch's calls down by status, with each value an integer: `completed`, `failed`, `cancelled`, `pending`, `processing`. (`pending` = scheduled + pending, `processing` = in_progress.) |
+| `created_at` | ISO string | Marks when the batch was created (UTC, `+00:00`). |
+| `cancelled_now` | int | Tells you how many queued calls this request just cancelled. |
 
 ## Errors
 
 | Status | Code | Description |
 |---|---|---|
-| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Auth errors. |
-| `404` | `RESOURCE_NOT_FOUND` | Batch not found or not in your company. |
-| `429` | `RATE_LIMITED` | Rate limit exceeded (per-minute). Retry after `Retry-After` seconds. |
+| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | The request's authentication failed. |
+| `404` | `RESOURCE_NOT_FOUND` | The batch doesn't exist, or it belongs to another company. |
+| `429` | `RATE_LIMITED` | You've exceeded the per-minute rate limit; retry after the `Retry-After` seconds. |
 
 :::note Only queued calls are affected
 This endpoint stops calls that haven't started yet. Calls already in progress run to completion, and finished calls are unchanged. The returned `cancelled_now` tells you exactly how many were stopped by this request. Calling it again on the same batch returns the current summary with `cancelled_now: 0`.
 :::
 
-:::note Cancelling a batch emits one `batch-ended` webhook
-If you have a webhook subscription, cancelling a batch emits a single [`batch-ended`](webhooks.md#batch-ended) event with `status: "cancelled"`. The individual calls this stops are **not** each reported via `call-ended` — they roll up into that one event, which avoids a flood on large batches. To cancel a single call and get a per-call [`call-ended`](webhooks.md#call-ended) (with `call_status: "cancelled"`) instead, use [`POST /v1/calls/:callId/cancel`](cancel-call.md).
+:::note Cancelling a batch emits a per-call `call-ended` plus one `batch-ended`
+If you have a webhook subscription, cancelling a batch emits one [`call-ended`](webhooks.md#call-ended) for **each** stopped queued call (each with `call_status: "cancelled"`, a minimal body, and your `call_metadata`/`call_variables` echoed back so you can match it one-to-one), **plus** a single [`batch-ended`](webhooks.md#batch-ended) with `status: "cancelled"`. The `batch-ended` always arrives **last**, after every one of those `call-ended` events. Cancelling a single call via [`POST /v1/calls/:callId/cancel`](cancel-call.md) behaves the same way for that one call. See [how cancellations map to webhooks](webhooks.md#batch-ended).
 :::
 
 ## Examples

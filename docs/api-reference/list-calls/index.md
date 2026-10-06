@@ -11,20 +11,18 @@ import TabItem from '@theme/TabItem';
 
 Returns your company's calls — each with its transcript, the data your structured outputs extracted, any metadata you attached, and a recording link when one is ready. Results come back a page at a time via an opaque cursor, and you can narrow them by assistant, direction, and a range of days.
 
-:::tip Listing one batch's calls
-To list the calls of a specific batch, use the dedicated [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) endpoint. Unlike this list — which returns only finalized calls — the batch endpoint also shows a batch's not-yet-dialed, in-progress, and cancelled calls.
-:::
-
 :::info Only finalized calls are returned
 Only calls that are **ready to be shown to you** are returned. A call is ready when:
 
 - It reached a **terminal** state — `completed` or `failed` — AND
-- If a recording exists, the recording transfer has settled (success or permanent failure)
+- If it `completed`, its **post-call analysis has finished**, so `call_structured_data` is final when you read it. (A `failed` call has nothing to analyze, so it appears as soon as it's terminal.)
 
 Calls still in progress are **never** included, and browser (WebRTC) calls never appear in the API at all. This makes your sync logic idempotent.
+
+The audio **recording** is delivered separately and is **not** required for a call to appear here — a just-listed call may briefly show `call_recording.available: false` while its recording finalizes. See [Recording retrieval](../../guides/recording-retrieval.md).
 :::
 
-A call becomes available **shortly after it ends** — typically a few seconds, and occasionally up to a few minutes for longer recordings, once its recording has finished transferring to durable storage. So a call that just ended may not show up on your very next request.
+A call becomes available **shortly after it ends** — usually within a few seconds, occasionally up to a minute or two while its post-call analysis finishes. So a call that just ended may not show up on your very next request.
 
 :::tip Pull and push share the same signal
 This endpoint is the **pull** counterpart of the [`call-ended` webhook](../webhooks.md): a call surfaces here and fires that webhook at the same moment it becomes ready. Use the webhook for real-time delivery, and this endpoint to fetch on demand or back-fill anything you may have missed.
@@ -41,6 +39,7 @@ Content-Type: application/json
 
 {
   "assistant_id": "8f3a1c20-4d3f-4a8b-bc12-5e6f7a8b9c01",
+  "status": "completed",
   "date_from": "2026-05-01",
   "date_to": "2026-05-31",
   "limit": 50,
@@ -54,31 +53,55 @@ Every field is **optional** — send an empty body to page through all of your c
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `assistant_id` | string (UUID) | — | Only calls handled by this assistant. From [`GET /v1/assistants`](../list-assistants.md). |
-| `call_bound_type` | string | — | `inbound` or `outbound`. Any other value (or omitting it) applies no direction filter. |
+| `assistant_id` | string (UUID) | — | Send this to fetch only the calls handled by one assistant; get its id from [`GET /v1/assistants`](../list-assistants.md). Omit it to get calls from every assistant. |
+| `call_bound_type` | string | — | Send `inbound` or `outbound` to narrow calls by direction. Any other value, or omitting it, applies no direction filter. |
+| `status` | string | — | Send this to narrow the page to a single `call_status`. The meaningful values here are `completed` and `failed`; the four queue statuses are accepted but return an **empty page** (see the note below). Omit it for no status filter. An invalid value → `400 VALIDATION_FAILED`. |
 | `date_from` | string (`YYYY-MM-DD`) | — | Include calls from this day onward. See [Filtering & Pagination](filtering-pagination.md). |
 | `date_to` | string (`YYYY-MM-DD`) | — | Include calls up to and including this day. See [Filtering & Pagination](filtering-pagination.md). |
-| `limit` | int | `200` | Maximum items in this page. Range: 1–500. Send `null` or omit it to use the default. |
-| `cursor` | string | — | Opaque cursor from a previous `next_cursor`. Omit on the first request. |
+| `limit` | int | `200` | Sets how many calls you get back in this page (1–500). Omit it or send `null` to use the default (200). |
+| `cursor` | string | — | The opaque `next_cursor` from your previous page, sent back to fetch the next one. Omit it on the first request. |
 
-**Combining filters.** `assistant_id`, `call_bound_type`, and the date range are independent — pass any subset and they combine (logical AND). Omit them all to scan every terminal call your company has.
+**What each `call_status` means:**
+
+- `completed` — the call connected and finished successfully.
+- `failed` — the call ran but did not succeed (no answer, busy, rejected, or an error).
+- `cancelled` — cancelled from the queue before it was dialed.
+- `pending` — queued, waiting its turn.
+- `scheduled` — queued for a future `scheduled_at` time, not yet due.
+- `in_progress` — currently being dialed or in conversation.
+
+Only `completed` and `failed` ever appear in this list; the other four are queue statuses, covered in the note below.
+
+:::note Where to see queued, in-progress, and cancelled calls
+This list only ever returns **terminal** calls (`completed` and `failed`). A call that is still queued, scheduled, in progress, or was cancelled before it was dialed never appears here, and asking for one of those statuses returns an empty page. To reach those calls, use one of the other two endpoints:
+
+- **One specific call:** fetch it by id with [`GET /v1/calls/:callId`](../get-call.md). That endpoint returns a call in **any** state, including `pending`, `scheduled`, `in_progress`, and `cancelled`.
+- **A whole batch:** list it with [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md). That endpoint returns **all** of a batch's statuses, not just the terminal ones.
+
+The `status` filter spans all six values because these three endpoints share it. On this list, only `completed` and `failed` can ever match.
+:::
+
+**Combining filters.** `assistant_id`, `call_bound_type`, `status`, and the date range are independent — pass any subset and they combine (logical AND). Omit them all to scan every terminal call your company has.
 
 **Validation rules:**
 
 - `date_from` after `date_to` → 400 (`DATE_RANGE_INVALID`).
 - `limit` outside 1–500 → 400 (`VALIDATION_FAILED`).
+- `status` not one of `completed`, `failed`, `cancelled`, `pending`, `scheduled`, `in_progress` → 400 (`VALIDATION_FAILED`).
 - See [Filtering & Pagination](filtering-pagination.md) for date behavior and accepted formats.
 
 ## Pagination and filtering
 
-Two independent controls shape the result, and they compose cleanly:
+Two independent controls shape your results, and they work together cleanly.
 
-- **The filters** (`assistant_id`, `call_bound_type`, `date_from` / `date_to`) decide *which* calls are in scope. All are optional.
-- **The cursor** (`cursor` / `limit`) walks *through* that scope, one page at a time, **newest first**.
+- **The filters** (`assistant_id`, `call_bound_type`, `status`, `date_from` / `date_to`) decide *which* calls are in scope. All are optional.
+- **The cursor** (`cursor` / `limit`) walks *through* that scope one page at a time, newest first.
 
-You can use either on its own or both together. With no filters and no cursor, you simply page through all of your calls, **newest first** — the first request returns the newest `limit` calls (200 by default), and you keep going until there's nothing left. Add filters and you page through only that scope the same way. In every case the rule is the same: send your filters on the first request, then on each following request send back the `next_cursor` you received — **unchanged** — while keeping `assistant_id`, `call_bound_type`, `date_from`, `date_to`, and `limit` exactly as they were. The cursor encodes your position *within that specific query*: it is valid only for the exact endpoint and filters that issued it. If you change a filter (or reuse it on another endpoint) and send the cursor anyway, the request is **rejected with `400 MALFORMED_CURSOR`** — start a fresh walk (drop the cursor) instead. You're done when `has_more` is `false` (at which point `next_cursor` is `null`).
+Use either on its own, or both together. If you send no filters and no cursor, you page through every one of your calls from newest to oldest. The first request returns the newest `limit` calls (200 by default), and you keep going until nothing is left. Adding filters narrows the scope, and you page through that scope the same way.
 
-The full parameter reference, accepted date formats, and copy-paste recipes live in **[Filtering & Pagination](filtering-pagination.md)**.
+The rule for paging is always the same. Send your filters on the first request. On each following request, send back the `next_cursor` you received, unchanged, and keep `assistant_id`, `call_bound_type`, `status`, `date_from`, and `date_to` exactly as they were. Only `limit` may change from page to page. A cursor records your position inside one specific query, so it is valid only for the exact endpoint and filters that issued it. If you change a filter (or send the cursor to a different endpoint) and reuse the cursor anyway, the request is rejected with `400 MALFORMED_CURSOR`, so drop the cursor and start a fresh walk. You are done when `has_more` is `false`, at which point `next_cursor` is `null`.
+
+The step-by-step walk, the full parameter reference, accepted date formats, and copy-paste recipes live in **[Filtering & Pagination](filtering-pagination.md)**.
 
 ## Response (200 OK)
 
@@ -194,50 +217,50 @@ Note that `date_from` / `date_to` match on a call's **start time**, falling back
 
 | Field | Type | Description |
 |---|---|---|
-| `data` | array | Calls in this page. |
-| `pagination` | object | Standard [pagination object](filtering-pagination.md#paginated). |
+| `data` | array | Holds the calls on the current page. |
+| `pagination` | object | Carries the standard [pagination object](filtering-pagination.md#paginated) you use to walk to the next page. |
 
 **Call object**
 
 | Field | Type | Description |
 |---|---|---|
-| `call_id` | string | The call's stable, unique identifier in our system. Use it wherever an endpoint takes a `:callId` — for example [`GET /v1/calls/:callId`](../get-call.md) to fetch this call or [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md) for a fresh recording link — and to correlate the call with its [`call-ended` webhook](../webhooks.md) payload. |
-| `batch_call_id` | string \| null | The batch this call belongs to — the same `batch_call_id` returned by [`POST /v1/calls/bulk`](../bulk-create-calls.md). Use it to group a batch's calls (e.g. when handling `call-ended` webhooks). `null` when the call is not part of a batch: a single call from [`POST /v1/calls`](../create-call.md), or any inbound call. |
-| `call_status` | string | `completed` \| `failed`. Ongoing and cancelled-in-queue calls never reach this list. |
-| `call_assistant_id` | string (UUID) | Assistant that handled the call. |
-| `call_assistant_name` | string \| null | Display name of the assistant. |
-| `call_phone_number` | string \| null | Phone number called or calling (E.164 format when available). `null` when the number is unavailable (e.g. an anonymous inbound caller). |
-| `call_bound_type` | `inbound` \| `outbound` | Whether the call was inbound (received) or outbound (placed). Never `null`. |
-| `call_started_at` | ISO 8601 (UTC) \| null | When the call actually started, in `+00:00` offset form (e.g. `2026-05-15T10:30:00+00:00`). Parse it with a real ISO 8601 parser — don't assume a `Z` suffix or fixed millisecond precision. `null` if the call never connected. |
-| `call_ended_at` | ISO 8601 (UTC) \| null | When the call ended, same format. `null` if the call never connected. |
-| `call_created_at` | ISO 8601 (UTC) | When we created the call record, same format. |
-| `call_duration_seconds` | int \| null | Call duration in seconds. |
-| `call_end_reason` | string \| null | A free-form string — the raw reason the call ended, returned unmapped. See [End reasons](#end-reasons) below. |
-| `call_transcript` | string \| null | Plain-text transcript of the conversation. Each line is `[HH:MM:SS] Asistan:` (assistant, `Asistan`) or `[HH:MM:SS] Müşteri:` (caller, `Müşteri`) — Turkish role labels prefixed with a UTC `HH:MM:SS` timestamp — separated by newlines (`\n`). May be empty or null for very short or failed calls. |
-| `call_structured_data` | object \| null | AI-extracted data, returned as a flat object whose keys are your assistant's structured output schema properties — see [Structured data shapes](#structured-data-shapes). `null` when the assistant has no structured output schema or nothing could be extracted (or the stored data couldn't be parsed). Individual values *inside* the object may themselves be `null` when a particular field couldn't be extracted (the object is present, the value is `null`) — parse defensively. |
-| `call_metadata` | object \| null | The metadata you attached when creating the call via [`POST /v1/calls/bulk`](../bulk-create-calls.md), returned to you verbatim for correlation. `null` if the call was created without metadata. See [Metadata](../bulk-create-calls.md#metadata) for the rules. |
-| `call_variables` | object \| null | The template variables sent for this call, echoed back verbatim — the same object you passed as `variables` when creating the call. `null` when none were sent (e.g. inbound calls). |
-| `call_recording` | object | Recording availability + URL (below). |
+| `call_id` | string | Identifies the call uniquely and permanently in our system. Use it wherever an endpoint takes a `:callId` — for example [`GET /v1/calls/:callId`](../get-call.md) to fetch this call, or [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md) for a fresh recording link — and to match the call to its [`call-ended` webhook](../webhooks.md) payload. |
+| `batch_call_id` | string \| null | Identifies the batch this call belongs to, and matches the `batch_call_id` that [`POST /v1/calls/bulk`](../bulk-create-calls.md) returned, so you can group a batch's calls together — for example while handling `call-ended` webhooks. It is `null` when the call isn't part of a batch, which is the case for a single call from [`POST /v1/calls`](../create-call.md) and for any inbound call. |
+| `call_status` | string | Gives the call's terminal status, which is either `completed` or `failed`. A call that is still in progress, or that was cancelled while queued, never reaches this list. |
+| `call_assistant_id` | string (UUID) | Identifies the assistant that handled this call, and matches the `assistant_id` returned by [`GET /v1/assistants`](../list-assistants.md). |
+| `call_assistant_name` | string \| null | Gives that assistant's display name. It is `null` on the rare occasion the name can't be resolved. |
+| `call_phone_number` | string \| null | Holds the other party's number on the call: the number dialed on an outbound call, or the caller's number on an inbound one, usually in E.164 format. It is `null` when the number isn't available, as with an anonymous inbound caller. |
+| `call_bound_type` | `inbound` \| `outbound` | Tells you the call's direction: `inbound` means the customer called you, and `outbound` means the assistant placed the call. It is never `null`. |
+| `call_started_at` | ISO 8601 (UTC) \| null | Marks the moment the call actually started, written with a `+00:00` offset (for example `2026-05-15T10:30:00+00:00`). Parse it with a real ISO 8601 parser rather than assuming a `Z` suffix or a fixed millisecond precision. It is `null` if the call never connected. |
+| `call_ended_at` | ISO 8601 (UTC) \| null | Marks the moment the call ended, in the same format. It is `null` if the call never connected. |
+| `call_created_at` | ISO 8601 (UTC) | Marks the moment we created the call record, in the same format. |
+| `call_duration_seconds` | int \| null | Tells you how long the call lasted, in seconds. It is `null` when the call never connected, as with a no-answer `failed` call. |
+| `call_end_reason` | string \| null | Gives the raw reason the call ended, returned to you as a free-form string without any mapping. See [End reasons](#end-reasons) below. |
+| `call_transcript` | string \| null | Holds the plain-text transcript of the conversation. Each line reads `[HH:MM:SS] Asistan:` for the assistant or `[HH:MM:SS] Müşteri:` for the caller — Turkish role labels, each prefixed with a UTC `HH:MM:SS` timestamp — and the lines are separated by newlines (`\n`). It may be empty or `null` for a very short or failed call. |
+| `call_structured_data` | object \| null | Holds the data the AI extracted, returned as a flat object whose keys are your assistant's structured output schema properties (see [Structured data shapes](#structured-data-shapes)). It is `null` when the assistant has no structured output schema, when nothing could be extracted, or when the stored data couldn't be parsed. Even when the object is present, an individual value inside it can be `null` where that particular field couldn't be extracted, so parse each one defensively. |
+| `call_metadata` | object \| null | Returns, verbatim, the metadata you attached when you created the call, so you can line the call up with your own records. It is `null` if the call was created without metadata. See [Metadata](../bulk-create-calls.md#metadata) for the rules. |
+| `call_variables` | object \| null | Returns, verbatim, the template variables sent for this call — the same object you passed as `variables` when you created it. It is `null` when none were sent, as with inbound calls. |
+| `call_recording` | object | Tells you whether the call's recording is ready and, when it is, where to download it. Its fields are listed below. |
 
 **`call_recording` object**
 
 | Field | Type | Description |
 |---|---|---|
-| `available` | bool | Whether a downloadable recording exists for this call. |
-| `url` | string \| absent | Presigned URL, valid for **~24 hours** (default 86400s, configurable). Present only when `available: true`. **Don't store it** — fetch a fresh one from [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md) when you need it. |
-| `expires_at` | ISO 8601 (UTC) \| absent | When the URL expires. Present only when `available: true`. |
+| `available` | bool | Tells you whether a downloadable recording exists for this call. |
+| `url` | string \| absent | Gives you a presigned download URL that stays valid for about **24 hours** (86400s by default, and configurable). It is present only when `available: true`. **Don't store it** — fetch a fresh one from [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md) when you need it. |
+| `expires_at` | ISO 8601 (UTC) \| absent | Marks the moment the URL stops working. It is present only when `available: true`. |
 
 ### `call_recording.available: false` — what it means {#recording-not-available}
 
-This state is **terminal** — retrying does not help. If a call appears in this list, its recording state is finalized (this endpoint does NOT return calls whose recording transfer is still in progress). `available: false` indicates one of:
+`available: false` happens for two different reasons — one temporary, one permanent:
 
-- No recording was produced for this call (e.g., very short or failed call where no audio was captured)
-- The recording transfer to durable storage **permanently failed**
+- **Not ready yet (temporary).** The call is finalized but its audio recording is still transferring to durable storage — normal in the moments right after a call ends (a call appears here as soon as it's finalized, **independent** of its recording). It will become available shortly: re-fetch a little later, or subscribe to the [`recording-ready` webhook](../webhooks.md#recording-ready), which fires the moment it lands.
+- **None will ever exist (terminal).** No recording was produced (e.g. a very short or failed call with no audio), or the transfer to durable storage **permanently failed**. Retrying won't help.
 
-For a fresh link, call [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md): a `404 RECORDING_NOT_AVAILABLE` confirms no recording exists, and a `409 RECORDING_NOT_READY` means it isn't downloadable yet. Contact the Vindy team if you believe the recording should exist.
+To tell them apart, call [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md): `409 RECORDING_NOT_READY` means it's still processing (temporary — try again soon), while `404 RECORDING_NOT_AVAILABLE` confirms none will ever exist (terminal). Contact the Vindy team if you believe a recording should exist but only ever get `404`.
 
 :::note Discrepancy with the panel
-The Vindy admin panel may display recordings from other sources (e.g., a temporary provider URL). For security, the API only serves recordings from durable storage. Seeing a recording in the panel but not via the API is expected; **the API response is the authoritative customer-facing contract**.
+The Vindy panel may display recordings from other sources (e.g., a temporary provider URL). For security, the API only serves recordings from durable storage. Seeing a recording in the panel but not via the API is expected; **the API response is the authoritative customer-facing contract**.
 :::
 
 ### Structured data shapes {#structured-data-shapes}
@@ -282,7 +305,7 @@ The object's keys and shape mirror the structured output schema you defined for 
 | `max_duration` | The maximum call duration was reached. |
 | `end_call_tool` | The assistant ended the call via its end-call tool. |
 
-Other values may appear, including **raw provider/SIP status text** (e.g. `User Busy`, `486`), and the set grows as new providers and adapters are added. If you keep a known-value list, **don't fail on unknown reasons** — log them and continue. When you need the pass/fail summary rather than the specific reason, read `call_status`, not `call_end_reason`.
+Other values may appear, including **raw provider/SIP status text** (e.g. `User Busy`, `486`), and the set grows as new providers and adapters are added. In particular, an unanswered, busy, or rejected outbound call often carries that raw provider text rather than the tidy `no_answer` / `busy` / `rejected` label above, so treat those three as representative categories, not guaranteed literals. If you keep a known-value list, **don't fail on unknown reasons** — log them and continue. When you need the pass/fail summary rather than the specific reason, read `call_status`, not `call_end_reason`.
 
 ## Errors
 
@@ -294,7 +317,7 @@ Other values may appear, including **raw provider/SIP status text** (e.g. `User 
 | `400` | `INVALID_CURSOR` | Cursor is empty or cannot be decoded |
 | `400` | `MALFORMED_CURSOR` | Cursor can't be parsed, or is for a different endpoint/filters |
 | `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Auth errors |
-| `429` | `RATE_LIMITED` | Per-minute rate limit exceeded |
+| `429` | `RATE_LIMITED` | Per-minute rate limit exceeded; wait the number of seconds in the `Retry-After` header, then retry |
 
 ## Examples
 

@@ -13,9 +13,13 @@ sidebar_position: 2
 ## Yaklaşım
 
 1. Çağrıları [`POST /v1/calls/list`](../api-reference/list-calls/index.md) ile alın. Bir ses kaydı mevcut ve erişilebilir durumdaysa, `call_recording` içinde doğrudan bir bağlantı döner.
-2. `call_recording.available: false` ise bu **kalıcı bir durumdur**; ya kayıt hiç üretilmemiştir ya da aktarımı kalıcı olarak başarısız olmuştur. Yeniden denemek sonucu değiştirmez. Doğrulamak için [`GET /v1/calls/:callId/recording-url`](../api-reference/get-recording-url.md) endpoint'i çağırın; kalıcı bir durum `404 RECORDING_NOT_AVAILABLE` döndürür.
-3. Ses dosyasını **kendi depolama alanınıza** indirin; imzalı bağlantı yaklaşık **24 saat** sonra geçerliliğini yitirir. Bağlantıyı veritabanınızda kalıcı olarak saklamayın.
+2. `call_recording.available: false` ise iki şeyden biridir: **henüz hazır değil** (kayıt hâlâ aktarılıyor; çağrı biter bitmez normaldir, çünkü bir çağrı, kaydından bağımsız olarak sonlanır sonlanmaz listelenir) veya **kalıcı** (kayıt yok ya da aktarım kalıcı olarak başarısız). İkisini [`GET /v1/calls/:callId/recording-url`](../api-reference/get-recording-url.md) ile ayırın: `409 RECORDING_NOT_READY` = hâlâ aktarılıyor (birazdan tekrar deneyin), `404 RECORDING_NOT_AVAILABLE` = kalıcı. Ya da hiç sorgulamadan, kayıt indirilebilir olduğu an tetiklenen [`recording-ready` webhook'una](../api-reference/webhooks.md#recording-ready) abone olun.
+3. Ses dosyasını **kendi depolama alanınıza** indirin; imzalı bağlantı yaklaşık **24 saat** sonra geçerliliğini yitirir. Acele etmenize gerek yok; ancak bağlantıyı veritabanınızda kalıcı olarak saklamayın; bunun yerine `call_id` değerini saklayın ve gerektiğinde yeni bir bağlantı oluşturun.
 4. İndirmeden önce bağlantının süresi dolarsa, aynı endpoint'e yeniden GET isteği göndererek (~24 saat geçerli) yeni bir bağlantı alın.
+
+:::tip Sorgulamak yerine push
+Kayıt için hiç sorgulama yapmamak için [`recording-ready` webhook'una](../api-reference/webhooks.md#recording-ready) abone olun. Vindy, bir çağrının kaydı indirilebilir olduğu an çağrıyı (`data.call_recording` içinde yeni bir bağlantıyla) size gönderir. Bu olay yalnızca kayıt gerçekten hazır olduğunda tetiklenir; kaydı olmayan bir çağrı için hiç tetiklenmez.
+:::
 
 ---
 
@@ -23,13 +27,13 @@ sidebar_position: 2
 
 | Gördüğünüz | Anlamı | Yapılması gereken |
 |---|---|---|
-| `call_recording.available: true` + `url` | Ses kaydı mevcut | Hemen indirin ya da daha sonra güncel bir bağlantı oluşturun |
-| `call_recording.available: false` | **Kalıcı** — kayıt yok veya aktarım kalıcı olarak başarısız | Yeniden denemeyin |
-| 404 `RECORDING_NOT_AVAILABLE` | **Kalıcı** — hiç ses kaydı üretilmemiş | Yeniden denemeyin. Kaydın var olması gerektiğini düşünüyorsanız Vindy'ye bildirin |
-| 409 `RECORDING_NOT_READY` | Nadir yarış koşulu — ses kaydı henüz indirilebilir değil | Birkaç dakika sonra tekrar deneyin |
+| `call_recording.available: true` + `url` | Ses kaydı hazırdır | Hemen indirin ya da daha sonra güncel bir bağlantı oluşturun |
+| `call_recording.available: false` | Ya henüz hazır değildir (hâlâ aktarılıyor) **ya da** kalıcıdır (hiç üretilmedi ya da başarısız oldu) | Aşağıdaki `recording-url` ile sınıflandırın ya da [`recording-ready` webhook'unu](../api-reference/webhooks.md#recording-ready) kullanın |
+| 409 `RECORDING_NOT_READY` | Kayıt hâlâ aktarılıyor; çağrı biter bitmez normaldir | Birazdan tekrar deneyin ya da [`recording-ready` webhook'unu](../api-reference/webhooks.md#recording-ready) bekleyin |
+| 404 `RECORDING_NOT_AVAILABLE` | **Kalıcı** — hiç kayıt olmayacak | Yeniden denemeyin. Kaydın var olması gerektiğini düşünüyorsanız Vindy'ye bildirin |
 
-:::caution En sık yapılan hata
-`call_recording.available` değeri `false` olan bir çağrı için `recording-url` endpoint'i bir yeniden deneme döngüsünde sürekli sorgulamak. Bu durum **kesindir**; bir çağrı, ses kaydı kalıcı bir duruma ulaşmadan zaten `/v1/calls/list` listesinde görünmez. Yeniden deneme bütçenizi gerçek ağ hataları için saklayın.
+:::caution `available: false`'ta sıkı döngü kurmayın
+`available: false` her zaman kalıcı değildir; çağrı biter bitmez çoğunlukla kaydın **hâlâ aktarıldığı** anlamına gelir. `recording-url`'i sıkı bir döngüde art arda çağırmayın: bir kez çağırıp sınıflandırın (`409` = hâlâ aktarılıyor, artan beklemeyle tekrar; `404` = kalıcı, durun) ya da (daha iyisi) [`recording-ready` webhook'una](../api-reference/webhooks.md#recording-ready) abone olup kayıt için sorgulamayı tamamen bırakın.
 :::
 
 ---
@@ -38,7 +42,7 @@ sidebar_position: 2
 
 - **İmzalı bağlantıyı kalıcı olarak saklamayın.** Yaklaşık 24 saat içinde geçerliliğini yitirir. Bunun yerine `call_id` değerini saklayın, bağlantıyı gerektiğinde yeniden oluşturun ve indirin.
 - **Her alıcı için ayrı bir bağlantı.** Kayıtları kendi kullanıcılarınıza iletecekseniz, tek bir bağlantıyı paylaşmak yerine her kullanıcı için ayrı bir bağlantı oluşturun.
-- **`Content-Type` değerini denetleyebilirsiniz.** Ses dosyaları genellikle `.wav` biçimindedir (mono, 8 kHz veya 16 kHz); ancak bazı kayıtlar farklı bir codec kullanabilir.
-- **Kayıt başına 1–10 MB** bekleyin; uzun çağrılar 30 MB'a kadar çıkabilir.
+- **`Content-Type`'ı denetleyin.** Kayıtlar **OGG/Opus ses** (`audio/ogg`) olarak teslim edilir; dosya uzantısını varsaymak yerine `Content-Type` header'ını okuyun.
+- **Dosyalar küçüktür.** OGG/Opus sıkıştırılmış olduğundan bir kayıt genellikle birkaç MB'ın altındadır ve boyutu çağrının uzunluğuyla büyür.
 
 Node.js ve Python için eksiksiz indirme kodunu [recording-url örneklerinde](../api-reference/get-recording-url.md#örnekler) bulabilirsiniz.

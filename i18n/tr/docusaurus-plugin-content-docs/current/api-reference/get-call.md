@@ -9,12 +9,12 @@ import TabItem from '@theme/TabItem';
 
 # `GET /v1/calls/:callId`
 
-Tek bir çağrıyı kalıcı `call_id` değeriyle döndürür. Yanıt, [`POST /v1/calls/list`](list-calls/index.md) içindeki bir çağrı nesnesiyle **birebir aynıdır** — transcript, yapısal veri, metadata ve (hazırsa) güncel bir ses kaydı bağlantısı dahil.
+Bu uç, tek bir çağrıyı kalıcı `call_id` değeriyle döndürür. Yanıt, [`POST /v1/calls/list`](list-calls/index.md) içindeki bir çağrı nesnesiyle **birebir aynıdır**: transcript, yapısal veri, metadata ve (hazırsa) güncel bir ses kaydı bağlantısını içerir.
 
-Elinizde bir `call_id` olduğunda — [Çağrıları Listele](list-calls/index.md), bir [webhook](webhooks.md) ya da kendi kayıtlarınızdan — çağrıyı talep anında çekmek için kullanın. Webhook'tan sonra tam nesne zaten elinizdedir; bu endpoint'i sonradan çağırmanın asıl nedeni, süresi dolmuş bir ses kaydı bağlantısını tazelemektir. Ses kaydı bağlantıları uzun ömürlüdür (~24 saat) ve her istekte taze üretilir; bu yüzden daha önce aldığınız bir bağlantı çoğu zaman hâlâ çalışır — ancak bir çağrıyı, o bağlantının üretilmesinden ~24 saatten fazla süre sonra çekiyorsanız, taze bir tane almak için buradan getirin.
+Elinizde bir `call_id` olduğunda ([Çağrıları Listele](list-calls/index.md), bir [`call-ended` webhook'u](webhooks.md) ya da kendi kayıtlarınızdan) ve o tek çağrının güncel durumunu listelemeye gerek kalmadan görmek istediğinizde bu uçu çağırın. [Çağrıları Listele](list-calls/index.md)'de göreceğiniz tam nesnenin aynısını, istek anında yeniden üretilmiş olarak alırsınız.
 
 :::info Görünürlük
-**Sonlanmış** çağrılar — durum `completed` veya `failed` — aşağıdaki tam nesneyi döndürür. **Kendi oluşturduğunuz bir giden çağrıyı** — `call_id` değeri [`POST /v1/calls`](create-call.md) tarafından döndürülen ya da [bir toplu aramanın çağrılarını listeleyerek](get-batch-calls.md) elde edilen — yaşam döngüsünün **herhangi** bir anında çekebilirsiniz. Hâlâ kuyruktayken `call_status` değeri `pending`, `scheduled`, `in_progress` veya `cancelled` olan minimal bir nesne döner; konuşma ve ses kaydı alanları `null`'dır — bunlar çağrı sonlanmış bir duruma ulaştığında dolar. Hâlâ devam eden gelen çağrılar ve tarayıcı (WebRTC) çağrıları hiçbir zaman dönmez; bunlar `404` yanıtı verir.
+**Sonlanmış** çağrılar (durumu `completed` ya da `failed`) aşağıdaki tam nesneyi döndürür. **Kendi oluşturduğunuz bir giden çağrıyı** ise yaşam döngüsünün **herhangi** bir anında çekebilirsiniz; bu çağrının `call_id`'sini [`POST /v1/calls`](create-call.md) döndürür ya da [bir toplu aramanın çağrılarını listeleyerek](get-batch-calls.md) elde edersiniz. Çağrı henüz sonlanmış bir duruma ulaşmadığı sürece, `call_status` değeri `pending`, `scheduled`, `in_progress` veya `cancelled` olan minimal bir nesne döner. Konuşma ve ses kaydı alanları `null`'dır; bunlar, çağrı sonlanmış bir duruma ulaştığında dolar. Hâlâ devam eden gelen çağrılar ve tarayıcı (WebRTC) çağrıları ise hiçbir zaman dönmez; bunlar `404` yanıtı verir.
 :::
 
 ---
@@ -30,7 +30,7 @@ Authorization: Bearer <api-key>
 
 | Parametre | Tür | Açıklama |
 |---|---|---|
-| `callId` | string | Çağrının kalıcı dize kimliği — [`POST /v1/calls`](create-call.md) (tekil çağrı), [`POST /v1/calls/list`](list-calls/index.md), [bir toplu aramanın çağrılarını listeleme](get-batch-calls.md) veya bir [webhook olayından](webhooks.md) alınır. |
+| `callId` | string | Çağrının kalıcı dize kimliğidir; [`POST /v1/calls`](create-call.md) (tekil çağrı), [`POST /v1/calls/list`](list-calls/index.md), [bir toplu aramanın çağrılarını listeleme](get-batch-calls.md) veya bir [webhook olayından](webhooks.md) alınır. |
 
 ## Yanıt (200 OK)
 
@@ -91,7 +91,7 @@ Kuyrukta bekleyen bir giden çağrı, tamamlanana kadar bu minimal yapıyı dön
 }
 ```
 
-Kuyruktayken, hiç aranmadan iptal edilen bir çağrı ise `call_status: "cancelled"` ve `call_end_reason: "cancelled"` ile döner — yine konuşma veya ses kaydı yoktur:
+Kuyruktayken hiç aranmadan iptal edilen bir çağrı ise `call_status: "cancelled"` ve `call_end_reason: "cancelled"` ile döner; yine konuşma ya da ses kaydı yoktur:
 
 ```json
 {
@@ -121,34 +121,34 @@ Kuyruktayken, hiç aranmadan iptal edilen bir çağrı ise `call_status: "cancel
 
 ## Yanıt alanları
 
-Çağrı nesnesi, bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı alanlara** sahiptir. Burada özellikle belirtilmesi gereken birkaç alan:
+Çağrı nesnesi, bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı alanlara** sahiptir. Burada yalnızca birkaçını özellikle vurguluyoruz:
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `call_id` | string | Çağrının kalıcı dize kimliği — yolda gönderdiğiniz değerin aynısı. |
-| `batch_call_id` | string \| null | Bu çağrının ait olduğu toplu arama — [`POST /v1/calls/bulk`](bulk-create-calls.md)'ın döndürdüğü `batch_call_id` ile aynı. Bir toplu aramanın çağrılarını gruplamak için kullanın (örn. `call-ended` webhook'larını işlerken). Çağrı bir toplu aramaya ait değilse `null`: [`POST /v1/calls`](create-call.md) ile açılan tekil çağrı veya herhangi bir inbound çağrı. |
-| `call_status` | string | Sonlanmış bir çağrı için `completed` veya `failed`. Hâlâ kuyrukta veya devam ederken çekilen bir giden çağrı için ise bu, kuyruk durumudur: `pending`, `scheduled`, `in_progress` veya `cancelled`. Fiziksel bir çağrı asla `cancelled` olmaz — iptal edilen kuyruktaki bir çağrı hiçbir zaman fiziksel bir çağrıya dönüşmez. `call_status` `cancelled` olduğunda `call_end_reason` `"cancelled"` dizesidir; `pending`, `scheduled` veya `in_progress` için `null`'dır. |
-| `call_metadata` | object \| null | [`POST /v1/calls/bulk`](bulk-create-calls.md) ile gönderdiğiniz metadata; aynen geri döner. Çağrı metadata ile oluşturulmadıysa `null` olur. |
-| `call_variables` | object \| null | Bu çağrı için gönderilen şablon değişkenleri, aynen geri döner — çağrıyı oluştururken `variables` olarak gönderdiğiniz nesne. Gönderilmediyse (ör. inbound çağrılar) `null`. |
+| `call_id` | string | Çağrının kalıcı dize kimliği; yolda gönderdiğiniz değerin aynısıdır. |
+| `batch_call_id` | string \| null | Bu çağrının ait olduğu toplu aramanın kimliğidir; [`POST /v1/calls/bulk`](bulk-create-calls.md)'ın döndürdüğü `batch_call_id` ile aynıdır. Bir toplu aramanın çağrılarını gruplamak için kullanırsınız (örneğin `call-ended` webhook'larını işlerken). Çağrı bir toplu aramaya ait değilse `null` olur; bu durum, [`POST /v1/calls`](create-call.md) ile açılan tekil çağrılarda ve herhangi bir gelen (inbound) çağrıda görülür. |
+| `call_status` | string | Çağrının durumunu verir. Sonlanmış bir çağrı için `completed` veya `failed` olur; hâlâ kuyrukta veya devam ederken çekilen bir giden çağrı için ise kuyruk durumudur: `pending`, `scheduled`, `in_progress` veya `cancelled`. Gerçekten kurulan bir arama asla `cancelled` olmaz; kuyrukta iptal edilen bir çağrı hiçbir zaman fiilî bir aramaya dönüşmez. `call_status` `cancelled` olduğunda `call_end_reason` `"cancelled"` dizesidir; `pending`, `scheduled` veya `in_progress` için `null`'dır. |
+| `call_metadata` | object \| null | [`POST /v1/calls`](create-call.md) veya [`POST /v1/calls/bulk`](bulk-create-calls.md) ile gönderdiğiniz metadata; aynen geri döner. Çağrı metadata ile oluşturulmadıysa `null` olur. |
+| `call_variables` | object \| null | Bu çağrı için gönderilen şablon değişkenleri; çağrıyı oluştururken `variables` olarak gönderdiğiniz nesne aynen geri döner. Gönderilmediyse (ör. gelen çağrılar) `null` olur. |
 
-Tüm zaman damgası alanları — `call_started_at`, `call_ended_at`, `call_created_at` ve `call_recording.expires_at` — **UTC**'dir; ISO 8601 `+00:00` biçiminde (ör. `2026-06-08T10:30:00+00:00`). Gerçek bir ISO-8601 ayrıştırıcıyla çözümleyin, `Z` son eki varsaymayın. Bkz. [Yanıt Biçimi → Tarih ve saatler](../concepts/response-envelopes.md#timestamps).
+`call_started_at`, `call_ended_at`, `call_created_at` ve `call_recording.expires_at` alanlarının tümü **UTC**'dir; ISO 8601 `+00:00` biçiminde gelir (ör. `2026-06-08T10:30:00+00:00`). Gerçek bir ISO-8601 ayrıştırıcıyla çözümleyin ve `Z` son eki varsaymayın. Bkz. [Yanıt Biçimi → Tarih ve saatler](../concepts/response-envelopes.md#timestamps).
 
-Diğer tüm alanlar — `call_transcript`, `call_structured_data`, `call_recording`, serbest biçimli `call_end_reason` dizesi — ve `call_recording.available: false`'ın ne anlama geldiği için tam [Çağrıları Listele alan referansına](list-calls/index.md#yanıt-alanları) bakın.
+`call_transcript`, `call_structured_data`, `call_recording`, serbest biçimli `call_end_reason` dizesi ve `call_recording.available: false`'ın ne anlama geldiği gibi diğer tüm alanlar için tam [Çağrıları Listele alan referansına](list-calls/index.md#yanıt-alanları) bakın.
 
 :::tip Güncel ses kaydı bağlantısı
-Buradaki `call_recording.url`, istek anında taze üretilir ve ~24 saat geçerlidir — saklamayın; gerektiğinde [`GET /v1/calls/:callId/recording-url`](get-recording-url.md) ile yeniden üretin.
+Buradaki `call_recording.url`, istek anında oluşturulur ve ~24 saat geçerlidir; saklamayın, gerektiğinde [`GET /v1/calls/:callId/recording-url`](get-recording-url.md) ile yeniden üretin.
 :::
 
 ## Hatalar
 
 | Durum | Kod | Açıklama |
 |---|---|---|
-| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları. |
-| `404` | `RESOURCE_NOT_FOUND` | Çağrı bulunamadı, hâlâ devam eden bir gelen çağrı, bir tarayıcı (WebRTC) çağrısı veya başka bir şirkete ait. (Kendi oluşturduğunuz bir giden çağrı, kuyruktayken bile `200` döner — yukarıdaki Görünürlük'e bakın.) |
+| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | İsteğin kimlik doğrulaması başarısız oldu. |
+| `404` | `RESOURCE_NOT_FOUND` | Çağrı ya hiç yoktur, ya hâlâ devam eden bir gelen çağrıdır, ya bir tarayıcı (WebRTC) çağrısıdır ya da başka bir şirkete aittir. (Kendi oluşturduğunuz bir giden çağrı, kuyruktayken bile `200` döner; yukarıdaki Görünürlük'e bakın.) |
 | `429` | `RATE_LIMITED` | Dakika-başı istek limiti aşıldı; `Retry-After` saniye sonra tekrar deneyin. |
 
 :::note Varlık bilgisi sızdırılmaz
-Başka bir şirkete ait bir `call_id`, var olmayan bir kimlikle aynı `404 RESOURCE_NOT_FOUND` yanıtını döndürür — bkz. [Çoklu kiracılık](../concepts/multi-tenancy.md).
+Başka bir şirkete ait bir `call_id`, var olmayan bir kimlikle aynı `404 RESOURCE_NOT_FOUND` yanıtını döndürür. Bkz. [Çoklu kiracılık](../concepts/multi-tenancy.md).
 :::
 
 ## Örnekler

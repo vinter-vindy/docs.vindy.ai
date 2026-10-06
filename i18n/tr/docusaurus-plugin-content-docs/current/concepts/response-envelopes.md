@@ -6,71 +6,76 @@ sidebar_position: 1
 
 # Yanıt Formatı
 
-Tüm Vindy API yanıtları JSON'dur (`application/json`) ve küçük, öngörülebilir bir yapı kümesine uyar.
+Tüm Vindy API yanıtları JSON (`application/json`) biçimindedir ve hepsi birkaç belirli biçimden birini kullanır. Bu biçimleri bir kez öğrendiğinizde tüm yanıtları aynı mantıkla okursunuz.
 
 :::note Bilinmeyen istek alanları yok sayılır
-İstek gövdelerinde, endpoint'in tanımadığı herhangi bir alan **sessizce yok sayılır** — asla hata olmaz. Yanlış yazılmış ya da fazladan bir alan hiçbir etki yapmaz (filtrelemez, değiştirmez, isteği reddetmez). Yalnızca belgelenen alanları gönderin.
+Bir istek gövdesinde, ucun tanımadığı herhangi bir alan **yok sayılır**; asla hata vermez. Yani fazladan ya da yanlış yazılmış *opsiyonel* bir alan hiçbir şey yapmaz. Tek istisna şudur: **zorunlu** bir alanı yanlış yazarsanız (örneğin `phone_number_id`), gerçek alan artık eksik kalır ve istek `VALIDATION_FAILED` ile başarısız olur. Yalnızca belgelenen alanları gönderin ve zorunlu olanları birebir doğru yazın.
 :::
 
-Liste yanıtlarının zarf yapısı ve sayfalama için bkz. [Filtreleme ve Sayfalama](../api-reference/list-calls/filtering-pagination.md#paginated). İki uç bunun istisnasıdır — [`GET /v1/assistants`](../api-reference/list-assistants.md) ve [`GET /v1/phone-numbers`](../api-reference/list-phone-numbers.md) `{ data, total }` döndürür.
+**Liste yanıtları** iki biçimde gelir:
+
+- **Sayfalanan listeler** (çoğu liste) `{ data, pagination }` biçimindedir. Bunları bir cursor ile sayfa sayfa okursunuz; bkz. [Filtreleme ve Sayfalama](../api-reference/list-calls/filtering-pagination.md#paginated).
+- **Tam listeler** ([`GET /v1/assistants`](../api-reference/list-assistants.md) ve [`GET /v1/phone-numbers`](../api-reference/list-phone-numbers.md)) her şeyi tek seferde döndürür. Sayfalama cursor'ı yerine `{ data, total }` verirler; buradaki `total`, öğe sayısıdır.
 
 ---
 
 ## Tarih ve saatler {#timestamps}
 
-API'nin **döndürdüğü** her zaman damgası **UTC**'dir; ISO 8601 / RFC 3339 biçiminde ve açık `+00:00` offset ile — örneğin `2026-05-15T10:30:00+00:00`. Gerçek bir ISO-8601 ayrıştırıcıyla çözümleyin; `Z` son ekini veya sabit sayıda kesirli-saniye basamağını **varsaymayın**. Bu, her yanıttaki her tarih-saat alanı için geçerlidir — `call_started_at`, `call_ended_at`, `call_created_at`, bir kaydın `expires_at`'i ve [webhook](../api-reference/webhooks.md) içeriklerindeki zaman damgaları.
+**API'nin döndürdüğü zaman damgaları** her zaman UTC'dir; ISO 8601 biçiminde, `+00:00` ofsetiyle yazılır. Örneğin: `2026-05-15T10:30:00+00:00`. Bu değerleri gerçek bir tarih-saat kütüphanesiyle çözümleyin; değerin `Z` ile bittiğini ya da kesirli saniyenin hep aynı uzunlukta olduğunu varsaymayın. Bu kural, her yanıttaki tüm tarih-saat alanları için geçerlidir: `call_started_at`, `call_ended_at`, `call_created_at`, bir kaydın `expires_at` değeri ve [webhook](../api-reference/webhooks.md) içeriklerindeki zaman damgaları.
 
-Tarih **girdileri** farklı çalışır ve iki türü vardır:
+**Sizin gönderdiğiniz tarihler** iki türdür:
 
-- [`POST /v1/calls/list`](../api-reference/list-calls/filtering-pagination.md#range-semantics)'teki `date_from` / `date_to` **yalnız gün**dür (`YYYY-MM-DD`), **Europe/Istanbul** gün sınırlarıyla yorumlanır — saat veya timezone bileşeni yoktur.
-- [`POST /v1/calls`](../api-reference/create-call.md#scheduled-at) ve [`POST /v1/calls/bulk`](../api-reference/bulk-create-calls.md#scheduled-at)'taki `scheduled_at`, **timezone offset ile** göndermeniz gereken tam bir ISO 8601 tarih-saattir (ör. `...+03:00` veya `...Z`); offset'siz bir değer UTC okunur.
+- `date_from` ve `date_to` ([`POST /v1/calls/list`](../api-reference/list-calls/filtering-pagination.md#range-semantics) ucunda) yalnızca tarihtir; `YYYY-MM-DD` biçiminde, saat ve saat dilimi içermeden yazılır. Vindy bunları **Europe/Istanbul** saat dilimine göre tam gün olarak okur.
+- `scheduled_at` ([`POST /v1/calls`](../api-reference/create-call.md#scheduled-at) ve [`POST /v1/calls/bulk`](../api-reference/bulk-create-calls.md#scheduled-at) uçlarında) tam bir tarih-saattir. Her zaman bir saat dilimi ofseti ekleyin; örneğin `2026-06-10T09:00:00+03:00`. Ofset koymazsanız Vindy saati UTC olarak okur.
 
 ---
 
 ## Hata formatı {#error-envelope}
 
-Her hata yanıtı aynı **minimal** yapıya sahiptir: insan-okunabilir bir `message` alanı ve her zaman makine-okunabilir bir `code` taşıyan bir `extensions` nesnesi.
+Her hata yanıtı aynı biçimdedir. İnsanın okuyabileceği bir `message` alanı ile bir `extensions` nesnesinden oluşur; `extensions` nesnesi de her zaman makinenin okuyabileceği bir `code` değeri taşır.
 
 ```json
 {
-  "message": "API key is invalid, expired, or has been revoked.",
+  "message": "Invalid, expired, or revoked API key.",
   "extensions": {
     "code": "INVALID_API_KEY"
   }
 }
 ```
 
+Kodunuzda `message` metnine değil `extensions.code` değerine göre dallanın; `message` zamanla değişebilir. HTTP durum satırı durumu, `extensions.code` ise hatanın tam türünü söyler.
+
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `message` | string | İnsan-okunabilir açıklama. Her zaman bulunur. |
-| `extensions` | object | Her zaman bulunur. Her zaman `code` taşır; bazı hatalarda ek ayrıntı ekler (aşağıya bakın). |
-| `extensions.code` | string | Makine-okunabilir hata kodu — bkz. [Hata Kodları kataloğu](../errors.md). Her zaman bulunur. |
+| `message` | string | Hatanın insan tarafından okunabilen açıklamasını taşır. Her zaman bulunur. |
+| `extensions` | object | Hatanın makine tarafından okunabilen ayrıntısını taşır. Her zaman bulunur ve her zaman `code` içerir; bazı hatalar buna ek alanlar da ekler (aşağıda listelenir). |
+| `extensions.code` | string | Makine tarafından okunabilen hata kodunu taşır; ayrıntılar için bkz. [Hata Kodları kataloğu](../errors.md). Her zaman bulunur. |
 
-Üst düzeyde `statusCode`, `timestamp`, `path`, `requestId` veya `code` alanları **yoktur**. HTTP durum satırı durumu taşır; kodu ise `extensions.code` taşır.
+Yanıtın üst düzeyinde `statusCode`, `timestamp`, `path`, `requestId` veya `code` alanı yoktur.
 
-:::note Beklenmeyen 5xx
-İyi tanımlanmış hatalar her zaman yukarıdaki zarfa uyar. Beklenmeyen bir sunucu hatası (`500`) ise uymayabilir — framework'ün varsayılan `{ "detail": "Internal Server Error" }` yanıtına düşebilir. `HTTP_500` diye bir kod yoktur. Kalıcı bir `5xx` ile karşılaşırsanız yeniden deneyin, ardından bildirin.
+:::note Beklenmeyen sunucu hataları
+Tanımlı hatalar her zaman yukarıdaki biçimi kullanır. Beklenmeyen bir sunucu hatası (HTTP 500) kullanmayabilir: `extensions.code` içermeyen, framework'ün varsayılan gövdesini (`{ "detail": "Internal Server Error" }`) döndürebilir. `HTTP_500` diye bir kod yoktur. Bir 500 sürekli tekrarlanıyorsa önce yeniden deneyin, sonra bize bildirin.
 :::
 
 ---
 
-## `extensions` içindeki ek ayrıntı
+## `extensions` içindeki ek alanlar
 
-Hataya bağlı olarak `extensions`, `code` alanının yanında ek makine-okunabilir alanlar taşır:
+Hataya göre `extensions`, `code` yanında birkaç alan daha taşır:
 
-| Hata (kod / durum) | `extensions` içindeki ek alanlar |
+| Hata (kod / durum) | Ek alanlar |
 |---|---|
-| `VALIDATION_FAILED` (400) | `validation_errors` — bir obje dizisi |
-| `INVALID_PHONE_NUMBER`, `INVALID_METADATA`, `INVALID_VARIABLES` (400) | `index` — `calls` dizisindeki hatalı öğenin 0-tabanlı indeksi (toplu istek); tekli çağrı hataları `index: 0` bildirir (toplu istekte istek düzeyindeki bir `variables` ihlali `-1` bildirir) |
+| `VALIDATION_FAILED` (400) | `validation_errors` — nesne listesi |
+| `INVALID_PHONE_NUMBER`, `INVALID_METADATA`, `INVALID_VARIABLES` (400) | `index` — hangi kaydın hatalı olduğu (aşağıda) |
 | `RATE_LIMITED` (429) | `retry_after` (saniye), `limit` |
 
 ### Doğrulama hataları
 
-`VALIDATION_FAILED` durumunda `extensions.validation_errors` bir **obje dizisidir** — doğrulamayı geçemeyen her alan için bir giriş:
+Bir istek doğrulamadan geçemezse `extensions.validation_errors`, geçemeyen her alan için bir nesne listeler:
 
 ```json
 {
-  "message": "Request validation failed.",
+  "message": "Invalid request.",
   "extensions": {
     "code": "VALIDATION_FAILED",
     "validation_errors": [
@@ -82,13 +87,13 @@ Hataya bağlı olarak `extensions`, `code` alanının yanında ek makine-okunabi
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `field` | string | Geçersiz girdinin konumu (örneğin `body.calls`). |
-| `message` | string | Bu alanda neyin hatalı olduğu. |
-| `type` | string | Doğrulama hatasının türü. |
+| `field` | string | Sorunun hangi alanda olduğunu gösterir (örneğin `body.calls`). |
+| `message` | string | O alanda neyin hatalı olduğunu açıklar. |
+| `type` | string | Doğrulama hatasının türünü belirtir. |
 
-### Öğe bazlı hatalar (toplu istek)
+### Toplu istekte hangi kayıt hatalı
 
-Toplu bir istek belirli bir çağrıda başarısız olduğunda, `extensions.index` alanı `calls` dizisindeki hatalı öğeyi (0-tabanlı) gösterir:
+Toplu (bulk) bir istekte `extensions.index`, `calls` dizisindeki hangi çağrının hataya yol açtığını söyler (0'dan sayılır):
 
 ```json
 {
@@ -100,13 +105,15 @@ Toplu bir istek belirli bir çağrıda başarısız olduğunda, `extensions.inde
 }
 ```
 
+Tekil bir [`POST /v1/calls`](../api-reference/create-call.md) isteğinde `INVALID_METADATA` ve `INVALID_VARIABLES` `index: 0` taşır; `INVALID_PHONE_NUMBER` ise `index` taşımaz. Tüm batch için ortak olan, istek düzeyindeki bir `variables` hatası `index: -1` bildirir.
+
 ### Hız limiti
 
-`RATE_LIMITED` durumunda `extensions`, ne kadar beklemeniz gerektiğini ve dakika başına limiti bildirir (aynı değerler `Retry-After` ve `X-RateLimit-Limit` header'ları olarak da gönderilir):
+Limiti aştığınızda `extensions`, ne kadar beklemeniz gerektiğini ve dakikalık limitinizi söyler. Aynı iki değer `Retry-After` ve `X-RateLimit-Limit` header'larında da gelir.
 
 ```json
 {
-  "message": "Rate limit exceeded.",
+  "message": "Rate limit exceeded. Please try again later.",
   "extensions": {
     "code": "RATE_LIMITED",
     "retry_after": 60,
@@ -115,10 +122,10 @@ Toplu bir istek belirli bir çağrıda başarısız olduğunda, `extensions.inde
 }
 ```
 
-**Her** başarılı (2xx) yanıt da `X-RateLimit-Limit` ve `X-RateLimit-Remaining` header'larını taşır; böylece limite takılmadan önce kalan kotanızı takip edebilirsiniz.
+Başarılı (2xx) yanıtlarda normalde `X-RateLimit-Limit` ve `X-RateLimit-Remaining` header'larını da alırsınız; böylece limite dayanmadan kalan kotanızı görebilirsiniz. Nadiren, bir iç sorun sırasında hız limiti atlanır ve bu header'lar gelmeyebilir.
 
 ---
 
 ## Bir hatayı bildirme
 
-Belirtebileceğiniz bir request ID yoktur. Bir sorunu bildirirken; HTTP metodunu ve URL'yi, istek ve yanıt gövdelerini ve isteğin yaklaşık zamanını ekleyin — ve paylaşmadan önce **API anahtarınızı maskeleyin**.
+Belirtebileceğiniz bir istek kimliği (request ID) yoktur. Bir sorunu bildirirken HTTP metodunu ve URL'yi, istek ve yanıt gövdelerini ve isteği yaklaşık ne zaman gönderdiğinizi ekleyin. Paylaşmadan önce **API anahtarınızı maskeleyin**.

@@ -9,46 +9,53 @@ import TabItem from '@theme/TabItem';
 
 # Webhook'lar (Olay Teslimatı)
 
-Vindy, hesabınız için tanımlı webhook URL'sine **HTTP POST** ile olaylar gönderir; böylece sürekli [`POST /v1/calls/list`](list-calls/index.md) ile sorgulamak yerine neredeyse anlık olarak tepki verebilirsiniz. **İki olay tipi** vardır:
+Vindy, önemli bir olay gerçekleştiğinde şirketiniz için tanımlı webhook adresine bir **HTTP POST** gönderir. Böylece [`POST /v1/calls/list`](list-calls/index.md)'i sürekli sorgulamak yerine olaylara neredeyse anında tepki verebilirsiniz. **Üç olay tipi** vardır:
 
 | `event_type` | Ne zaman tetiklenir | `data` nedir |
 |---|---|---|
-| [`call-ended`](#call-ended) | Bir **fiziksel çağrı** sonlanmış bir duruma ulaştığında — `completed` veya `failed` — **veya** [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile **tekli** bir kuyruk çağrısı iptal edildiğinde (`call_status: cancelled`, minimal gövde). | Tam çağrı nesnesi (veya `null`). |
-| [`batch-ended`](#batch-ended) | Bir **toplu arama** `completed` olduğunda — içindeki her çağrı sonlanmış bir duruma ulaştığında — **veya** [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) ile bir toplu arama iptal edildiğinde (`status: cancelled`). Bir kez gönderilir. | Durum bazında dökümü olan bir toplu arama özeti (veya `null`). |
+| [`call-ended`](#call-ended) | Bir **fiziksel çağrı** sonlanmış bir duruma (`completed` veya `failed`) ulaştığında **veya** kuyrukta bekleyen bir çağrı iptal edildiğinde; ister tek başına (Vindy panelinden ya da [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile) ister bir [toplu iptalin](cancel-batch.md) parçası olarak (`call_status: cancelled`, minimal gövde). | Tam çağrı nesnesi (veya `null`). |
+| [`recording-ready`](#recording-ready) | Bir çağrının **ses kaydı** kalıcı depolamaya aktarılıp indirilebilir hâle geldiğinde. O çağrının `call-ended`'inden **sonra**, **aynı `call_id`** ile tetiklenir. Yalnızca kayıt gerçekten hazır olduğunda tetiklenir (başarısız veya hiç olmayan kayıt için asla). | **Yalın** bir gövdedir: `call_id`, `batch_call_id`, `call_duration_seconds`, gönderdiğiniz `call_metadata` ve hazır bir `call_recording` (`available: true` + indirme `url`'i) taşır. Tam çağrı nesnesi değildir. |
+| [`batch-ended`](#batch-ended) | Bir **toplu arama** `completed` olduğunda (içindeki her çağrı sonlanmış bir duruma ulaştığında) **veya** bir toplu arama iptal edildiğinde (Vindy panelinden ya da [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) ile) (`status: cancelled`). Bir kez gönderilir. | Durum bazında dökümü olan bir toplu arama özeti (veya `null`). |
 
-İkisi de aynı teslimat semantiğini paylaşır (yeniden denemeler, en az bir kez teslimat) — bkz. [Davranış](#behavior).
+Üçü de aynı teslimat kurallarına tabidir (yeniden deneme, en az bir kez teslimat); bkz. [Davranış](#behavior).
 
 ---
 
 ## Kurulum
 
-:::info Webhook kurulumu henüz self-servis değil
-Webhook endpoint'leri **Vindy ekibi tarafından** ayarlanır. Etkinleştirmek için bizimle iletişime geçin ve şunları verin:
+Bir webhook aboneliği üç bilgiden oluşur: olayların gönderileceği URL, opsiyonel özel header'lar ve almak istediğiniz olaylar.
 
-- **URL** — herkese açık bir `https://` endpoint'i olmalıdır (düz `http`, özel, loopback ve bulut-metadata adresleri reddedilir).
-- **Özel header'lar (opsiyonel)** — serbest biçimli bir HTTP header map'i; her teslimatta **aynen** gönderilir. İsteği kendi tarafınızda doğrulamak için kullanın, örn. `{"X-API-Key": "<sizin-secret>"}` veya `{"Authorization": "Bearer <sizin-token>"}`. Vindy'nin kendi kanonik header'ları (`Content-Type`, `User-Agent`, `X-Vindy-*`) her zaman önceliklidir ve ezilemez.
-- **Olaylar** — hangi olayları almak istediğiniz: `call.ended`, `campaign.ended` (batch-ended olayı) ya da her ikisi.
+- **URL** — olayların gönderileceği adres. Herkese açık bir `https://` adresi olmalıdır (düz `http`, özel/yerel ağ, loopback ve bulut-metadata adresleri güvenlik nedeniyle reddedilir).
+- **Özel header'lar (opsiyonel)** — webhook endpoint'iniz için kaydettiğiniz özel HTTP header'lar; **her teslimatta her zaman aynı şekilde** gönderilir. İsteğin gerçekten Vindy'den geldiğini kendi tarafınızda doğrulamak için kullanın (örn. `{"X-API-Key": "<sizin-gizli-anahtarınız>"}`). Vindy'nin kendi standart header'ları (`Content-Type`, `User-Agent`, `X-Vindy-*`) her zaman önceliklidir ve ezilemez.
+- **Olaylar** — almak istediğiniz olaylar (herhangi bir kombinasyon): `call.ended`, `recording.ready` ve `campaign.ended` (batch-ended olayı).
+
+:::info Kurulum henüz self-servis değil
+Webhook endpoint'leri **Vindy ekibi tarafından** ayarlanır; bunun için henüz self-servis bir ekran yok. Webhook'ları etkinleştirmek için yukarıdaki üç bilgiyle (URL, varsa özel header'lar ve almak istediğiniz olaylar) bizimle iletişime geçin; aboneliği hesabınız için biz tanımlarız. İleride bunları (URL, header'lar veya olay seti) değiştirmek de şimdilik bizim üzerimizden yapılır.
+:::
+
+:::note Kimlik doğrulama: değişmez (statik) bir yöntem kullanın
+Vindy, webhook gönderirken **önce bir token alıp sürekli kimlik doğrulayan** akışları (OAuth token-exchange, süreli/dönen token vb.) **desteklemez**. İsteği doğrulamak için **değişmez (statik) bir güvenlik yöntemi** ayarlayın. Örneğin sabit bir API anahtarını özel bir header'da (`X-API-Key`) gönderin. Kaydettiğiniz header'lar her teslimatta aynen tekrarlanır; bu yüzden dönen bir değer değil, sabit bir sır kullanın.
 :::
 
 ## İstek header'ları
 
-Vindy, her iki olay tipi için de her teslimatta aynı header setini gönderir:
+Vindy, olay tipinden bağımsız olarak her teslimatta aynı header'ları gönderir:
 
 | Header | Değer | Not |
 |---|---|---|
 | `Content-Type` | `application/json` | |
 | `User-Agent` | `Vindy-Webhooks/1.0` | Vindy'nin teslimat aracısını tanımlar. |
-| `X-Vindy-Event` | `call.ended` \| `campaign.ended` | Dahili olay adı — **noktalıdır** ve gövdedeki tireli `event_type`'tan bilinçli olarak farklıdır. `call.ended`, gövdedeki `call-ended`'e; `campaign.ended`, gövdedeki `batch-ended`'e karşılık gelir. Hangisini isterseniz onunla yönlendirin. |
-| `X-Vindy-Delivery-Id` | `<uuid>` | Bu teslimatın kalıcı kimliği — aynı olayın **her yeniden deneme adımında değişmez**. İdempotency / tekrar ayıklama anahtarı olarak kullanın. Gövdede de `delivery_id` olarak yer alır. |
-| _özel header'lar_ | tanımlandığı gibi | Kaydettiğiniz her özel header — aynen gönderilir. Vindy'nin yukarıdaki kanonik header'ları her zaman kazanır ve ezilemez. |
+| `X-Vindy-Event` | `call.ended` \| `recording.ready` \| `campaign.ended` | Olayın **iç (internal)** adıdır; **noktalı** yazılır ve gövdedeki tireli `event_type`'tan **bilinçli olarak** farklıdır. `call.ended` ↔ `call-ended`; `recording.ready` ↔ `recording-ready`; `campaign.ended` ↔ `batch-ended`. Hangisini isterseniz onunla yönlendirin. |
+| `X-Vindy-Delivery-Id` | `<uuid>` | Bu teslimatın kalıcı kimliğidir; aynı olayın **her yeniden deneme adımında değişmez**. Aynı olay birden çok kez gelirse tekilleştirmek için bu değeri kullanın. Gövdede de `delivery_id` olarak yer alır. |
+| _özel header'lar_ | tanımlandığı gibi | Kaydettiğiniz her özel header aynen gönderilir. Vindy'nin yukarıdaki standart header'ları her zaman kazanır ve ezilemez. |
 
 ## `call-ended` olayı {#call-ended}
 
-:::caution İptal edilen bir çağrı `call-ended`'i ne zaman tetikler, ne zaman tetiklemez
-`call-ended`, gerçek bir çağrı sonlanmış bir duruma ulaştığında (`completed` veya `failed`) **ve ayrıca** [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile **tekli** bir kuyruk çağrısını iptal ettiğinizde tetiklenir — bu teslimat `call_status: "cancelled"` ve **minimal** bir gövde taşır (transcript, yapısal veri ve kayıt alanları `null`). Bir **toplu iptalin** durdurduğu çağrılar istisnadır — tek tek `call-ended` tetiklemez; bkz. [iptallerin webhook'lara nasıl yansıdığı](#batch-ended).
+:::caution İptal edilen kuyruk çağrısı da `call-ended` üretir
+`call-ended` şu durumlarda tetiklenir: (1) gerçek bir çağrı sonlanmış bir duruma ulaştığında (`completed` veya `failed`); (2) kuyrukta bekleyen bir çağrı iptal edildiğinde, ister tek başına (Vindy panelinden ya da [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile) ister bir [toplu iptalin](cancel-batch.md) parçası olarak. İptal edilen **her** kuyruk çağrısı, `call_status: "cancelled"` ve **minimal** bir gövdeyle (transcript, yapısal veri ve kayıt alanları `null`) **kendi** `call-ended`'ini üretir; `call_metadata` ve `call_variables` aynen geri döner, böylece her birini birebir eşleştirebilirsiniz. Bkz. [iptaller webhook'lara nasıl yansır](#batch-ended).
 :::
 
-Vindy, JSON gövdeli bir HTTP `POST` gönderir. Gövde, `data`'yı saran bir **üst düzey nesnedir** (`event_type`, `delivery_id`, `call_id`). `data`, **tam çağrı nesnesidir** — [`GET /v1/calls/:callId`](get-call.md) ve [`POST /v1/calls/list`](list-calls/index.md) içindeki her öğeyle birebir aynı yapı.
+Vindy, JSON gövdeli bir HTTP `POST` gönderir. Gövde üst düzeyde `event_type`, `delivery_id` ve `call_id` taşır; asıl içerik ise `data` alanındadır. `data`, **tam çağrı nesnesidir**; [`GET /v1/calls/:callId`](get-call.md) ve [`POST /v1/calls/list`](list-calls/index.md) yanıtlarındaki çağrı nesnesiyle birebir aynı yapıdadır.
 
 ```http
 POST <sizin-webhook-url>
@@ -88,7 +95,7 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
     "call_variables": { "first_name": "Elif" },
     "call_recording": {
       "available": true,
-      "url": "https://your-bucket.s3.eu-central-1.amazonaws.com/call-records/...wav?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=86400&X-Amz-Signature=...",
+      "url": "https://your-bucket.s3.eu-central-1.amazonaws.com/call-records/...ogg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=86400&X-Amz-Signature=...",
       "expires_at": "2026-06-09T10:31:27+00:00"
     }
   }
@@ -98,17 +105,17 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
 `data.call_transcript` tek bir metin dizesidir; içindeki konuşma sıraları satır sonlarıyla (`\n`) ayrılır, bu yüzden yukarıdaki kaçışlı değer tek satırda görünür. Transcript biçimi ve gerçek satır sonlarıyla görüntülenmiş bir örnek için bkz. [Çağrıları Listele](list-calls/index.md).
 
 :::note Alan sırası ve kodlama
-Fiilen teslim ettiğimiz JSON'da anahtarlar **alfabetik** olarak sıralanır ve ASCII olmayan karakterler ham UTF-8 olarak gönderilir (`\u` ile kaçışlanmaz). Bu sayfadaki örnekler okunabilirlik için anlaşılır bir alan sırası kullanır — alan sırasına güvenmeyin; alanlara adlarıyla erişin.
+Teslim ettiğimiz JSON'da alanlar bu sayfadaki örneklerle **aynı sırayı** izler: zarf `event_type` ve `delivery_id` ile başlar, `data`'nın ilk alanı ise `call_id`'dir. ASCII olmayan karakterler ham UTF-8 olarak gönderilir (`\u` ile kaçışlanmaz). Yine de alan sırasının garanti olduğunu varsaymayın; alanlara her zaman **adlarıyla** erişin.
 :::
 
 ### Üst düzey alanlar
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `event_type` | string | Bu olay için `call-ended`. |
-| `delivery_id` | string (UUID) | Bu teslimatın kalıcı kimliği. Aynı olayın her yeniden deneme adımında değişmez; bu nedenle tekrarları bu değerle ayıklayabilirsiniz (ayrıca `X-Vindy-Delivery-Id` header'ı olarak da gönderilir). |
-| `call_id` | string \| null | Çağrının kalıcı kimliği (bir string). **Outbound** bir çağrı için [`POST /v1/calls`](create-call.md) (tekil çağrı), toplu aramanın çağrılarını [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile listeleme veya [`POST /v1/calls/list`](list-calls/index.md) yanıtından alınan kimliktir; **inbound** bir çağrı için çağrının kendi kimliğidir. Çağrının tüm yaşamı boyunca ve teslimat yeniden denemeleri arasında değişmez. `data`'yı ayrıştırmadan tekrarları ayıklayıp yönlendirebilmeniz için üst seviyede de yer alır. Çağrının kimliği yoksa (nadir) `null`. |
-| `data` | object \| null | Tam çağrı nesnesi — tüm alanlar aşağıda. Kaynak kayıt yansıtılamazsa `null`. |
+| `event_type` | string | Bu olay için `call-ended` değerini taşır. |
+| `delivery_id` | string (UUID) | Bu teslimatın kimliğidir. Yeniden denemelerde aynı kaldığı için, aynı olay birden çok kez gelirse bununla tekilleştirin. `X-Vindy-Delivery-Id` header'ında da bulunur. |
+| `call_id` | string \| null | Çağrıyı tanımlayan kalıcı kimliktir; çağrının tüm yaşamı boyunca (kuyrukta → devam ederken → sonlanmış) aynı kalır. `data.call_id` ile aynıdır ve diğer tüm API yanıtlarındaki (ör. [`POST /v1/calls/list`](list-calls/index.md), [`GET /v1/calls/:callId`](get-call.md)) `call_id` ile eşleşir; çağrıyı kendi kayıtlarınızla bununla eşleştirirsiniz. `data`'yı açmadan tekilleştirip yönlendirebilmeniz için üst seviyede de yer alır. Kimlik yoksa (nadir) `null` olur. |
+| `data` | object \| null | Tam çağrı nesnesidir; tüm alanlar aşağıda listelenir. Nadir durumlarda kaynak kayda ulaşılamazsa `null` döner. |
 
 ### `data` — çağrı nesnesi
 
@@ -116,39 +123,41 @@ Fiilen teslim ettiğimiz JSON'da anahtarlar **alfabetik** olarak sıralanır ve 
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `call_id` | string | Kalıcı çağrı kimliği (üst düzeydeki `call_id` ile aynı değer). |
-| `batch_call_id` | string \| null | Bu çağrının ait olduğu toplu arama — [`POST /v1/calls/bulk`](bulk-create-calls.md)'ın döndürdüğü `batch_call_id` ile aynı. Bir toplu aramanın `call-ended` olaylarını gruplamak için kullanın. Çağrı bir toplu aramaya ait değilse `null`: [`POST /v1/calls`](create-call.md) ile açılan tekil çağrı veya herhangi bir inbound çağrı. |
-| `call_status` | string | `completed` \| `failed` \| `cancelled`. `cancelled` yalnızca bu çağrıyı **tekli** bir kuyruk çağrısı olarak iptal ettiğinizde görünür — o teslimat minimal bir gövde taşır ([aşağıya](#a-cancelled-single-call) bakın). Fiziksel çağrılar yalnızca `completed` veya `failed` olur. |
-| `call_assistant_id` | string (UUID) \| null | Çağrıyı yürüten asistan. Bilinmiyorsa `null`. |
-| `call_assistant_name` | string \| null | Okunabilir asistan adı. |
-| `call_phone_number` | string \| null | Aranan veya arayan telefon numarası (mümkün olduğunda E.164 biçiminde). Bilinmiyorsa `null`. |
-| `call_bound_type` | string \| null | `inbound` \| `outbound` \| `null`. |
-| `call_started_at` | ISO 8601 (UTC) \| null | Çağrının fiilen başladığı an — **UTC** cinsinden, `+00:00` offset'iyle yazılmış bir ISO-8601 zaman damgası. Garantili bir `Z` son eki veya sabit milisaniye hassasiyeti **yoktur**; bu yüzden gerçek bir ISO-8601 ayrıştırıcıyla çözümleyin ve görüntülemek için kendi yerel saat diliminize çevirin. Çağrı hiç bağlanmadıysa `null`. |
-| `call_ended_at` | ISO 8601 (UTC) \| null | Çağrının sona erdiği an, aynı ISO-8601 UTC biçiminde. Çağrı hiç bağlanmadıysa `null`. |
-| `call_created_at` | ISO 8601 (UTC) | Çağrı kaydının sistemimizde oluşturulduğu an, aynı ISO-8601 UTC biçiminde. |
-| `call_duration_seconds` | int \| null | Saniye cinsinden çağrı süresi. |
-| `call_end_reason` | string \| null | Çağrının sona erme ham nedeni — serbest biçimli bir string, eşlenmeden döner, bkz. [Bitiş nedenleri](list-calls/index.md#end-reasons). Opak kabul edin, bilinmeyen değerlerde hata vermeyin. |
-| `call_transcript` | string \| null | Düz metin transcript. Her satır `[HH:MM:SS] Asistan:` (asistan, `Asistan`) veya `[HH:MM:SS] Müşteri:` (arayan, `Müşteri`) biçimindedir — Türkçe rol etiketleri, önlerinde UTC `HH:MM:SS` zaman damgasıyla — ve satırlar `\n` ile ayrılır. Çok kısa veya başarısız çağrılarda boş ya da `null` olabilir. |
-| `call_structured_data` | object \| null | Yapay zekânın çıkardığı veri — genellikle asistanınızın yapısal çıktı şemasının özellikleriyle anahtarlanan düz (flat) bir nesnedir. Aynen döndürüldüğü için ilkesel olarak başka bir JSON şekli de (ör. bir dizi) olabilir. Asistanın yapısal çıktı şeması yoksa ya da hiçbir şey çıkarılamadığında `null` — bkz. [Yapısal veri şekilleri](list-calls/index.md#structured-data-shapes). |
-| `call_metadata` | object \| null | [`POST /v1/calls/bulk`](bulk-create-calls.md) ile gönderdiğiniz opak metadata; korelasyon için aynen geri döner. Çağrı metadata ile oluşturulmadıysa `null`. |
-| `call_variables` | object \| null | Bu çağrı için gönderilen şablon değişkenleri, aynen geri döner — çağrıyı oluştururken `variables` olarak gönderdiğiniz nesne. Gönderilmediyse (ör. inbound çağrılar) `null`. |
-| `call_recording` | object | Kayıt durumu + URL — alanlar aşağıda. |
+| `call_id` | string | Çağrının kalıcı kimliğidir; üst düzeydeki `call_id` ile aynı değeri taşır. |
+| `batch_call_id` | string \| null | Bu çağrının ait olduğu toplu aramayı tanımlar; [`POST /v1/calls/bulk`](bulk-create-calls.md)'ın döndürdüğü `batch_call_id` ile aynıdır. Bir toplu aramanın `call-ended` olaylarını gruplamak için kullanırsınız. Çağrı bir toplu aramaya ait değilse `null` olur; bu durum, [`POST /v1/calls`](create-call.md) ile açılan tekil çağrılarda ve herhangi bir gelen (inbound) çağrıda görülür. |
+| `call_status` | string | Çağrının durumunu verir; `completed`, `failed` ya da `cancelled` değerlerinden biridir. `cancelled`, kuyrukta bekleyen bir çağrı iptal edildiğinde görünür (ister tek başına ister bir [toplu iptalin](cancel-batch.md) parçası olarak) ve o teslimat minimal bir gövde taşır ([aşağıya](#a-cancelled-single-call) bakın). Fiziksel çağrılar yalnızca `completed` veya `failed` olur. |
+| `call_assistant_id` | string (UUID) \| null | Bu çağrıyı yürüten asistanı tanımlar; [`GET /v1/assistants`](list-assistants.md) yanıtındaki `assistant_id` ile eşleşir. Bilinmiyorsa `null` olur. |
+| `call_assistant_name` | string \| null | Çağrıyı yürüten asistanın görünen adını verir; panelde gördüğünüz adla aynıdır. Bilinmiyorsa `null` olur. |
+| `call_phone_number` | string \| null | Bu çağrıdaki karşı tarafın numarasını taşır: giden çağrıda aranan numara, gelen çağrıda ise arayanın numarasıdır (mümkün olduğunda E.164 biçiminde). Bilinmiyorsa `null` olur. |
+| `call_bound_type` | string \| null | Çağrının yönünü belirtir: müşteri sizi aradıysa `inbound`, asistan müşteriyi aradıysa `outbound` olur. Yön bilinmiyorsa `null` döner. |
+| `call_started_at` | ISO 8601 (UTC) \| null | Çağrının fiilen başladığı anı gösterir; **UTC** cinsinden, `+00:00` offset'iyle yazılmış bir ISO-8601 zaman damgasıdır. Garantili bir `Z` son eki veya sabit milisaniye hassasiyeti **yoktur**; bu yüzden gerçek bir ISO-8601 ayrıştırıcıyla çözümleyin ve görüntülemek için kendi yerel saat diliminize çevirin. Çağrı hiç bağlanmadıysa `null` olur. |
+| `call_ended_at` | ISO 8601 (UTC) \| null | Çağrının sona erdiği anı gösterir, aynı ISO-8601 UTC biçimindedir. Çağrı hiç bağlanmadıysa `null` olur. |
+| `call_created_at` | ISO 8601 (UTC) | Çağrı kaydının sistemimizde oluşturulduğu anı gösterir, aynı ISO-8601 UTC biçimindedir. |
+| `call_duration_seconds` | int \| null | Çağrının saniye cinsinden ne kadar sürdüğünü verir. Çağrı hiç bağlanmadıysa (örneğin cevapsız bir `failed` çağrı) `null` döner. |
+| `call_end_reason` | string \| null | Çağrının sona ermesinin ham nedenini verir; serbest biçimli bir string'tir ve eşlenmeden döner. Bkz. [Bitiş nedenleri](list-calls/index.md#end-reasons). Opak kabul edin, bilinmeyen değerlerde hata vermeyin. |
+| `call_transcript` | string \| null | Görüşmenin düz metin dökümünü taşır. Her satırın başında UTC `HH:MM:SS` zaman damgası, ardından Türkçe bir rol etiketi bulunur: asistan için `[HH:MM:SS] Asistan:`, arayan için `[HH:MM:SS] Müşteri:`. Satırlar birbirinden `\n` ile ayrılır. Çok kısa veya başarısız çağrılarda boş ya da `null` olabilir. |
+| `call_structured_data` | object \| null | Yapay zekânın çıkardığı veriyi taşır; genellikle asistanınızın yapısal çıktı şemasının özellikleriyle anahtarlanan düz (flat) bir nesnedir. Veri aynen döndürüldüğü için, nadiren bir nesne yerine farklı bir JSON yapısı (örneğin bir dizi) da gelebilir. Asistanın yapısal çıktı şeması yoksa ya da hiçbir şey çıkarılamadığında `null` döner; bkz. [Yapısal veri şekilleri](list-calls/index.md#structured-data-shapes). |
+| `call_metadata` | object \| null | [`POST /v1/calls`](create-call.md) veya [`POST /v1/calls/bulk`](bulk-create-calls.md) ile gönderdiğiniz opak metadata'yı, kendi kayıtlarınızla eşleştirebilmeniz için aynen geri döndürür. Çağrı metadata ile oluşturulmadıysa `null` olur. |
+| `call_variables` | object \| null | Bu çağrı için gönderilen şablon değişkenlerini taşır; çağrıyı oluştururken `variables` olarak gönderdiğiniz nesne aynen geri döner. Hiç gönderilmediyse (örneğin inbound çağrılar) `null` olur. |
+| `call_recording` | object | Çağrının ses kaydının hazır olup olmadığını, hazırsa nereden indirileceğini belirten bir nesnedir. Alanları aşağıda listelenir. |
 
 **`data.call_recording`**
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `available` | bool | Bu çağrı için indirilebilir bir ses kaydının mevcut olup olmadığı. |
-| `url` | string \| yok | Uzun ömürlü (~24 saat) presigned indirme URL'si. **Yalnızca** `available: true` iken bulunur. |
-| `expires_at` | ISO string \| yok | URL'nin geçerliliğini yitireceği an (UTC, `+00:00`). **Yalnızca** `available: true` iken bulunur. |
+| `available` | bool | Bu çağrı için indirilebilir bir ses kaydının bulunup bulunmadığını belirtir. |
+| `url` | string \| yok | Uzun ömürlü (yaklaşık 24 saat), presigned bir indirme URL'si verir. **Yalnızca** `available: true` iken bulunur. |
+| `expires_at` | ISO string \| yok | URL'nin geçerliliğini yitireceği anı gösterir (UTC, `+00:00`). **Yalnızca** `available: true` iken bulunur. |
 
 :::info Ses kaydı URL'si uzun ömürlüdür ve gönderim anında üretilir
-`data.call_recording.url`, **webhook'un gönderildiği andan itibaren** yaklaşık **24 saat** geçerlidir; bu süre normal işlemeyi ve yeniden denemeleri rahatça aşar. URL'yi kalıcı olarak saklamayın — `call_id` değerini saklayıp ihtiyaç oldukça taze bir URL çekin. Tüm kurallar için bkz. [Ses Kaydı Bağlantısı Al](get-recording-url.md). `available` `false` ise çağrı için kalıcı bir kayıt yoktur — [ne anlama geldiğine](list-calls/index.md#recording-not-available) bakın.
+`data.call_recording.url`, **webhook'un gönderildiği andan itibaren** yaklaşık **24 saat** geçerlidir; bu süre normal işlemeyi ve yeniden denemeleri rahatça aşar. URL'yi kalıcı olarak saklamayın; `call_id` değerini saklayıp ihtiyaç oldukça yeni bir URL çekin. Tüm kurallar için bkz. [Ses Kaydı Bağlantısı Al](get-recording-url.md).
+
+Bir **`call-ended`** teslimatında `available` **geçici olarak** `false` olabilir; çağrı sonlanmıştır ama ses kaydı hâlâ kalıcı depolamaya aktarılıyordur (özellikle yapısal çıktı şeması olmayan asistanlarda, `call-ended` çağrı sonlanır sonlanmaz tetiklenir). Kayıt indirilebilir olunca Vindy ayrı bir [`recording-ready`](#recording-ready) olayı gönderir (`available: true` + yeni `url`). Yani `call-ended`'deki `available: false`'ı **"henüz hazır değil"** diye okuyun, **"hiçbir zaman olmayacak"** diye değil; [`recording-ready`](#recording-ready)'yi bekleyin ya da [`GET /v1/calls/:callId/recording-url`](get-recording-url.md)'i tekrar çağırın (kayıt hâlâ işlenirken `409`, hiç olmayacaksa `404` döner).
 :::
 
-### İptal edilen tekli bir çağrı {#a-cancelled-single-call}
+### İptal edilen belirli bir çağrı {#a-cancelled-single-call}
 
-[`POST /v1/calls/:callId/cancel`](cancel-call.md) ile **tekli** bir kuyruk çağrısını iptal ettiğinizde yine bir `call-ended` olayı tetiklenir — ancak `call_status: "cancelled"` ve **minimal** bir `data` nesnesiyle: çağrı hiç gerçekleşmediğinden konuşma, yapısal veri ve zaman alanları `null`, `call_end_reason` `"cancelled"`, `call_recording.available` ise `false` olur. Korelasyon yapabilmeniz için `call_metadata` ve `call_variables` yine aynen geri döner. Bir **toplu iptalin** parçası olarak durdurulan çağrılar bunu tek tek göndermez — bkz. [`batch-ended`](#batch-ended).
+Kuyrukta bekleyen bir çağrı iptal edildiğinde (ister tek başına, Vindy panelinden ya da [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile; ister bir [toplu iptalin](cancel-batch.md) parçası olarak) **o çağrıya özel** bir `call-ended` olayı tetiklenir; bu olay `call_status: "cancelled"` ve **minimal** bir `data` nesnesi taşır. Çağrı hiç gerçekleşmediğinden konuşma, yapısal veri ve zaman alanları `null`, `call_end_reason` `"cancelled"`, `call_recording.available` ise `false` olur. Birebir korelasyon yapabilmeniz için `call_metadata` ve `call_variables` yine aynen geri döner. Bir toplu iptal, durdurduğu **her** kuyruk çağrısı için bunlardan birer tane üretir (artı en sonda gelen tek bir [`batch-ended`](#batch-ended)).
 
 ```json
 {
@@ -177,19 +186,84 @@ Fiilen teslim ettiğimiz JSON'da anahtarlar **alfabetik** olarak sıralanır ve 
 }
 ```
 
+## `recording-ready` olayı {#recording-ready}
+
+Bir çağrının **ses kaydı** kalıcı depolamaya aktarılıp indirilebilir hâle geldiğinde tetiklenir; her zaman o çağrının [`call-ended`](#call-ended)'inden **sonra** gelir. Kaydı sürekli sorgulamanın (polling) push karşılığıdır: kayıt hazır olur olmaz size ulaşır, ayrıca bir zamanlayıcı veya tekrar-çekme döngüsü kurmanıza gerek kalmaz.
+
+Kaydı güvenilir biçimde almak istediğinizde bu olayı kullanın. Bir `call-ended` teslimatı, kayıt hâlâ aktarılırken `call_recording.available: false` taşıyabilir; özellikle **yapısal çıktı şeması olmayan** asistanlarda `call-ended`, çağrı biter bitmez (kayıt henüz yüklenmeden) gönderilir. `recording-ready` işte bu boşluğu kapatır.
+
+- **Yalnızca** kayıt gerçekten hazır olduğunda tetiklenir; kaydı hiç olmayan ya da kalıcı olarak başarısız olan çağrı için **asla** gelmez. Bir çağrı için bu olayı hiç almazsanız, o çağrının indirilebilir kaydı yoktur.
+- O çağrının `call-ended`'iyle (ve [`GET /v1/calls/:callId`](get-call.md) ile) **aynı `call_id`**'yi taşır; ikisini `call_id` üzerinden eşleştirin.
+- Her zaman o çağrının `call-ended`'inden **sonra teslim edilir**: Vindy, `recording-ready`'yi o çağrının `call-ended`'i endpoint'inize ulaşana kadar bekletir (yani sırayı garanti eder). Yine de teslimat **en az bir kez**tir (aynı olay tekrarlanabilir). Ayrıca bir çağrının `call-ended`'i tüm denemelere rağmen teslim edilemezse bu bekleme kalkar; bu yüzden tekrarları `delivery_id` ile tekilleştirin, eşleştirmeyi `call_id` ile yapın.
+- **`batch-ended`'e bağlı DEĞİLDİR.** Bir batch'teki çağrının `recording-ready`'si, batch'in [`batch-ended`](#batch-ended)'inden **sonra** gelebilir; ses kayıtları paralel işlenir ve kendi temposunda biter, yani batch "tamamlanmış" (tüm çağrı sonuçları elinizde) olsa bile bazı kayıtlar hâlâ aktarılıyor olabilir. Bu **beklenen** bir durumdur, kaçırılmış ya da geciken bir olay değildir; `batch-ended`'i gördükten sonra da `recording-ready` almaya devam edin.
+
+Gövde **yalın ve yalnızca kayda odaklıdır**; `call-ended`'in tam çağrı nesnesini bilinçli olarak **tekrarlamaz**. Üst düzey zarf aynıdır (`event_type`, `delivery_id`, `call_id`); `data` ise bu olaya özgü alanları ve olayı bir sorgu yapmadan kendi kayıtlarınızla eşleştirebilmeniz için gereken alanları taşır: `call_id`, `batch_call_id`, gönderdiğiniz `call_metadata`, `call_duration_seconds` ve yeni bir `call_recording` bloğu. `batch_call_id` ve `call_metadata`, o çağrının `call-ended`'iyle **birebir aynıdır**; ikisi de `null` olabilir (her biri için aşağıya bakın). Çağrıya dair geri kalan her şeye (transcript, yapısal veri, maliyet) ortak `call_id` üzerinden, o çağrının `call-ended`'inden (bu olaydan **önce** gelir) veya [`GET /v1/calls/:callId`](get-call.md)'den ulaşabilirsiniz.
+
+| `data` alanı | Tip | Açıklama |
+|---|---|---|
+| `call_id` | string | Kaydın ait olduğu çağrıyı tanımlar; o çağrının [`call-ended`](#call-ended)'i ve [`GET /v1/calls/:callId`](get-call.md) ile **birebir aynıdır**. Bununla eşleştirin. |
+| `batch_call_id` | string \| null | Bu çağrının ait olduğu toplu aramayı tanımlar; o çağrının [`call-ended`](#call-ended)'iyle **birebir aynıdır**. Çağrı bir toplu aramaya ait değilse `null` olur; bu durum, [`POST /v1/calls`](create-call.md) ile açılan tekil çağrılarda ve herhangi bir gelen (inbound) çağrıda görülür. |
+| `call_duration_seconds` | integer \| null | Çağrının saniye cinsinden ne kadar sürdüğünü verir. |
+| `call_metadata` | object \| null | [`POST /v1/calls/bulk`](bulk-create-calls.md) veya [`POST /v1/calls`](create-call.md) ile gönderdiğiniz opak metadata'dır; aynen geri döner ve o çağrının [`call-ended`](#call-ended)'iyle **birebir aynıdır**, böylece kaydı kendi kayıtlarınızla eşleştirebilirsiniz. Çağrı metadata ile oluşturulmadıysa `null` olur. |
+| `call_recording.available` | boolean | Bu olayda her zaman `true` döner. |
+| `call_recording.url` | string | Ses dosyası için süreli, **presigned** bir indirme URL'i verir. |
+| `call_recording.expires_at` | string (ISO 8601) | `url`'in çalışmayı bırakacağı anı gösterir. O ana kadar indirin ya da [`GET /v1/calls/:callId/recording-url`](get-recording-url.md) ile yeniden isteyin. |
+
+```http
+POST <sizin-webhook-url>
+Content-Type: application/json
+User-Agent: Vindy-Webhooks/1.0
+X-Vindy-Event: recording.ready
+X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc987654321
+<sizin özel header'larınız, örn. X-API-Key: ...>
+```
+
+```json
+{
+  "event_type": "recording-ready",
+  "delivery_id": "0190aa00-1c5a-7000-8000-abc987654321",
+  "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f",
+  "data": {
+    "call_id": "01a0c8cf-4eb3-7de3-a3f2-efe4e0daf62f",
+    "batch_call_id": "84213f7a-58cc-4372-a567-0e02b2c3d479",
+    "call_duration_seconds": 87,
+    "call_metadata": { "order_id": "ORD-4821" },
+    "call_recording": {
+      "available": true,
+      "url": "https://your-bucket.s3.eu-central-1.amazonaws.com/call-records/...ogg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=86400&X-Amz-Signature=...",
+      "expires_at": "2026-06-09T10:31:27+00:00"
+    }
+  }
+}
+```
+
+Teslimat semantiği diğer tüm olaylarla aynıdır (~15 sn içinde `2xx`, en az bir kez, `delivery_id` ile tekrar ayıklama, artan beklemelerle yeniden deneme); bkz. [Davranış](#behavior). Bu yalın gövdenin taşımadığı bir alan mı gerekiyor (transcript, yapısal veri, maliyet)? O çağrının [`call-ended`](#call-ended)'inde veya [`GET /v1/calls/:callId`](get-call.md)'de, ortak `call_id` ile erişilir.
+
 ## `batch-ended` olayı {#batch-ended}
 
-[`POST /v1/calls/bulk`](bulk-create-calls.md) ile oluşturulan bir toplu arama `completed` durumuna ulaştığında (**içindeki her çağrı aramayı bitirip sonlanmış bir duruma ulaştığında**) **veya** [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) ile bir toplu arama iptal edildiğinde (`status: cancelled`), **bir kez** tetiklenir. Bu, toplu aramanın **arama turunun bittiğini** bildirir — sonuç için `counts` dökümünü kullanın, ardından çağrıları [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile çekin. Her çağrının `call-ended`'inin çoktan teslim edildiği anlamına **gelmez** — aşağıdaki sıra notuna bakın.
+[`POST /v1/calls/bulk`](bulk-create-calls.md) ile oluşturulan bir toplu arama **bir kez** `batch-ended` üretir: ya `completed` durumuna ulaştığında (**içindeki her çağrı sonlanmış bir duruma geldiğinde**) ya da iptal edildiğinde (Vindy panelinden ya da [`POST /v1/calls/batches/:batchId/cancel`](cancel-batch.md) ile) (`status: cancelled`). Bu olay, toplu aramanın **tamamen sonuçlandığı** anlamına gelir: özet için `counts` dökümüne bakın, ardından çağrıların tamamını [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile çekin. Vindy `batch-ended`'i toplu aramanın **her** `call-ended`'inden **sonra** teslim eder; böylece güvenilir bir "tüm çağrılar elimde" garantisi görevi de görür (aşağıdaki garantiye bakın).
+
+Aşağıdaki `data` payload'ı, [`GET /v1/calls/batches/:batchId`](get-batch.md) (tek toplu arama) veya [`POST /v1/calls/batches/list`](list-batches.md) (tüm toplu aramalarınız) uçlarından istediğiniz an çekebileceğiniz **aynı `BatchCallSummary`**'dir; bu olay onun push (itme) karşılığıdır.
 
 :::caution İptaller webhook'lara nasıl yansır
-Bir toplu aramayı iptal etmek **tek** bir `batch-ended` olayı gönderir (`status: "cancelled"`). Bir toplu iptalin durdurduğu çağrılar tek tek `call-ended` **üretmez** — bunlar o tek `batch-ended` olayına toplanır (bu, büyük toplu iptallerde olay yağmurunu önler). Toplu aramada iptal **edilmeyen** çağrılar — o ana dek tamamlanmış (veya aranmakta olup biten) çağrılar — her zamanki gibi **kendi** `call-ended`'lerini üretmeye devam eder; yalnız toplu iptalin durdurduğu kuyruktaki çağrılar tek olaya toplanır. Bunun yerine [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile **tekli** bir çağrıyı iptal ederseniz, o çağrı `call_status: "cancelled"` ile kendi [`call-ended`](#call-ended) olayını üretir.
+Bir toplu aramayı iptal etmek, durdurulan **her kuyruk çağrısı için birer `call-ended`** (her biri `call_status: "cancelled"`, minimal gövde ve aynen geri dönen `call_metadata`/`call_variables` ile) **artı** `status: "cancelled"` taşıyan **tek** bir `batch-ended` üretir. Her iptal edilen çağrı, tıpkı tek çağrı iptalindeki gibi, tek tek raporlanır; böylece her birini `call_metadata`'sıyla kendi kayıtlarınıza eşleyebilirsiniz. **Özetleme (roll-up) YOKTUR**, çıkarım yapmanız gereken hiçbir şey yoktur. İptalden **etkilenmeyen** çağrılar (o ana kadar tamamlanmış ya da aranırken biten çağrılar) her zamanki gibi kendi `call-ended`'lerini üretir. Her zamanki gibi `batch-ended`, bu `call-ended`'lerin (iptal edilenler dâhil) hepsinden sonra, **en son** gelir. Belirli bir çağrıyı tek başına iptal etmek de birebir aynı davranır: o çağrı `call_status: "cancelled"` ile kendi [`call-ended`](#call-ended) olayını üretir.
 :::
 
-:::caution `batch-ended` bir teslimat bariyeri değildir
-`batch-ended` almanız, o toplu aramanın **tüm** `call-ended`'lerini çoktan aldığınızı **garanti etmez**. Bir çağrının `call-ended`'i, kendi `batch-ended`'inden **sonra** gelebilir: başarılı bir çağrının `call-ended`'i, transcript ve yapısal veri analizi hazır olana kadar bekler; toplu arama ise aramalar biter bitmez `completed`'e döner — ve tüm olaylar gibi teslimatlar bağımsız olarak yeniden denenir, **sıra garantisi yoktur**. Bu yüzden `batch-ended`'i "artık tüm çağrı olayları elimde" sinyali olarak **kullanmayın**. Bir toplu aramanın çağrılarının kesin ve eksiksiz listesine ihtiyacınız olduğunda, her `call-ended`'i topladığınıza güvenmek yerine [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile sayfalayın — kaynak-of-truth API'dir.
+:::tip `batch-ended`, batch'in her `call-ended`'inden sonra gelir
+Vindy, bir toplu aramanın `batch-ended`'ini, o batch'in **her** `call-ended`'i adresinize teslim edilene kadar bekletir. Dolayısıyla `batch-ended` elinize ulaştığında batch'in tüm çağrılarını çoktan almış olursunuz; bunu "her şey elimde" sinyali kabul edip kendi tarafınızı kapatabilirsiniz. Bu, iptal edilen bir batch için de geçerlidir: durdurulan her kuyruk çağrısı kendi `call-ended`'ini (`call_status: "cancelled"`) üretir ve `batch-ended` onları da bekler; yani yine kesinlikle en son gelir (bkz. [iptaller webhook'lara nasıl yansır](#batch-ended)).
+
+Bu, vakaların büyük çoğunluğunda geçerlidir ama **mutlak bir garanti değildir**: nadiren bir `call-ended` eksik kalabilir ya da çok seyrek olarak kendi `batch-ended`'inden **sonra** gelebilir. Bu yüzden işleyiciniz şunları hesaba katmalıdır:
+
+- **Tekrarları ayıklayın.** Teslimat **en az bir kez** olduğundan aynı `call-ended` (hatta `batch-ended`'in kendisi) birden çok kez gelebilir; her zaman `delivery_id` ile tekilleştirin.
+- **Kalıcı olarak teslim edilemeyen bir `call-ended`.** Bir çağrının `call-ended`'i tüm yeniden denemelere rağmen teslim edilemezse (ör. adresiniz saatlerce kapalı kalıp Vindy [vazgeçtiyse](#behavior)), Vindy artık onu beklemez; bu durumda `batch-ended` o çağrı eksik gelebilir.
+- **Çok nadiren geciken bir `call-ended`.** Çok seyrek olarak geçici bir iç aksaklık tek bir `call-ended`'i geciktirebilir; o olay `batch-ended`'den biraz **sonra** teslim edilir.
+
+Son iki durumda çözüm aynıdır: **`batch-ended`'den sonra da `call-ended` almayı sürdürün** ve eksiksiz, nihai liste için nihai kaynak olarak [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md)'i kullanın.
+
+`recording-ready` bu garantiye **dahil değildir**: bir çağrının [`recording-ready`](#recording-ready)'si, batch'in `batch-ended`'inden **sonra** bile gelebilir ve bu **beklenen** bir durumdur; ses kayıtları paralel işlenir ve kendi temposunda biter, yani batch "tamamlanmış" (tüm çağrı sonuçları teslim edilmiş) olsa bile bazı kayıtlar hâlâ aktarılıyor olabilir. `batch-ended`'den sonra gelen bir `recording-ready`'yi normal karşılayın, kaçırılmış teslimat sanmayın. Bu garanti yalnızca `call-ended`'i (yani çağrı başına sonucu) kapsar, kayıt sinyalini değil.
 :::
 
-Üst düzey nesne, `call-ended`'den farklıdır: üst seviyede `call_id` **değil** `batch_call_id` taşır ve `data`, bir çağrı nesnesi değil bir **toplu arama özetidir**.
+Üst düzey yapı, `call-ended`'den bir noktada ayrılır: üst düzeyde `call_id` yerine `batch_call_id` taşır ve `data`, bir çağrı nesnesi değil bir **toplu arama özetidir**.
 
 ```json
 {
@@ -216,44 +290,64 @@ Bir toplu aramayı iptal etmek **tek** bir `batch-ended` olayı gönderir (`stat
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `event_type` | string | Bu olay için `batch-ended`. |
-| `delivery_id` | string (UUID) | Bu teslimatın kalıcı kimliği — her yeniden deneme adımında değişmez. Tekrarları bu değerle veya `batch_call_id` ile ayıklayın. |
-| `batch_call_id` | string | Toplu aramanın kimliği — kolaylık için üst seviyede de tekrarlanır. Tekrarları ayıklamak ve toplu aramanın çağrılarını [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile çekmek için kullanın. |
-| `data` | object \| null | Toplu arama özeti — alanlar aşağıda. Kaynak kayıt yansıtılamazsa `null`. |
+| `event_type` | string | Bu olay için `batch-ended` değerini taşır. |
+| `delivery_id` | string (UUID) | Bu teslimatın kalıcı kimliğidir; her yeniden deneme adımında değişmez. Tekrarları bu değerle veya `batch_call_id` ile ayıklayın. |
+| `batch_call_id` | string | Toplu aramanın kimliğidir; kolaylık için üst seviyede de tekrarlanır. Tekrarları ayıklamak ve toplu aramanın çağrılarını [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile çekmek için kullanın. |
+| `data` | object \| null | Toplu arama özetidir; alanlar aşağıda listelenir. Nadir durumlarda kaynak kayda ulaşılamazsa `null` döner. |
 
 ### `data` — toplu arama özeti
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `batch_call_id` | string | Toplu aramanın kimliği (üst düzeydeki `batch_call_id` ile aynı değer). |
-| `status` | string | Toplu aramanın nihai durumu — `completed` ya da toplu arama iptal edildiğinde `cancelled`. |
-| `total_count` | int | Toplu aramadaki toplam çağrı sayısı. |
-| `counts` | object | Toplu aramanın çağrılarının durum bazında dökümü. |
-| `created_at` | ISO string | Toplu aramanın oluşturulduğu an (UTC, `+00:00`). |
+| `batch_call_id` | string | Toplu aramayı tanımlar; üst düzeydeki `batch_call_id` ile aynı değeri taşır. |
+| `status` | string | Toplu aramanın nihai durumudur: `completed`, ya da toplu arama iptal edildiğinde `cancelled` olur. |
+| `total_count` | int | Toplu aramadaki toplam çağrı sayısını verir. |
+| `counts` | object | Toplu aramanın çağrılarını durum bazında ayrıştırır; üyeleri aşağıda listelenir. |
+| `created_at` | ISO string | Toplu aramanın oluşturulduğu anı gösterir (UTC, `+00:00`). |
 
 **`data.counts`**
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `completed` | int | Başarıyla tamamlanan çağrılar. |
-| `failed` | int | Başarısız biten çağrılar. |
-| `cancelled` | int | Aranmadan önce kuyruktan iptal edilen çağrılar. Bkz. [iptallerin webhook'lara nasıl yansıdığı](#batch-ended). |
-| `pending` | int | Henüz başlamamış çağrılar. Tamamlanmış bir toplu aramada `0`. |
-| `processing` | int | Hâlâ devam eden çağrılar. Tamamlanmış bir toplu aramada `0`. |
+| `completed` | int | Başarıyla tamamlanan çağrıların sayısını verir. |
+| `failed` | int | Başarısız biten çağrıların sayısını verir. |
+| `cancelled` | int | Aranmadan önce kuyruktan iptal edilen çağrılardır. Bunların her biri ayrıca `call_status: "cancelled"` ile kendi [`call-ended`](#call-ended)'ini üretir; bu sayı yalnızca toplamdır. Bkz. [iptallerin webhook'lara nasıl yansıdığı](#batch-ended). |
+| `pending` | int | Henüz başlamamış çağrılardır; `pending` ve `scheduled` çağrıların ikisini de kapsar. `batch-ended` teslim edildiğinde daima `0` olur. |
+| `processing` | int | Hâlâ devam eden çağrılardır (`in_progress` durumu). `batch-ended` teslim edildiğinde daima `0` olur; olay, toplu aramadaki her çağrı bitene kadar (hiçbiri hâlâ aranmıyorken) bekletilir, dolayısıyla teslim edilen bir `batch-ended` her zaman sonuçlanmış, nihai bir döküm raporlar. |
 
 :::note `call-ended` ile aynı teslimat semantiği
-`batch-ended`, tıpkı `call-ended` gibi teslim edilir — ~15 saniye içinde `2xx` dönün, artan beklemelerle yeniden denenir, en az bir kez teslim edilir (`delivery_id` veya `batch_call_id` ile tekrarları ayıklayın), sıra garantisi yoktur ve aynı header'lar kullanılır. Bkz. [Davranış](#behavior).
+`batch-ended`, tıpkı `call-ended` gibi teslim edilir: ~15 saniye içinde `2xx` dönün, artan beklemelerle yeniden denenir, en az bir kez teslim edilir (`delivery_id` veya `batch_call_id` ile tekrarları ayıklayın) ve aynı header'lar kullanılır. Tek fark sıralamadadır: `batch-ended` daima batch'inin **her** `call-ended`'inden **sonra** teslim edilir (yukarıdaki garanti). (Bir çağrının `recording-ready`'si de kendi `call-ended`'inden sonra teslim edilir; bunun dışında olaylar arasında sıra garantisi yoktur.) Bkz. [Davranış](#behavior).
+:::
+
+## Bir toplu aramayı kendi tarafınızda sonuçlandırma — önerilen durum takibi {#reconcile-batch}
+
+Bir batch'teki **her** çağrı, ister `completed` ister `failed` ister `cancelled` olsun (toplu iptalin durdurduğu kuyruk çağrıları dâhil), kendi [`call-ended`](#call-ended)'ini üretir. Ve `batch-ended` **hepsinden sonra** teslim edilir (yukarıdaki garanti). Yani entegrasyonunuzu tamamen olaylarla yürütebilir, her çağrıyı benzersiz bir id ile kendi kayıtlarınıza eşleyebilirsiniz; API yalnız kesinti yedeği kalır. Çıkarım yapacak hiçbir şey yok: toplu iptal, çağrıları özetlemez (roll-up yok).
+
+**Gönderdiğiniz her çağrı için bir satır tutun** ve benzersiz bir id ile eşleştirin: `metadata`'ya koyduğunuz bir alan (önerilir; iptal edilenler dâhil her `call-ended`'de ve API'de geri döner) ya da `call_phone_number`. Her satır şu geçişleri yapar: `queued` → `completed` / `failed` / `cancelled`.
+
+1. **Her `call-ended`'de** → o çağrının satırını doğrudan `call_status`'tan terminal duruma çekin (`completed` / `failed` / `cancelled`). İhtiyacınız olan **tek** geçiş budur; `metadata` id'sine göre eşleyin, hangi çağrı olduğunu (iptal edilenler dâhil) her zaman tam bilirsiniz. `delivery_id` ile tekilleştirin.
+
+2. **`batch-ended`'de** → batch tamamen sonuçlanmıştır ve tüm `call-ended`'lar çoktan gelmiştir. Bunu yalnızca "her şey elimde" sinyali olarak kullanın: kendi tarafınızda batch'i kapatın ve özet için `counts`'u okuyun. Normal durumda **hiçbir satır hâlâ `queued` olmamalı**; her çağrı zaten kendi `call-ended`'ini aldı.
+
+`batch-ended`'deki `status: "cancelled"`, **batch'in** iptal edildiği (aksiyon) anlamına gelir, her çağrının iptal edildiği değil; çoktan çalışmış çağrılar `counts.completed` / `counts.failed` altında sayılmaya devam eder ve iptal edilen her çağrı kendi `call-ended`'iyle raporlanır.
+
+:::tip Tek kesinti boşluğu
+Tek istisna, tüm denemelerden sonra **teslim edilemeyen** bir `call-ended`'tir (endpoint'in yeterince uzun kapalı kalıp [ölü işaretlenecek](#behavior) kadar); Vindy artık onu beklemez, dolayısıyla `batch-ended` geldiğinde o çağrının satırı sizde hâlâ `queued` kalabilir. Bunu saptamak çok basittir (`batch-ended`'den sonra hâlâ `queued` kalan her satır); yalnız o satırları kesin kaynak olan [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile mutabakata bağlarsınız. Sağlıklı bir endpoint bununla **hiç** karşılaşmaz ve batch'i **sıfır** ekstra API çağrısıyla mutabakata bağlar.
+:::
+
+:::caution Kendi eşzamanlılığını yönet
+Teslimat en az bir kezdir ve işleyicileriniz paralel çalışabilir. Durum güncellemelerinizi tekrarlara karşı güvenli yapın ve kayıtları `metadata` id'nize göre eşleştirin: aynı `call-ended`'i iki kez uygulamak hiçbir şeyi değiştirmemeli (`delivery_id` ile tekilleştirin) ve zaten terminal durumdaki bir satırı aynı duruma set etmek zararsızdır. İptal edilenler dâhil her çağrı kendi `call-ended`'i olarak geldiği için, eksik satırları sonradan toplu olarak tamamlamaya (bir `batch-ended` "süpürmesi"ne) hiç ihtiyacınız olmaz; dolayısıyla böyle bir toplu tamamlama ile geç gelen bir çağrı arasında yarış da oluşmaz.
 :::
 
 ## Davranış {#behavior}
 
 - **`2xx` dönün** — yaklaşık 15 saniye içinde. `2xx` dışı bir yanıt veya zaman aşımı, başarısız teslimat olarak değerlendirilir ve Vindy yeniden dener.
-- **Yeniden denemeler** — başarısız teslimatlar, artan beklemelerle (yaklaşık `30sn → 2dk → 10dk → 1sa`, yaklaşık ±%20 rastgele jitter ile) ve toplamda yaklaşık 5 denemeyle tekrarlanır; ardından teslimat "dead" (ölü) olarak işaretlenir.
-- **En az bir kez teslimat (at-least-once)** — olumsuz ağ koşullarında aynı olay birden çok kez gelebilir. **Tekrarları ayıklayın:** `delivery_id` üzerinden (yeniden denemelerde değişmez; ayrıca `X-Vindy-Delivery-Id` header'ında bulunur) — ya da `call-ended` için `call_id`, `batch-ended` için `batch_call_id` üzerinden.
-- **Sıra garantisi yok** — olaylar, çağrıların sona erme sırasından farklı bir sırada gelebilir.
+- **Yeniden denemeler** — başarısız teslimatlar, artan beklemelerle (yaklaşık `30sn → 2dk → 10dk → 1sa`, yaklaşık ±%20 rastgele jitter ile) ve toplamda yaklaşık 5 denemeyle tekrarlanır; ardından Vindy o teslimat için yeniden denemeyi bırakır.
+- **En az bir kez teslimat (at-least-once)** — olumsuz ağ koşullarında aynı olay birden çok kez gelebilir. Tekrarları şu değerlerden biriyle ayıklayın: `delivery_id` (yeniden denemelerde değişmez; ayrıca `X-Vindy-Delivery-Id` header'ında bulunur), `call-ended` için `call_id` ya da `batch-ended` için `batch_call_id`.
+- **Genel sıra garantisi yok** — olaylar, çağrıların sona erme sırasından farklı gelebilir; bu yüzden varış sırasına değil `call_id` / `batch_call_id`'ye göre eşleştirin. **İki istisna:** (1) bir batch'in `batch-ended`'i daima o batch'in **her** `call-ended`'inden **sonra** teslim edilir ("batch tamamlandı" garantisi; bkz. [`batch-ended`](#batch-ended)); (2) bir çağrının `recording-ready`'si daima o çağrının `call-ended`'inden **sonra** teslim edilir (çağrı-bazlı garanti; bkz. [`recording-ready`](#recording-ready)). (Tekrar-ayıklama yine geçerlidir; kalıcı olarak teslim edilemeyen bir `call-ended` her iki garantideki tek boşluktur; [`POST /v1/calls/batches/:batchId/calls`](get-batch-calls.md) ile mutabakat yapın.)
 - **Yalnızca herkese açık HTTPS** — webhook endpoint'i herkese açık bir `https` URL'si olmalıdır; özel, loopback ve bulut-metadata adresleri reddedilir (SSRF koruması).
-- **Ses kaydı bağlantısının güncelliği** — `data.call_recording.url`, gönderim anında üretilmiş ~24 saat geçerli bir bağlantıdır. Kalıcı olarak saklamayın; gerektiğinde taze bir bağlantı çekin — bkz. [Ses Kaydı Bağlantısı Al](get-recording-url.md).
-- **PII** — payload telefon numarası ve transcript içerebilir; bunu (yürürlükteki mevzuata uygun şekilde) buna göre işleyin ve saklayın.
+- **Ses kaydı bağlantısının güncelliği** — `data.call_recording.url`, gönderim anında üretilmiş ~24 saat geçerli bir bağlantıdır. Kalıcı olarak saklamayın; gerektiğinde yeni bir bağlantı çekin; bkz. [Ses Kaydı Bağlantısı Al](get-recording-url.md).
+- **Kişisel veri (PII)** — payload telefon numarası ve transcript içerebilir; bu veriyi yürürlükteki mevzuata uygun şekilde işleyin ve saklayın.
 
 :::tip Hızlı onaylayın, sonra işleyin
 Olayı güvenli biçimde kaydeder kaydetmez `2xx` dönün; ardından ağır işleri (ses kaydı indirme, sistemlerinizi güncelleme) eşzamansız (asenkron) olarak yapın. Bu, ~15 saniyelik pencerede kalmanızı sağlar ve gereksiz yeniden denemeleri önler.

@@ -9,9 +9,11 @@ import TabItem from '@theme/TabItem';
 
 # `GET /v1/phone-numbers`
 
-Şirketinize kayıtlı **arayan hatlarını** — giden bir toplu aramanın kendisinden yapılabileceği telefon numaralarını — döndürür. Birini seçip [`POST /v1/calls/bulk`](bulk-create-calls.md) ile çağrı başlatırken arayan olarak `phone_number_id` değerini gönderin.
+Bu uç, şirketinize kayıtlı **arayan numaralarını**, yani giden aramaları **hangi numaradan** başlatabileceğinizi belirleyen telefon numaralarını döndürür. Bunların her biri, Vindy sizin adınıza birini aradığında karşı tarafın telefonunda görünen numaradır.
 
-Yalnızca **giden arama için hazır** (provisioned) numaralar döner. Hesabınızda bulunan ama henüz giden arama için hazır olmayan bir numara burada görünmez.
+Tekil ([`POST /v1/calls`](create-call.md)) ya da toplu ([`POST /v1/calls/bulk`](bulk-create-calls.md)) bir giden arama başlatırken, bu listeden bir numara seçer ve onun `phone_number_id` değerini göndererek o aramanın arayan numarasını belirlersiniz.
+
+Listede yalnızca **giden aramaya hazır** numaralar yer alır. Şirketinizde kayıtlı olsa bile henüz giden aramaya hazırlanmamış bir numara burada görünmez.
 
 ---
 
@@ -22,7 +24,7 @@ GET https://api.vindy.ai/v1/phone-numbers
 Authorization: Bearer <api-key>
 ```
 
-Sorgu parametresi yoktur. Yanıt **sayfalanmaz** — kullanılabilir tüm arayan hatları tek çağrıda döner (en fazla 1000).
+Bu uç hiçbir sorgu parametresi almaz ve yanıt **sayfalanmaz**; kullanılabilir tüm arayan numaraları, en fazla 1000 tanesini tek çağrıda döndürür.
 
 ## Yanıt (200 OK)
 
@@ -48,15 +50,15 @@ Sorgu parametresi yoktur. Yanıt **sayfalanmaz** — kullanılabilir tüm arayan
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `data` | array | Telefon numarası öğeleri. |
-| `total` | int | `data` dizisinin uzunluğu. |
+| `data` | array | Şirketinizin arayan numaralarını, numara başına bir nesne olarak listeler. |
+| `total` | int | `data` dizisinde kaç öğe bulunduğunu belirtir. |
 
 **Telefon numarası öğesi**
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `phone_number_id` | string | Arayan hattın kalıcı, opak kimliği. [`POST /v1/calls/bulk`](bulk-create-calls.md) ile toplu giden çağrı başlatırken `phone_number_id` olarak gönderin. |
-| `phone_number` | string | Hattın E.164 biçimi (örneğin `+902323323389`). |
+| `phone_number_id` | string | Arayan numaranın kalıcı kimliğidir (içeriğini çözmeyin; anlamı olmayan opak bir değerdir). Tekil ([`POST /v1/calls`](create-call.md)) ya da toplu ([`POST /v1/calls/bulk`](bulk-create-calls.md)) bir giden çağrı başlatırken `phone_number_id` olarak gönderirsiniz. |
+| `phone_number` | string | Numaranın kendisidir; uluslararası E.164 biçiminde döner (örneğin `+902323323389`) ve aranan kişinin telefonunda görünecek numara budur. |
 
 ## Hatalar
 
@@ -67,13 +69,14 @@ Sorgu parametresi yoktur. Yanıt **sayfalanmaz** — kullanılabilir tüm arayan
 
 ## Notlar
 
-:::info Inbound ataması, outbound'u kısıtlamaz
-Bir telefon numarası, bir asistana **gelen (inbound)** yönlendirme için atanmış olabilir (böylece o numaraya gelen çağrılar o asistana ulaşır). Bu atamanın **giden (outbound) aramaya hiçbir etkisi yoktur**: burada dönen **herhangi bir** numara, **herhangi bir** asistanınızla yapılan bir toplu aramada arayan olarak kullanılabilir. Arayan hattı ve asistanı birbirinden bağımsız seçin.
+:::info Gelen (inbound) atama, giden (outbound) aramayı kısıtlamaz
+Bir numara, bir asistana **gelen (inbound) çağrılar** için atanmış olabilir; böyle bir atamada o numarayı arayanlar o asistana bağlanır. Ancak bu atama, **giden (outbound) aramaları etkilemez.** Bu listedeki **herhangi bir** numarayı, **herhangi bir** asistanla yaptığınız giden aramada (tekil ya da toplu) arayan numara olarak kullanabilirsiniz. Kısacası arayan numara ile asistanı birbirinden bağımsız seçersiniz.
 :::
 
-- Yalnızca giden arama için hazır numaralar döner. Beklediğiniz bir hat listede yoksa, henüz giden arama için hazır hâle getirilmemiştir.
-- `phone_number_id`, [`POST /v1/calls/bulk`](bulk-create-calls.md) isteğinin **zorunlu** `phone_number_id` alanında beklediği değerdir. Bilinmeyen veya şirketinize ait olmayan bir `phone_number_id`, orada `404 PHONE_NUMBER_NOT_FOUND` ile reddedilir; var olan ama giden arama için hazır olmayan bir hat ise `400 PHONE_NUMBER_NOT_USABLE` ile.
-- `phone_number_id` değerini opak bir string olarak ele alın — ayrıştırmayın ve numarayı ondan türetmeyin; numarayı `phone_number` alanından okuyun.
+- Numaralar en yeniden en eskiye sıralanır.
+- Listede yalnızca giden aramaya hazır numaralar yer alır. Beklediğiniz bir numara listede yoksa, henüz giden aramaya hazır hâle getirilmemiştir.
+- `phone_number_id`, hem [`POST /v1/calls`](create-call.md) hem de [`POST /v1/calls/bulk`](bulk-create-calls.md) isteğinin **zorunlu** `phone_number_id` alanında beklediği değerdir. Bilinmeyen ya da şirketinize ait olmayan bir `phone_number_id` orada `404 PHONE_NUMBER_NOT_FOUND` ile reddedilir; var olan ama giden aramaya hazır olmayan bir numara ise `400 PHONE_NUMBER_NOT_USABLE` ile geri çevrilir.
+- `phone_number_id`'yi **anlamı olmayan (opak) bir kimlik** gibi kullanın: içeriğini çözmeye çalışmayın ve telefon numarasını ondan çıkarmaya kalkmayın. Numaranın kendisini `phone_number` alanından okuyun.
 
 ## Örnekler
 

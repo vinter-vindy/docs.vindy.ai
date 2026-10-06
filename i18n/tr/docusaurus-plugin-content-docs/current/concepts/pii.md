@@ -6,7 +6,7 @@ sidebar_position: 5
 
 # Kişisel Veriler ve Telefon Numaraları
 
-Vindy API, çağrı verisini olduğu gibi döndürür. Bu verinin kendi tarafınızda yasalara uygun biçimde işlenmesi sizin sorumluluğunuzdadır.
+Vindy API, çağrı verisini **olduğu gibi** döndürür. Bu verinin kendi tarafınızda yasalara uygun biçimde işlenmesi sizin sorumluluğunuzdadır.
 
 ---
 
@@ -14,9 +14,11 @@ Vindy API, çağrı verisini olduğu gibi döndürür. Bu verinin kendi tarafın
 
 | Alan | İçerik |
 |---|---|
-| `call_phone_number` | Genellikle **E.164 biçiminde** ham telefon numarası (örneğin `+905551112233`). Maskelenmez. |
-| `call_transcript` | Müşteriyle yapılan görüşme; kişisel bilgi içerebilir. |
-| `call_structured_data` | Asistanınızın çıkardığı yapısal veri; hangi alanları yapılandırdıysanız onları içerir. |
+| `call_phone_number` | Karşı tarafın ham telefon numarasını taşır: giden çağrıda aranan, gelen çağrıda ise arayan numaradır; genellikle **E.164 biçimindedir** (örneğin `+905551112233`). **Maskelenmez.** |
+| `call_transcript` | Çağrının tam konuşma metnini taşır. Müşteri serbestçe konuştuğu için ad, adres, kimlik numarası gibi kişisel bilgiler içerebilir. |
+| `call_structured_data` | Asistanınızın görüşmeden çıkardığı yapısal veriyi taşır; yalnız sizin tanımladığınız alanları içerir, dolayısıyla içindeki kişisel verinin kapsamını siz belirlersiniz. |
+| `call_variables` | Gönderdiğiniz şablon değişkenlerini birebir geri döndürür (örneğin `{"first_name": "..."}`). **Maskelenmez.** |
+| `call_metadata` | Kendi belirlediğiniz opak metadata'yı birebir geri döndürür. **Maskelenmez.** |
 
 ---
 
@@ -24,9 +26,9 @@ Vindy API, çağrı verisini olduğu gibi döndürür. Bu verinin kendi tarafın
 
 Bu veriler kişisel veri (PII) içerebilir. Söz konusu veriyi kendi sisteminizde **yürürlükteki mevzuata uygun biçimde** (Türkiye'de KVKK, AB'de GDPR) saklayın ve işleyin.
 
-Kendi sistemlerinize kopyaladığınız verilere ilişkin saklama, silme ve anonimleştirme politikaları sizin sorumluluğunuzdadır. Pratik öneriler:
+Kendi sistemlerinize kopyaladığınız verilere ilişkin saklama, silme ve anonimleştirme politikaları **sizin sorumluluğunuzdadır**. Pratik öneriler:
 
-- Yalnızca gerçekten ihtiyaç duyduğunuz alanları senkronize etmeniz önerilir.
-- İndirdiğiniz transcript'lere ve ses kayıtlarına kendi saklama politikanızı uygulamanız önerilir.
-- Kayıt indirme bağlantıları geçicidir — varsayılan olarak yaklaşık 24 saat geçerlidir; bağlantıyı değil, indirdiğiniz ses dosyasını saklayın ve gerektiğinde taze bir bağlantı oluşturun. Bkz. [Ses Kaydı Bağlantısı Al](../api-reference/get-recording-url.md).
+- Yalnızca gerçekten ihtiyaç duyduğunuz alanları senkronize edin.
+- İndirdiğiniz transcript'lere ve ses kayıtlarına kendi saklama politikanızı uygulayın.
+- Kayıt indirme bağlantıları geçicidir; varsayılan olarak yaklaşık 24 saat geçerlidir. Bağlantıyı değil, indirdiğiniz ses dosyasını saklayın ve gerektiğinde yeni bir bağlantı oluşturun. Bkz. [Ses Kaydı Bağlantısı Al](../api-reference/get-recording-url.md).
 - Ses kayıtlarını kendi kullanıcılarınıza iletecekseniz, tek bir bağlantıyı paylaşmak yerine her kullanıcı için ayrı bir indirme bağlantısı oluşturun; bkz. [kayıt indirme rehberi](../guides/recording-retrieval.md).

@@ -7,13 +7,25 @@
     "message": "Kavramlar",
     "description": "The label for category Concepts in sidebar tutorialSidebar"
   },
+  "sidebar.tutorialSidebar.category.Concepts.link.generated-index.description": {
+    "message": "Vindy API'nin her yerde işinize yarayan temelleri: yanıt biçimi, çok-kiracılık ve kişisel veriler.",
+    "description": "The generated-index page description for category Concepts in sidebar tutorialSidebar"
+  },
   "sidebar.tutorialSidebar.category.API Reference": {
     "message": "API Referansı",
     "description": "The label for category API Reference in sidebar tutorialSidebar"
   },
+  "sidebar.tutorialSidebar.category.API Reference.link.generated-index.description": {
+    "message": "Her Vindy API ucu; istek ve yanıt ayrıntıları ile curl, Node.js ve Python örnekleriyle birlikte.",
+    "description": "The generated-index page description for category API Reference in sidebar tutorialSidebar"
+  },
   "sidebar.tutorialSidebar.category.Guides": {
     "message": "Rehberler",
     "description": "The label for category Guides in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Guides.link.generated-index.description": {
+    "message": "Sık yapılan işler için kopyala-yapıştır örnekler: artımlı senkronizasyon, kayıt indirme ve tarih aralığı sorguları.",
+    "description": "The generated-index page description for category Guides in sidebar tutorialSidebar"
   },
   "sidebar.tutorialSidebar.category.Calls": {
     "message": "Aramalar",

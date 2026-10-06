@@ -25,11 +25,8 @@ Authorization: Bearer <api-key>
 ## Rules
 
 - The plain key is visible **only** at creation time. If lost, generate a new one — recovery is not possible.
-- Revoked keys become invalid immediately, so all subsequent requests return 401.
-- Expired keys (`expires_at < now()`) are automatically invalid.
+- A key does **not** expire — it stays valid until you revoke it. Revoked keys become invalid immediately, so all subsequent requests return 401.
 - Each key is bound to a single company, so it **cannot** access another company's data. See [Multi-tenancy](concepts/multi-tenancy.md).
-- Do **not** put keys in logs, source code, or public repositories. Use environment variables or a secret manager.
-- Do **not** share keys over email, Slack, WhatsApp, etc. If a key may be compromised, revoke it immediately and create a new one.
 
 ---
 
@@ -39,7 +36,7 @@ Authorization: Bearer <api-key>
 |---|---|---|
 | `401` | `MISSING_AUTH_HEADER` | `Authorization` header is missing |
 | `401` | `INVALID_AUTH_FORMAT` | Doesn't follow `Bearer <api-key>` format |
-| `401` | `INVALID_API_KEY` | Key is invalid, expired, or revoked |
+| `401` | `INVALID_API_KEY` | Key is invalid or revoked |
 
 All error responses share the same JSON shape — see [Response Format](concepts/response-envelopes.md#error-envelope).
 
@@ -51,7 +48,7 @@ curl -i https://api.vindy.ai/v1/assistants
 
 ```json
 {
-  "message": "Authorization header is missing.",
+  "message": "Authorization header is required.",
   "extensions": {
     "code": "MISSING_AUTH_HEADER"
   }

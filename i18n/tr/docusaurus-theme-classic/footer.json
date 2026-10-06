@@ -48,7 +48,7 @@
     "description": "The label of footer link with label=Glossary linking to /docs/glossary"
   },
   "copyright": {
-    "message": "Copyright © 2026 Vindy. All rights reserved",
+    "message": "Telif Hakkı © 2026 Vindy. Tüm hakları saklıdır.",
     "description": "The footer copyright"
   }
 }

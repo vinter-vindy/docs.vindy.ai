@@ -28,11 +28,11 @@ Authorization: Bearer <api-key>
 
 | Parametre | Tür | Açıklama |
 |---|---|---|
-| `batchId` | string | Toplu aramanın kimliği — [`POST /v1/calls/bulk`](bulk-create-calls.md) yanıtındaki `batch_call_id`. |
+| `batchId` | string | Toplu aramanın kimliğidir; [`POST /v1/calls/bulk`](bulk-create-calls.md) yanıtındaki `batch_call_id` değeridir. |
 
 ## Yanıt (200 OK)
 
-Toplu arama özetini ve ayrıca `cancelled_now` değerini — bu isteğin az önce iptal ettiği kuyruktaki çağrı sayısını — döndürür.
+Toplu arama özetini, ayrıca bu isteğin az önce iptal ettiği kuyruktaki çağrı sayısını veren `cancelled_now` değerini döndürür.
 
 ```json
 {
@@ -53,27 +53,27 @@ Toplu arama özetini ve ayrıca `cancelled_now` değerini — bu isteğin az ön
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `batch_call_id` | string | İptal edilen toplu aramanın kimliği (istekte gönderdiğiniz `batchId`). |
-| `status` | string | Toplu aramanın iptal sonrası durumu. |
-| `total_count` | int | Toplu aramadaki toplam çağrı sayısı. |
-| `counts` | object | Durum bazında döküm; her değer bir tam sayıdır: `completed`, `failed`, `cancelled`, `pending`, `processing`. (`pending` = scheduled + pending, `processing` = in_progress.) |
-| `created_at` | ISO string | Toplu aramanın oluşturulduğu an (UTC, `+00:00`). |
-| `cancelled_now` | int | Bu isteğin az önce iptal ettiği kuyruktaki çağrı sayısı. |
+| `batch_call_id` | string | İptal edilen toplu aramayı tanımlar; istekte gönderdiğiniz `batchId` değeridir. |
+| `status` | string | Toplu aramanın iptal işleminden sonraki durumudur. Hâlâ çalışan bir toplu aramada `cancelled` olur; çoktan `completed` olmuş bir toplu arama ise `completed` kalır. |
+| `total_count` | int | Toplu aramadaki toplam çağrı sayısını verir. |
+| `counts` | object | Toplu aramanın çağrılarını durum bazında ayrıştırır; her değer bir tam sayıdır: `completed`, `failed`, `cancelled`, `pending`, `processing`. (`pending` = scheduled + pending, `processing` = in_progress.) |
+| `created_at` | ISO string | Toplu aramanın oluşturulduğu anı gösterir (UTC, `+00:00`). |
+| `cancelled_now` | int | Bu isteğin az önce iptal ettiği kuyruktaki çağrı sayısını verir. |
 
 ## Hatalar
 
 | Durum | Kod | Açıklama |
 |---|---|---|
-| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları. |
-| `404` | `RESOURCE_NOT_FOUND` | Toplu arama bulunamadı veya sizin şirketinize ait değil. |
+| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | İsteğin kimlik doğrulaması başarısız oldu. |
+| `404` | `RESOURCE_NOT_FOUND` | Toplu arama bulunamadı ya da başka bir şirkete aittir. |
 | `429` | `RATE_LIMITED` | Dakika-başı istek limiti aşıldı; `Retry-After` saniye sonra tekrar deneyin. |
 
 :::note Yalnızca kuyruktaki çağrılar etkilenir
 Bu endpoint, henüz başlamamış çağrıları durdurur. Halihazırda devam eden çağrılar tamamlanana kadar sürer, bitmiş çağrılar değişmez. Dönen `cancelled_now`, bu istekle tam olarak kaç çağrının durdurulduğunu belirtir. Aynı toplu arama üzerinde tekrar çağırırsanız güncel özet `cancelled_now: 0` ile döner.
 :::
 
-:::note Bir toplu aramayı iptal etmek tek bir `batch-ended` webhook'u üretir
-Bir webhook aboneliğiniz varsa, bir toplu aramayı iptal etmek `status: "cancelled"` ile tek bir [`batch-ended`](webhooks.md#batch-ended) olayı üretir. Bunun durdurduğu bireysel çağrılar tek tek `call-ended` ile **raporlanmaz** — hepsi o tek olaya toplanır; bu, büyük toplu aramalarda olay yağmurunu önler. Bunun yerine tekli bir çağrıyı iptal edip çağrı başına [`call-ended`](webhooks.md#call-ended) (`call_status: "cancelled"` ile) almak için [`POST /v1/calls/:callId/cancel`](cancel-call.md) kullanın.
+:::note Bir toplu aramayı iptal etmek çağrı başına `call-ended` artı tek bir `batch-ended` üretir
+Bir webhook aboneliğiniz varsa, bir toplu aramayı iptal etmek durdurulan **her** kuyruk çağrısı için birer [`call-ended`](webhooks.md#call-ended) (her biri `call_status: "cancelled"`, minimal gövde ve birebir eşleştirebilmeniz için aynen geri dönen `call_metadata`/`call_variables` ile), **artı** `status: "cancelled"` taşıyan tek bir [`batch-ended`](webhooks.md#batch-ended) üretir. `batch-ended`, bu `call-ended`'lerin hepsinden sonra, her zaman **en son** gelir. Tekli bir çağrıyı [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile iptal etmek de o çağrı için aynı şekilde davranır. Bkz. [iptaller webhook'lara nasıl yansır](webhooks.md#batch-ended).
 :::
 
 ## Örnekler

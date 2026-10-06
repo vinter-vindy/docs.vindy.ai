@@ -16,7 +16,7 @@ No. The plain key is shown only once at creation. Create a new key and revoke th
 
 ## Why doesn't a call appear in `POST /v1/calls/list`?
 
-The endpoint only returns calls that reached a **terminal** state — `completed` or `failed` — with the recording transfer settled. A call that just ended may take a short while to appear. Calls still in progress never appear, and browser (WebRTC) calls never appear in the API at all. See [why in-progress calls don't appear](api-reference/list-calls/index.md).
+The endpoint only returns calls that reached a **terminal** state — `completed` or `failed`; a `completed` call also waits until its **post-call analysis has finished**, so `call_structured_data` is final. A call that just ended may take a short while to appear. Calls still in progress never appear, and browser (WebRTC) calls never appear in the API at all. (The audio recording is delivered separately — it isn't required for the call to appear.) See [why in-progress calls don't appear](api-reference/list-calls/index.md).
 
 ## A recording shows in the Vindy panel but the API says `available: false`. Bug?
 
@@ -24,11 +24,11 @@ Expected. The panel may display recordings from temporary sources; the API only 
 
 ## `call_recording.available` is `false`. Should I retry?
 
-No — that state is **terminal**. Either no recording was produced, or its transfer permanently failed. See [recording retrieval](guides/recording-retrieval.md).
+It depends. Right after a call ends the recording may still be **transferring** — a temporary `false` that becomes available shortly (re-fetch, or subscribe to the [`recording-ready` webhook](api-reference/webhooks.md#recording-ready)). It's **terminal** only when no recording was produced or its transfer permanently failed. To tell them apart, call [`GET /v1/calls/:callId/recording-url`](api-reference/get-recording-url.md): `409` = still processing (retry soon), `404` = none will ever exist. See [recording retrieval](guides/recording-retrieval.md).
 
 ## Is it safe to retry requests?
 
-Yes for reads. All `GET` endpoints are idempotent, and `POST /v1/calls/list` is a **query, not a mutation** — it has no side effects and is safe to retry. Upsert calls on your side (UNIQUE constraint on `call_id`) and retries become harmless.
+Yes for reads. All `GET` endpoints are safe to repeat, and `POST /v1/calls/list` only reads data — it changes nothing, so retrying it is always safe. Insert-or-update calls on your side (a UNIQUE constraint on `call_id`) and retries become harmless.
 
 Write requests are different. `POST /v1/calls/bulk` creates calls, and there is **no server-side lock** that blocks a concurrent or repeated submission — nothing rejects a second call with a "batch in progress" error. So blindly retrying it can start a **second batch and call people twice**. Guard against this on your side:
 
@@ -43,7 +43,7 @@ No more than once per minute. For continuous syncing, use `date_from` with your 
 
 ## Is there a rate limit?
 
-Yes — **300 requests per minute per API key** by default. Going over returns a `429` with the `RATE_LIMITED` code, plus a `Retry-After` header (also in `extensions.retry_after`) telling you how many seconds to wait before retrying. Back off and retry after that window. See [Error Codes](errors.md).
+Yes — **300 requests per minute per company (organization)** by default, **shared across all of that company's API keys** (the limit is counted per company, not per key), and tunable per company. Going over returns a `429` with the `RATE_LIMITED` code, plus a `Retry-After` header (also in `extensions.retry_after`) telling you how many seconds to wait before retrying. Back off and retry after that window. See [Error Codes](errors.md).
 
 ## Why do my date filters fail with 400?
 

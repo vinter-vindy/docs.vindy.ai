@@ -9,14 +9,14 @@ import TabItem from '@theme/TabItem';
 
 # `POST /v1/calls/batches/:batchId/calls`
 
-Tek bir toplu aramaya — [`POST /v1/calls/bulk`](bulk-create-calls.md) yanıtındaki `batch_call_id` değerine — ait çağrıları cursor tabanlı sayfalama ile döndürür. Her çağrı nesnesi, [`POST /v1/calls/list`](list-calls/index.md) içindeki bir öğeyle **aynı yapıdadır**.
+Tek bir toplu aramaya ([`POST /v1/calls/bulk`](bulk-create-calls.md) yanıtındaki `batch_call_id`) ait çağrıları cursor tabanlı sayfalama ile döndürür. Her çağrı nesnesi, [`POST /v1/calls/list`](list-calls/index.md) içindeki bir öğeyle **aynı yapıdadır**.
 
-Bu endpoint, toplu aramadaki **her çağrıyı**, hangi aşamada olursa olsun döndürür — yalnızca bitenleri değil — böylece bu endpoint'i yoklayarak (poll) bir toplu aramanın sıradan bitişe ilerleyişini izleyebilirsiniz.
+Bu endpoint, toplu aramadaki **her çağrıyı** (yalnızca bitenleri değil) hangi aşamada olursa olsun döndürür; böylece bu endpoint'i yoklayarak (poll) bir toplu aramanın tamamlanmaya doğru ilerleyişini izleyebilirsiniz.
 
-Çağrıları Listele gibi bu da küçük bir JSON gövdesiyle yapılan bir `POST` isteğidir: cursor opak olduğundan query string yerine gövdede taşınır. Çağrıları Listele'den farklı olarak **tarih filtresi almaz** — tek bir toplu aramayla sınırlıdır ve kendi cursor'una sahiptir. Çağrılar tamamlandıkça sonuçları sayfalamak ya da toplu arama bittikten sonra tüm kümeyi çekmek için kullanın.
+Çağrıları Listele gibi bu da küçük bir JSON gövdesiyle yapılan bir `POST` isteğidir: cursor opak olduğundan query string yerine gövdede taşınır. Çağrıları Listele'den farklı olarak **tarih filtresi almaz**; tek bir toplu aramayla sınırlıdır ve kendi cursor'una sahiptir. Çağrılar tamamlandıkça sonuçları sayfalamak ya da toplu arama bittikten sonra tüm kümeyi çekmek için bu endpoint'i kullanırsınız.
 
 :::info Çağrıları Listele'den daha geniş görünürlük
-[`POST /v1/calls/list`](list-calls/index.md) yalnızca **sonlanmış** çağrıları (`completed` veya `failed`) döndürürken, bu endpoint toplu aramadaki **her çağrıyı, hangi aşamada olursa olsun** döndürür. Kuyruktaki ve devam eden çağrılar kuyruk `call_status`'üyle (`pending`, `scheduled`, `in_progress` ya da `cancelled`) ve `null` konuşma/kayıt/zaman alanlarıyla; sonlanmış çağrılar ise tam nesneyle döner. Sonuçlar **en yeniden başlayarak** (oluşturulma zamanına göre) sıralanır. Bir toplu aramayı sıradan bitişe kadar yoklayabilmenizi (poll) sağlayan da budur.
+[`POST /v1/calls/list`](list-calls/index.md) yalnızca **sonlanmış** çağrıları (`completed` veya `failed`) döndürürken, bu endpoint toplu aramadaki **her çağrıyı, hangi aşamada olursa olsun** döndürür. Kuyruktaki ve devam eden çağrılar kuyruk `call_status`'üyle (`pending`, `scheduled`, `in_progress` ya da `cancelled`) ve `null` konuşma/kayıt/zaman alanlarıyla; sonlanmış çağrılar ise tam nesneyle döner. Sonuçlar **en yeniden başlayarak** (oluşturulma zamanına göre) sıralanır. Bir toplu aramayı tamamlanana kadar yoklayabilmenizi (poll) sağlayan da budur.
 :::
 
 ---
@@ -29,6 +29,7 @@ Authorization: Bearer <api-key>
 Content-Type: application/json
 
 {
+  "status": "completed",
   "limit": 100,
   "cursor": null
 }
@@ -38,16 +39,30 @@ Content-Type: application/json
 
 | Parametre | Tür | Açıklama |
 |---|---|---|
-| `batchId` | string | Toplu aramanın kimliği — [`POST /v1/calls/bulk`](bulk-create-calls.md) yanıtındaki `batch_call_id`. |
+| `batchId` | string | Toplu aramanın kimliğidir; [`POST /v1/calls/bulk`](bulk-create-calls.md) yanıtındaki `batch_call_id` değeridir. |
 
 ## Gövde parametreleri
 
 | Alan | Tür | Zorunlu | Varsayılan | Açıklama |
 |---|---|---|---|---|
-| `limit` | int | hayır | `200` | Bu sayfadaki azami öğe sayısı. Aralık: 1–500. Varsayılanı kullanmak için `null` gönderin veya alanı atlayın. |
-| `cursor` | string | hayır | — | Önceki bir `next_cursor` değerinden gelen opak cursor. İlk istekte göndermeyin. |
+| `limit` | int | hayır | `200` | Bu sayfada kaç çağrı alacağınızı belirlersiniz (1–500). Varsayılanı (200) kullanmak için alanı atlar ya da `null` gönderirsiniz. |
+| `cursor` | string | hayır | — | Bir önceki sayfadan dönen opak `next_cursor` değerini, sonraki sayfayı almak için buraya geri gönderirsiniz. İlk istekte göndermezsiniz. |
+| `status` | string | hayır | — | Sayfayı yalnızca belirli bir `call_status`'e sahip çağrılarla daraltmak için bunu gönderirsiniz. Bu endpoint bir toplu aramanın çağrılarını **her** aşamada döndürdüğü için altı değerin hepsi geçerlidir: `completed`, `failed`, `cancelled`, `pending`, `scheduled`, `in_progress`. Filtre, çağrının görüntülenen `call_status`'üne göre çalışır. Aranıp da başarısız olan bir çağrı, kuyruktan çıkmış olsa bile `completed` değil `failed`'dir. Filtre uygulanmasını istemezseniz alanı atlarsınız. Geçersiz değer → `400 VALIDATION_FAILED`. |
 
-Gövde opsiyoneldir — ilk sayfayı varsayılan limitle almak için `{}` (veya boş) gönderebilirsiniz.
+Gövde opsiyoneldir; ilk sayfayı varsayılan limitle almak için `{}` (ya da hiçbir şey) gönderebilirsiniz.
+
+:::note Status'e göre filtreleme
+`status` sayfayı tek bir `call_status`'e daraltır; cursor buna bağlanır, bu yüzden sayfalarken `status`'ü değiştirmeyin (her filtre gibi onu değiştirmek de yeni bir gezinme gerektirir; aşağıdaki cursor notuna bakın). Her status için kaç öğe bekleyeceğinizi [toplu arama özetindeki](get-batch.md) `counts` söyler.
+
+Her `call_status` değeri şu anlama gelir:
+
+- `completed` — çağrı bağlandı ve başarıyla tamamlandı.
+- `failed` — çağrı yapıldı ama başarılı olmadı (cevap yok, meşgul, reddedildi veya hata).
+- `cancelled` — çağrı, aranmadan önce kuyruktan iptal edildi.
+- `pending` — kuyrukta, aranma sırasını bekliyor.
+- `scheduled` — gelecekteki bir `scheduled_at` zamanı için kuyrukta, henüz zamanı gelmedi.
+- `in_progress` — şu anda aranıyor ya da görüşme sürüyor.
+:::
 
 ## Yanıt (200 OK)
 
@@ -119,30 +134,30 @@ Gövde opsiyoneldir — ilk sayfayı varsayılan limitle almak için `{}` (veya 
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `batch_call_id` | string | Sorguladığınız toplu arama (yolda gönderdiğiniz `batchId`). |
-| `status` | string | Toplu aramanın güncel durumu — `active`, `completed` veya `cancelled`. |
-| `calling_window` | object | Her zaman bulunur. Bu toplu aramaya uygulanan arama penceresi (ayarlanan değeri ya da platform varsayılanını yansıtır). |
-| `data` | array | Bu sayfadaki çağrı nesneleri — bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı yapı**. |
-| `pagination` | object | Standart [sayfalama nesnesi](list-calls/filtering-pagination.md#paginated) — üyeleri aşağıda. |
+| `batch_call_id` | string | Sorguladığınız toplu aramayı tanımlar; yolda gönderdiğiniz `batchId` değeridir. |
+| `status` | string | Toplu aramanın güncel durumudur: `active`, `completed` ya da `cancelled` değerlerinden biridir. |
+| `calling_window` | object | Bu toplu aramaya uygulanan arama penceresidir. Arama pencereleri özelliğinden önce oluşturulmuş toplu aramalarda veya sayfada hiç çağrı olmadığında `null` döner. |
+| `data` | array | Bu sayfadaki çağrı nesneleridir; bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı yapıdadır**. |
+| `pagination` | object | Standart [sayfalama nesnesidir](list-calls/filtering-pagination.md#paginated); üyeleri aşağıda listelenir. |
 
 **`pagination`**
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `next_cursor` | string \| null | Sonraki sayfa için opak cursor. `has_more` `false` iken `null`. |
-| `has_more` | boolean | Bu sayfadan sonra başka sayfa kalıp kalmadığı. |
-| `limit` | int | Bu yanıta uygulanan sayfa boyutu. |
+| `next_cursor` | string \| null | Sonraki sayfanın opak cursor'ını taşır. `has_more` `false` olduğunda `null` olur. |
+| `has_more` | boolean | Bu sayfadan sonra başka sayfa kalıp kalmadığını belirtir. |
+| `limit` | int | Bu yanıta uygulanan sayfa boyutunu verir. |
 
 **Çağrı nesnesi**
 
-`data` içindeki her öğe, bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı alanlara** sahiptir — `call_id` (bir dize), `call_status` (sonlanmış çağrılar için `completed` veya `failed`, henüz bitmemiş çağrılar için `pending`/`scheduled`/`in_progress`/`cancelled` gibi bir kuyruk durumu), `call_transcript`, `call_structured_data`, `call_metadata`, `call_recording`, serbest biçimli `call_end_reason` dizesi ve diğerleri. Kuyruktaki ve devam eden çağrılar sonlanana dek konuşma/kayıt/zaman alanları için `null` taşır. Bu alanları burada yeniden okumak yerine tam [Çağrıları Listele alan referansına](list-calls/index.md#yanıt-alanları) bakabilirsiniz.
+`data` içindeki her öğe, bir [Çağrıları Listele](list-calls/index.md#yanıt-alanları) öğesiyle **aynı alanlara** sahiptir: `call_id` (bir dize), `call_status` (sonlanmış çağrılar için `completed` veya `failed`, henüz bitmemiş çağrılar için `pending`/`scheduled`/`in_progress`/`cancelled` gibi bir kuyruk durumu), `call_transcript`, `call_structured_data`, `call_metadata`, `call_recording`, serbest biçimli `call_end_reason` dizesi ve diğerleri. Kuyruktaki ve devam eden çağrılar sonlanana dek konuşma/kayıt/zaman alanları için `null` taşır. Bu alanları burada yeniden okumak yerine tam [Çağrıları Listele alan referansına](list-calls/index.md#yanıt-alanları) bakabilirsiniz.
 
 :::note Cursor opaktır — aynı `batchId` ile sayfalayın
-`cursor` opaktır: onu oluşturmayın veya değiştirmeyin. Sonraki sayfayı almak için **aynı `batchId` ile** gövdede `cursor` olarak geri gönderin. `has_more` `false` olduğunda durun (o noktada `next_cursor` `null` olur). Bu cursor hem bu endpoint'e **hem de** bu toplu aramaya özeldir: [`POST /v1/calls/list`](list-calls/index.md) cursor'ını ya da başka bir toplu aramanın cursor'ını burada kullanmak `400 MALFORMED_CURSOR` ile reddedilir — bunun yerine yeni bir gezinme başlatın.
+`cursor` opaktır; onu oluşturmayın veya değiştirmeyin. Sonraki sayfayı almak için **aynı `batchId` ile** gövdede `cursor` olarak geri gönderin. `has_more` `false` olduğunda durun (o noktada `next_cursor` `null` olur). Bu cursor bu endpoint'e, bu toplu aramaya **ve** kullandığınız `status` filtresine özeldir. [`POST /v1/calls/list`](list-calls/index.md) cursor'ını, başka bir toplu aramanın cursor'ını ya da `status` filtresini değiştirdikten sonra eski cursor'ı burada kullanırsanız `400 MALFORMED_CURSOR` ile reddedilir; bunun yerine yeni bir gezinme başlatırsınız.
 :::
 
 :::note Burada tarih filtresi yok
-Bu endpoint `date_from` / `date_to` almaz — tek bir toplu aramayla sınırlıdır. Tarih aralığı filtreleme yalnızca [`POST /v1/calls/list`](list-calls/index.md) endpoint'inde bulunur. Bkz. [Filtreleme ve Sayfalama](list-calls/filtering-pagination.md).
+Bu endpoint `date_from` / `date_to` almaz; tek bir toplu aramayla sınırlıdır. Tarih aralığı filtreleme yalnızca [`POST /v1/calls/list`](list-calls/index.md) endpoint'inde bulunur. Bkz. [Filtreleme ve Sayfalama](list-calls/filtering-pagination.md).
 :::
 
 ## Hatalar
@@ -151,19 +166,19 @@ Bu endpoint `date_from` / `date_to` almaz — tek bir toplu aramayla sınırlıd
 |---|---|---|
 | `400` | `VALIDATION_FAILED` | `limit` 1–500 aralığının dışında ya da bir gövde alanı geçersiz tipte. Bilinmeyen/fazla alanlar **yok sayılır**, reddedilmez. |
 | `400` | `INVALID_CURSOR` | Cursor boş veya çözümlenemiyor. |
-| `400` | `MALFORMED_CURSOR` | Cursor çözümlenemiyor ya da farklı bir endpoint veya toplu arama için üretilmiş. |
-| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | Kimlik doğrulama hataları. |
-| `404` | `RESOURCE_NOT_FOUND` | Toplu arama bulunamadı veya başka bir şirkete ait. |
+| `400` | `MALFORMED_CURSOR` | Cursor çözümlenemiyor ya da farklı bir endpoint, toplu arama veya `status` filtresi için üretilmiş. |
+| `401` | `MISSING_AUTH_HEADER`, `INVALID_AUTH_FORMAT`, `INVALID_API_KEY` | İsteğin kimlik doğrulaması başarısız oldu. |
+| `404` | `RESOURCE_NOT_FOUND` | Toplu arama bulunamadı ya da başka bir şirkete aittir. |
 | `429` | `RATE_LIMITED` | Dakika-başı istek limiti aşıldı; `Retry-After` saniye sonra tekrar deneyin. |
 
 :::note Varlık bilgisi sızdırılmaz
-Başka bir şirkete ait bir `batchId`, var olmayan bir kimlikle aynı `404 RESOURCE_NOT_FOUND` yanıtını döndürür — [`GET /v1/calls/:callId`](get-call.md) ile aynı kural. Bkz. [Çoklu kiracılık](../concepts/multi-tenancy.md).
+Başka bir şirkete ait bir `batchId`, var olmayan bir kimlikle aynı `404 RESOURCE_NOT_FOUND` yanıtını döndürür; bu, [`GET /v1/calls/:callId`](get-call.md) ile aynı kuraldır. Bkz. [Çoklu kiracılık](../concepts/multi-tenancy.md).
 :::
 
 :::tip Toplu aramanın tamamının ne zaman bittiğini öğrenmek
-Toplu arama **kendi kendine bittiğinde** `status` alanı `completed` olur — tüm çağrılar sonlanmış bir duruma ulaşmıştır. Durum bazında döküm için [`batch-ended` webhook'unu](webhooks.md#batch-ended) kullanın veya buradaki `status` alanını `completed` olana kadar sorgulayın.
+Toplu arama **kendi kendine bittiğinde** `status` alanı `completed` olur; tüm çağrılar sonlanmış bir duruma ulaşmıştır. Durum bazında döküm için [`batch-ended` webhook'unu](webhooks.md#batch-ended) kullanın veya buradaki `status` alanını `completed` olana kadar sorgulayın.
 
-Toplu aramayı [iptal ederseniz](cancel-batch.md) `status` hemen `cancelled` olur (hâlihazırda devam eden çağrılar tamamlanana kadar sürer). Toplu aramayı iptal etmek, `status: "cancelled"` ile tek bir [`batch-ended` webhook'u](webhooks.md#batch-ended) gönderir; toplu aramanın bireysel çağrıları tek tek `call-ended` ile **raporlanmaz**, bu yüzden bunları bu endpoint üzerinden sayfalayarak veya özetteki `counts.cancelled` ile mutabakata getirin.
+Toplu aramayı [iptal ederseniz](cancel-batch.md) `status` hemen `cancelled` olur (hâlihazırda devam eden çağrılar tamamlanana kadar sürer). Toplu aramayı iptal etmek, durdurulan her kuyruk çağrısı için birer [`call-ended` webhook'u](webhooks.md#call-ended) (her biri `call_status: "cancelled"`, `call_metadata`'nız aynen geri dönmüş olarak) artı en sonda gelen `status: "cancelled"` taşıyan tek bir [`batch-ended` webhook'u](webhooks.md#batch-ended) üretir. İptal edilen her çağrıyı burada da görebilirsiniz (`status: "cancelled"` ile filtreleyin) ya da özetteki `counts.cancelled` değerini okuyabilirsiniz.
 :::
 
 ## Örnekler
@@ -248,7 +263,7 @@ if page:
 
 ### Tüm sayfaları gezme
 
-`next_cursor` değerini — aynı `batchId` ile — `cursor` olarak geri gönderin; `has_more` `false` olana kadar devam edin.
+`next_cursor` değerini (aynı `batchId` ile) `cursor` olarak geri gönderin; `has_more` `false` olana kadar devam edin.
 
 <Tabs groupId="lang">
 <TabItem value="curl" label="curl">
