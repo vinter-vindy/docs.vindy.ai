@@ -78,10 +78,10 @@ This list only ever returns **terminal** calls (`completed` and `failed`). A cal
 - **One specific call:** fetch it by id with [`GET /v1/calls/:callId`](../get-call.md). That endpoint returns a call in **any** state, including `pending`, `scheduled`, `in_progress`, and `cancelled`.
 - **A whole batch:** list it with [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md). That endpoint returns **all** of a batch's statuses, not just the terminal ones.
 
-The `status` filter spans all six values because these three endpoints share it. On this list, only `completed` and `failed` can ever match.
+The `status` filter spans all six values because these three endpoints share it. On this list, only `completed` and `failed` can ever match; the other four queue statuses return an empty page here.
 :::
 
-**Combining filters.** `assistant_id`, `call_bound_type`, `status`, and the date range are independent — pass any subset and they combine (logical AND). Omit them all to scan every terminal call your company has.
+**Combining filters.** `assistant_id`, `call_bound_type`, `status`, and the date range are independent filters — pass any combination and a call must satisfy all of them to be returned (logical AND). Omit them all to scan every terminal call your company has.
 
 **Validation rules:**
 

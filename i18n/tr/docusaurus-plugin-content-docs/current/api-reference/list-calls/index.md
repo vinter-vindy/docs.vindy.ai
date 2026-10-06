@@ -73,15 +73,15 @@ Tüm alanlar **isteğe bağlıdır**. Şirketinizin sonlanmış tüm çağrılar
 Bu listede yalnızca `completed` ve `failed` görünür; diğer dördü kuyruk durumudur ve aşağıdaki notta ele alınır.
 
 :::note Bekleyen, süren ve iptal çağrıları nerede görünür?
-Bu liste her zaman yalnızca **sonlanmış** çağrıları (`completed` ve `failed`) döndürür. Hâlâ kuyrukta bekleyen, ileri tarihe planlanmış, süren ya da aranmadan iptal edilmiş bir çağrı burada hiç görünmez; bu statülerden birini isterseniz de boş sayfa alırsınız. Bu çağrılara ulaşmak için diğer iki uçtan birini kullanın:
+Bu liste **yalnızca sonlanmış** çağrıları (`completed` ve `failed`) döndürür. Henüz kuyrukta bekleyen, ileri bir tarihe planlanmış, hâlâ süren ya da aranmadan iptal edilmiş bir çağrı bu listede yer almaz; bu durumlardan birini `status` filtresinde isteseniz bile yanıt boş bir sayfa olur. Bu çağrılara şu iki uçtan ulaşırsınız:
 
-- **Tek bir çağrı:** id ile [`GET /v1/calls/:callId`](../get-call.md) uçundan çekin; bu uç, `pending`, `scheduled`, `in_progress` ve `cancelled` dahil çağrıyı **her** durumda döndürür.
-- **Bütün bir toplu arama:** [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) ile listeleyin; bu uç bir toplu aramanın yalnızca sonlanmışlarını değil, **tüm** statülerini döndürür.
+- **Tek bir çağrı için:** o çağrıyı kimliğiyle [`GET /v1/calls/:callId`](../get-call.md) ile çekin; bu uç çağrıyı `pending`, `scheduled`, `in_progress` ve `cancelled` dahil **her durumda** döndürür.
+- **Bütün bir toplu arama için:** toplu aramayı [`POST /v1/calls/batches/:batchId/calls`](../get-batch-calls.md) ile listeleyin; bu uç bir toplu aramanın yalnızca sonlanmış çağrılarını değil, **her durumdaki** çağrılarını döndürür.
 
-Bu üç uç `status` filtresini paylaştığı için bu filtre, altı olası değerin tamamını kapsar; bu listede ise yalnızca `completed` ve `failed` eşleşebilir.
+`status` filtresi bu üç uçta ortaktır; bu nedenle altı değerin tamamını kabul eder. Ancak bu listede yalnızca `completed` ve `failed` bir sonuçla eşleşir; kalan dört kuyruk durumu boş bir sayfa döndürür.
 :::
 
-**Filtreleri birleştirme.** `assistant_id`, `call_bound_type`, `status` ve tarih aralığı birbirinden bağımsızdır. Herhangi bir alt kümesini gönderebilirsiniz; hepsi birlikte çalışır (mantıksal VE). Şirketinizin tüm sonlanmış çağrılarını taramak için hepsini boş bırakın.
+**Filtreleri birleştirme.** `assistant_id`, `call_bound_type`, `status` ve tarih aralığı birbirinden bağımsız filtrelerdir. Bunlardan dilediğinizi tek başına ya da birlikte gönderebilirsiniz; yanıtta, gönderdiğiniz filtrelerin **hepsini birden** sağlayan çağrılar döner (VE mantığı). Şirketinizin tüm sonlanmış çağrılarını baştan sona taramak için hiçbirini göndermeyin.
 
 **Doğrulama kuralları:**
 
