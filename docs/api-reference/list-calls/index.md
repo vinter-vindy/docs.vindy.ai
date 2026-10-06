@@ -56,8 +56,8 @@ Every field is **optional** — send an empty body to page through all of your c
 | `assistant_id` | string (UUID) | — | Send this to fetch only the calls handled by one assistant; get its id from [`GET /v1/assistants`](../list-assistants.md). Omit it to get calls from every assistant. |
 | `call_bound_type` | string | — | Send `inbound` or `outbound` to narrow calls by direction. Any other value, or omitting it, applies no direction filter. |
 | `status` | string | — | Send this to narrow the page to a single `call_status`. The meaningful values here are `completed` and `failed`; the four queue statuses are accepted but return an **empty page** (see the note below). Omit it for no status filter. An invalid value → `400 VALIDATION_FAILED`. |
-| `date_from` | string (`YYYY-MM-DD`) | — | Narrows the list to calls whose **start time** falls on or after this day. The value is a whole calendar day, included in full: `date_from = 2026-05-23` means from `2026-05-23 00:00` in Europe/Istanbul onward. Omit it to scan from your earliest call. See [Filtering & Pagination](filtering-pagination.md). |
-| `date_to` | string (`YYYY-MM-DD`) | — | Narrows the list to calls whose **start time** falls on or before this day, the whole day included: `date_to = 2026-05-23` means up to `2026-05-23 23:59:59` in Europe/Istanbul (i.e. before `2026-05-24 00:00`). Omit it to include everything up to now; `date_from` later than `date_to` is rejected. See [Filtering & Pagination](filtering-pagination.md). |
+| `date_from` | string (`YYYY-MM-DD`) | — | `date_from` is the **lower bound** of the date range, a day you send as `YYYY-MM-DD`. The list is narrowed to calls whose **start time** is on or after that date. The day you send is included in full; the bound is that day's `00:00` in Europe/Istanbul. Example: `date_from: "2026-05-23"` → from 23 May 2026 `00:00` (Europe/Istanbul) onward. Omit it to apply no lower bound (scan back to your earliest call). See [Filtering & Pagination](filtering-pagination.md). |
+| `date_to` | string (`YYYY-MM-DD`) | — | `date_to` is the **upper bound** of the date range, a day you send as `YYYY-MM-DD`. The list is narrowed to calls whose **start time** is on or before that date. The day you send is included in full; the bound is the end of that day in Europe/Istanbul (`23:59:59`, i.e. just before the next day's `00:00`). Example: `date_to: "2026-05-23"` → through the end of 23 May 2026 (Europe/Istanbul). Omit it to apply no upper bound (include calls up to now). Sending `date_from` later than `date_to` is rejected with `400`. See [Filtering & Pagination](filtering-pagination.md). |
 | `limit` | int | `200` | Sets how many calls come back per page (1–500). Omit it or send `null` to use the default of 200. |
 | `cursor` | string | — | The opaque `next_cursor` from your previous page, sent back to fetch the next one. Omit it on the first request. |
 
@@ -184,9 +184,9 @@ The step-by-step walk, the full parameter reference, accepted date formats, and 
 ```
 
 :::note Failed calls are included too
-The list returns `failed` calls as well as `completed` ones — not only successful conversations. A call that never connected (for example a `failed` no-answer) has no conversation or audio, so its time-based fields are `null` and `call_recording.available` is `false`. Your code should tolerate these nulls.
+This list returns `failed` calls as well as `completed` ones, not only successful conversations. A call that never connected (for example a no-answer `failed` call) has no conversation and no recording, so its time fields (`call_started_at`, `call_ended_at`, `call_duration_seconds`) come back `null` and `call_recording.available` is `false`. Handle these fields as possibly null.
 
-Note that `date_from` / `date_to` match on a call's **start time**, falling back to its **creation time** for a call that never connected — so `no_answer` / `failed` calls are **included** in date-filtered results too.
+The `date_from` / `date_to` filters match on a call's **start time**, falling back to its **creation time** for a call that never started. That way calls which never connected — including `no_answer` / `failed` ones — still fall inside the date window instead of being dropped, which keeps incremental sync over a date range safe.
 
 ```json
 {
@@ -231,13 +231,13 @@ Note that `date_from` / `date_to` match on a call's **start time**, falling back
 | `call_assistant_name` | string \| null | Gives that assistant's display name. It is `null` on the rare occasion the name can't be resolved. |
 | `call_phone_number` | string \| null | Holds the other party's number on the call: the number dialed on an outbound call, or the caller's number on an inbound one, usually in E.164 format. It is `null` when the number isn't available, as with an anonymous inbound caller. |
 | `call_bound_type` | `inbound` \| `outbound` | Tells you the call's direction: `inbound` means the customer called you, and `outbound` means the assistant placed the call. It is never `null`. |
-| `call_started_at` | ISO 8601 (UTC) \| null | Marks the moment the call actually started, written with a `+00:00` offset (for example `2026-05-15T10:30:00+00:00`). Parse it with a real ISO 8601 parser rather than assuming a `Z` suffix or a fixed millisecond precision. It is `null` if the call never connected. |
-| `call_ended_at` | ISO 8601 (UTC) \| null | Marks the moment the call ended, in the same format. It is `null` if the call never connected. |
+| `call_started_at` | ISO 8601 (UTC) \| null | Marks the moment the call actually started, written with a `+00:00` offset (for example `2026-05-15T10:30:00+00:00`). Parse it with a real ISO 8601 parser rather than assuming a `Z` suffix or a fixed millisecond precision. It is `null` when the call never connected to the other party — for example a system error, no answer, or a busy line. |
+| `call_ended_at` | ISO 8601 (UTC) \| null | Marks the moment the call ended, in the same format. It is `null` when the call never connected to the other party. |
 | `call_created_at` | ISO 8601 (UTC) | Marks the moment we created the call record, in the same format. |
-| `call_duration_seconds` | int \| null | Tells you how long the call lasted, in seconds. It is `null` when the call never connected, as with a no-answer `failed` call. |
+| `call_duration_seconds` | int \| null | Tells you how long the call lasted, in seconds. It is `null` when the call never connected to the other party, as with a no-answer `failed` call. |
 | `call_end_reason` | string \| null | Gives the raw reason the call ended, returned to you as a free-form string without any mapping. See [End reasons](#end-reasons) below. |
 | `call_transcript` | string \| null | Holds the plain-text transcript of the conversation. Each line reads `[HH:MM:SS] Asistan:` for the assistant or `[HH:MM:SS] Müşteri:` for the caller — Turkish role labels, each prefixed with a UTC `HH:MM:SS` timestamp — and the lines are separated by newlines (`\n`). It may be empty or `null` for a very short or failed call. |
-| `call_structured_data` | object \| null | Holds the data the AI extracted, returned as a flat object whose keys are your assistant's structured output schema properties (see [Structured data shapes](#structured-data-shapes)). It is `null` when the assistant has no structured output schema, when nothing could be extracted, or when the stored data couldn't be parsed. Even when the object is present, an individual value inside it can be `null` where that particular field couldn't be extracted, so parse each one defensively. |
+| `call_structured_data` | object \| null | Holds the structured data the AI extracted from the call, returned as a flat object whose keys are the field names from your assistant's structured output schema (see [Structured data shapes](#structured-data-shapes)). It is `null` in three cases: the assistant has no structured output schema, nothing could be extracted, or the stored data couldn't be parsed. Even when the object is present, an individual value inside it can be `null` where that field couldn't be extracted, so check each one before using it. |
 | `call_metadata` | object \| null | Returns, verbatim, the metadata you attached when you created the call, so you can line the call up with your own records. It is `null` if the call was created without metadata. See [Metadata](../bulk-create-calls.md#metadata) for the rules. |
 | `call_variables` | object \| null | Returns, verbatim, the template variables sent for this call — the same object you passed as `variables` when you created it. It is `null` when none were sent, as with inbound calls. |
 | `call_recording` | object | Tells you whether the call's recording is ready and, when it is, where to download it. Its fields are listed below. |
@@ -259,13 +259,13 @@ Note that `date_from` / `date_to` match on a call's **start time**, falling back
 
 To tell them apart, call [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md): `409 RECORDING_NOT_READY` means it's still processing (temporary — try again soon), while `404 RECORDING_NOT_AVAILABLE` confirms none will ever exist (terminal). Contact the Vindy team if you believe a recording should exist but only ever get `404`.
 
-:::note Discrepancy with the panel
-The Vindy panel may display recordings from other sources (e.g., a temporary provider URL). For security, the API only serves recordings from durable storage. Seeing a recording in the panel but not via the API is expected; **the API response is the authoritative customer-facing contract**.
-:::
-
 ### Structured data shapes {#structured-data-shapes}
 
-`call_structured_data` is the data the AI extracted according to **your assistant's structured output schema**, returned as a **flat object** whose keys are your schema's properties (e.g. `age`, `would_recommend`). It is **not** keyed by an output ID and has no `name`/`result` wrapper. Its values can hold scalars, nested objects, and arrays — including arrays of objects — exactly as your schema defines them. It is `null` when the assistant has no structured output schema, when nothing could be extracted, or when the stored data couldn't be parsed. Beyond that, **individual fields can come back `null`** even when the object itself is present — that means the assistant ran your schema but couldn't extract that particular value, so check each field before you use it. For example, an *Order Summary* schema might return:
+`call_structured_data` is the data the AI pulled from each call according to **your assistant's structured output schema**. It comes back as a **flat JSON object** whose keys are the field names defined in your schema (for example `age`, `would_recommend`). The data is not nested under any ID, and it has no `name` or `result` wrapper. Depending on your schema, the values can be scalars (text, numbers, true/false), nested objects, or arrays — including arrays of objects.
+
+The whole field is `null` in three cases: the assistant has no structured output schema, nothing could be extracted from the call, or the stored data couldn't be parsed. Even when the object itself is present, an individual field inside it can be `null` — that means the assistant ran your schema but couldn't extract that field's value from the call, so check each field before you use it.
+
+For example, an *Order Summary* schema might return:
 
 ```json
 {
@@ -285,11 +285,11 @@ The Vindy panel may display recordings from other sources (e.g., a temporary pro
 }
 ```
 
-The object's keys and shape mirror the structured output schema you defined for your assistant (returned by [`GET /v1/assistants`](../list-assistants.md)), so you can parse it field by field.
+The object's keys and shape match the structured output schema you defined for your assistant; you can see that schema in the [`GET /v1/assistants`](../list-assistants.md) response. Because the keys are the schema's field names, you can read the data field by field, against the structure you already expect.
 
 ## Call end reasons {#end-reasons}
 
-`call_status` (`completed` / `failed`) is a derived summary of the call; `call_end_reason` is the **specific raw reason** it ended, returned unmapped. An outbound call that never reached a normal conversation comes back with **`call_status: failed`** and a reason such as `no_answer`, `busy`, or `rejected`. **Treat `call_end_reason` as an opaque string — do not rely on a fixed enum.** Common values:
+Two fields together describe how a call ended. `call_status` has just two values (`completed` / `failed`) and is the **summary** — whether the call succeeded or failed. `call_end_reason` gives the **detailed reason** it ended, returned raw, without any mapping. For example, an outbound call that never reached a normal conversation comes back with `call_status: failed` and a `call_end_reason` such as `no_answer`, `busy`, or `rejected`. Treat `call_end_reason` as an opaque string — its set of values isn't fixed in advance, so don't rely on a fixed enum. Common values:
 
 | Value | Description |
 |---|---|
@@ -305,7 +305,7 @@ The object's keys and shape mirror the structured output schema you defined for 
 | `max_duration` | The maximum call duration was reached. |
 | `end_call_tool` | The assistant ended the call via its end-call tool. |
 
-Other values may appear, including **raw provider/SIP status text** (e.g. `User Busy`, `486`), and the set grows as new providers and adapters are added. In particular, an unanswered, busy, or rejected outbound call often carries that raw provider text rather than the tidy `no_answer` / `busy` / `rejected` label above, so treat those three as representative categories, not guaranteed literals. If you keep a known-value list, **don't fail on unknown reasons** — log them and continue. When you need the pass/fail summary rather than the specific reason, read `call_status`, not `call_end_reason`.
+The table above isn't exhaustive. `call_end_reason` can also carry **raw provider/SIP status text** (for example `User Busy` or `486`), and the set of possible values grows as new providers and adapters are added. In particular, an unanswered, busy, or rejected outbound call often carries that raw provider text instead of the tidy `no_answer` / `busy` / `rejected` label above — so treat those three as representative categories, not guaranteed literals. If you keep a list of known values, **don't throw on an unrecognized reason**; log it and carry on. When you only need the pass/fail summary rather than the specific reason, read `call_status`, not `call_end_reason`.
 
 ## Errors
 

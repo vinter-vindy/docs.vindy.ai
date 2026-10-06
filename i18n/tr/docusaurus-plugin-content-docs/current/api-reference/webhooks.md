@@ -43,22 +43,27 @@ Vindy, olay tipinden bağımsız olarak her teslimatta aynı header'ları gönde
 
 | Header | Değer | Not |
 |---|---|---|
-| `Content-Type` | `application/json` | |
-| `User-Agent` | `Vindy-Webhooks/1.0` | Vindy'nin teslimat aracısını tanımlar. |
-| `X-Vindy-Event` | `call.ended` \| `recording.ready` \| `campaign.ended` | Olayın **iç (internal)** adıdır; **noktalı** yazılır ve gövdedeki tireli `event_type`'tan **bilinçli olarak** farklıdır. `call.ended` ↔ `call-ended`; `recording.ready` ↔ `recording-ready`; `campaign.ended` ↔ `batch-ended`. Hangisini isterseniz onunla yönlendirin. |
-| `X-Vindy-Delivery-Id` | `<uuid>` | Bu teslimatın kalıcı kimliğidir; aynı olayın **her yeniden deneme adımında değişmez**. Aynı olay birden çok kez gelirse tekilleştirmek için bu değeri kullanın. Gövdede de `delivery_id` olarak yer alır. |
-| _özel header'lar_ | tanımlandığı gibi | Kaydettiğiniz her özel header aynen gönderilir. Vindy'nin yukarıdaki standart header'ları her zaman kazanır ve ezilemez. |
+| `Content-Type` | `application/json` | Gövde her zaman JSON'dur. |
+| `User-Agent` | `Vindy-Webhooks/1.0` | İsteği gönderenin Vindy'nin webhook teslim sistemi olduğunu belirtir; değeri her teslimatta aynıdır. |
+| `X-Vindy-Event` | `call.ended` \| `recording.ready` \| `campaign.ended` | Teslim edilen olayın türünü bildirir. Olay adı bu header'da **noktalı** yazılır; bu, gövdedeki **tireli** `event_type` değerinden bilinçli olarak farklıdır (`call.ended` ↔ `call-ended`, `recording.ready` ↔ `recording-ready`, `campaign.ended` ↔ `batch-ended`). Gelen isteği türüne göre yönlendirirken ister bu header'ı ister gövdedeki `event_type`'ı kullanabilirsiniz. |
+| `X-Vindy-Delivery-Id` | `<uuid>` | Bu teslimatın benzersiz kimliğidir ve aynı olay yeniden denense bile değişmez. Aynı olayı birden çok kez alırsanız, yinelenenleri ayıklamak (idempotency) için bu değeri kullanın. Aynı değer gövdede `delivery_id` olarak da bulunur. |
+| _özel header'lar_ | tanımlandığı gibi | Webhook'unuz için kaydettiğiniz özel header'lar her teslimatta aynen gönderilir. Bir özel header, yukarıdaki standart Vindy header'larından biriyle çakışırsa her zaman Vindy'nin değeri geçerli olur; bu header'lar geçersiz kılınamaz. |
 
 ## `call-ended` olayı {#call-ended}
 
 :::caution İptal edilen kuyruk çağrısı da `call-ended` üretir
-`call-ended` şu durumlarda tetiklenir: (1) gerçek bir çağrı sonlanmış bir duruma ulaştığında (`completed` veya `failed`); (2) kuyrukta bekleyen bir çağrı iptal edildiğinde, ister tek başına (Vindy panelinden ya da [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile) ister bir [toplu iptalin](cancel-batch.md) parçası olarak. İptal edilen **her** kuyruk çağrısı, `call_status: "cancelled"` ve **minimal** bir gövdeyle (transcript, yapısal veri ve kayıt alanları `null`) **kendi** `call-ended`'ini üretir; `call_metadata` ve `call_variables` aynen geri döner, böylece her birini birebir eşleştirebilirsiniz. Bkz. [iptaller webhook'lara nasıl yansır](#batch-ended).
+`call-ended` olayı iki durumda tetiklenir:
+
+1. **Gerçek bir çağrı sonlandığında:** çağrı `completed` ya da `failed` gibi sonlanmış bir duruma ulaşır.
+2. **Kuyrukta bekleyen bir çağrı iptal edildiğinde:** bu iptal ister tek bir çağrıyı kapsasın (Vindy panelinden ya da [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile) ister bir [toplu iptalin](cancel-batch.md) parçası olsun.
+
+İptal edilen **her** kuyruk çağrısı **kendi** `call-ended` olayını üretir: `call_status` `"cancelled"` olur ve gövde minimaldir (transcript, yapısal veri ve kayıt alanları `null` gelir). `call_metadata` ile `call_variables` aynen geri döndüğü için her olayı ilgili çağrıyla birebir eşleştirebilirsiniz. Ayrıntı için bkz. [iptaller webhook'lara nasıl yansır](#batch-ended).
 :::
 
 Vindy, JSON gövdeli bir HTTP `POST` gönderir. Gövde üst düzeyde `event_type`, `delivery_id` ve `call_id` taşır; asıl içerik ise `data` alanındadır. `data`, **tam çağrı nesnesidir**; [`GET /v1/calls/:callId`](get-call.md) ve [`POST /v1/calls/list`](list-calls/index.md) yanıtlarındaki çağrı nesnesiyle birebir aynı yapıdadır.
 
 ```http
-POST <sizin-webhook-url>
+POST webhook-url
 Content-Type: application/json
 User-Agent: Vindy-Webhooks/1.0
 X-Vindy-Event: call.ended
@@ -105,7 +110,7 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
 `data.call_transcript` tek bir metin dizesidir; içindeki konuşma sıraları satır sonlarıyla (`\n`) ayrılır, bu yüzden yukarıdaki kaçışlı değer tek satırda görünür. Transcript biçimi ve gerçek satır sonlarıyla görüntülenmiş bir örnek için bkz. [Çağrıları Listele](list-calls/index.md).
 
 :::note Alan sırası ve kodlama
-Teslim ettiğimiz JSON'da alanlar bu sayfadaki örneklerle **aynı sırayı** izler: zarf `event_type` ve `delivery_id` ile başlar, `data`'nın ilk alanı ise `call_id`'dir. ASCII olmayan karakterler ham UTF-8 olarak gönderilir (`\u` ile kaçışlanmaz). Yine de alan sırasının garanti olduğunu varsaymayın; alanlara her zaman **adlarıyla** erişin.
+Teslim ettiğimiz JSON'da alanlar bu sayfadaki örneklerle **aynı sırayı** izler: istek `event_type` ve `delivery_id` ile başlar, `data`'nın ilk alanı ise `call_id`'dir. ASCII olmayan karakterler ham UTF-8 olarak gönderilir (`\u` ile kaçışlanmaz). Yine de alan sırasının garanti olduğunu varsaymayın; alanlara her zaman **adlarıyla** erişin.
 :::
 
 ### Üst düzey alanlar
@@ -130,13 +135,13 @@ Teslim ettiğimiz JSON'da alanlar bu sayfadaki örneklerle **aynı sırayı** iz
 | `call_assistant_name` | string \| null | Çağrıyı yürüten asistanın görünen adını verir; panelde gördüğünüz adla aynıdır. Bilinmiyorsa `null` olur. |
 | `call_phone_number` | string \| null | Bu çağrıdaki karşı tarafın numarasını taşır: giden çağrıda aranan numara, gelen çağrıda ise arayanın numarasıdır (mümkün olduğunda E.164 biçiminde). Bilinmiyorsa `null` olur. |
 | `call_bound_type` | string \| null | Çağrının yönünü belirtir: müşteri sizi aradıysa `inbound`, asistan müşteriyi aradıysa `outbound` olur. Yön bilinmiyorsa `null` döner. |
-| `call_started_at` | ISO 8601 (UTC) \| null | Çağrının fiilen başladığı anı gösterir; **UTC** cinsinden, `+00:00` offset'iyle yazılmış bir ISO-8601 zaman damgasıdır. Garantili bir `Z` son eki veya sabit milisaniye hassasiyeti **yoktur**; bu yüzden gerçek bir ISO-8601 ayrıştırıcıyla çözümleyin ve görüntülemek için kendi yerel saat diliminize çevirin. Çağrı hiç bağlanmadıysa `null` olur. |
-| `call_ended_at` | ISO 8601 (UTC) \| null | Çağrının sona erdiği anı gösterir, aynı ISO-8601 UTC biçimindedir. Çağrı hiç bağlanmadıysa `null` olur. |
+| `call_started_at` | ISO 8601 (UTC) \| null | Çağrının fiilen başladığı anı gösterir; **UTC** cinsinden, `+00:00` offset'iyle yazılmış bir ISO 8601 zaman damgasıdır. Garantili bir `Z` son eki veya sabit milisaniye hassasiyeti **yoktur**; bu yüzden gerçek bir ISO 8601 ayrıştırıcıyla çözümleyin ve görüntülemek için kendi yerel saat diliminize çevirin. Çağrı karşı tarafa herhangi bir nedenle bağlanamadıysa (örneğin sistem hatası, çağrının cevaplanmaması ya da hattın meşgul olması) `null` olur. |
+| `call_ended_at` | ISO 8601 (UTC) \| null | Çağrının sona erdiği anı gösterir; aynı ISO 8601 UTC biçimindedir. Çağrı karşı tarafa hiç bağlanamadıysa `null` olur. |
 | `call_created_at` | ISO 8601 (UTC) | Çağrı kaydının sistemimizde oluşturulduğu anı gösterir, aynı ISO-8601 UTC biçimindedir. |
-| `call_duration_seconds` | int \| null | Çağrının saniye cinsinden ne kadar sürdüğünü verir. Çağrı hiç bağlanmadıysa (örneğin cevapsız bir `failed` çağrı) `null` döner. |
+| `call_duration_seconds` | int \| null | Çağrının saniye cinsinden ne kadar sürdüğünü verir. Çağrı karşı tarafa hiç bağlanamadıysa (örneğin cevapsız kalan bir `failed` çağrı) `null` döner. |
 | `call_end_reason` | string \| null | Çağrının sona ermesinin ham nedenini verir; serbest biçimli bir string'tir ve eşlenmeden döner. Bkz. [Bitiş nedenleri](list-calls/index.md#end-reasons). Opak kabul edin, bilinmeyen değerlerde hata vermeyin. |
 | `call_transcript` | string \| null | Görüşmenin düz metin dökümünü taşır. Her satırın başında UTC `HH:MM:SS` zaman damgası, ardından Türkçe bir rol etiketi bulunur: asistan için `[HH:MM:SS] Asistan:`, arayan için `[HH:MM:SS] Müşteri:`. Satırlar birbirinden `\n` ile ayrılır. Çok kısa veya başarısız çağrılarda boş ya da `null` olabilir. |
-| `call_structured_data` | object \| null | Yapay zekânın çıkardığı veriyi taşır; genellikle asistanınızın yapısal çıktı şemasının özellikleriyle anahtarlanan düz (flat) bir nesnedir. Veri aynen döndürüldüğü için, nadiren bir nesne yerine farklı bir JSON yapısı (örneğin bir dizi) da gelebilir. Asistanın yapısal çıktı şeması yoksa ya da hiçbir şey çıkarılamadığında `null` döner; bkz. [Yapısal veri şekilleri](list-calls/index.md#structured-data-shapes). |
+| `call_structured_data` | object \| null | Yapay zekânın görüşmeden çıkardığı yapısal veriyi taşır; anahtarları asistanınızın yapısal çıktı şemasındaki alan adları olan düz (flat) bir nesnedir. Asistanın şeması yoksa, görüşmeden hiçbir veri çıkarılamadıysa ya da saklanan veri ayrıştırılamadıysa `null` olur; nesne dolu gelse bile içindeki tek tek alanlar `null` olabilir. Ayrıntı için bkz. [Yapısal veri şekilleri](list-calls/index.md#structured-data-shapes). |
 | `call_metadata` | object \| null | [`POST /v1/calls`](create-call.md) veya [`POST /v1/calls/bulk`](bulk-create-calls.md) ile gönderdiğiniz opak metadata'yı, kendi kayıtlarınızla eşleştirebilmeniz için aynen geri döndürür. Çağrı metadata ile oluşturulmadıysa `null` olur. |
 | `call_variables` | object \| null | Bu çağrı için gönderilen şablon değişkenlerini taşır; çağrıyı oluştururken `variables` olarak gönderdiğiniz nesne aynen geri döner. Hiç gönderilmediyse (örneğin inbound çağrılar) `null` olur. |
 | `call_recording` | object | Çağrının ses kaydının hazır olup olmadığını, hazırsa nereden indirileceğini belirten bir nesnedir. Alanları aşağıda listelenir. |
@@ -157,7 +162,7 @@ Bir **`call-ended`** teslimatında `available` **geçici olarak** `false` olabil
 
 ### İptal edilen belirli bir çağrı {#a-cancelled-single-call}
 
-Kuyrukta bekleyen bir çağrı iptal edildiğinde (ister tek başına, Vindy panelinden ya da [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile; ister bir [toplu iptalin](cancel-batch.md) parçası olarak) **o çağrıya özel** bir `call-ended` olayı tetiklenir; bu olay `call_status: "cancelled"` ve **minimal** bir `data` nesnesi taşır. Çağrı hiç gerçekleşmediğinden konuşma, yapısal veri ve zaman alanları `null`, `call_end_reason` `"cancelled"`, `call_recording.available` ise `false` olur. Birebir korelasyon yapabilmeniz için `call_metadata` ve `call_variables` yine aynen geri döner. Bir toplu iptal, durdurduğu **her** kuyruk çağrısı için bunlardan birer tane üretir (artı en sonda gelen tek bir [`batch-ended`](#batch-ended)).
+Kuyrukta bekleyen bir çağrı iptal edildiğinde (ister tek başına, Vindy panelinden ya da [`POST /v1/calls/:callId/cancel`](cancel-call.md) ile; ister bir [toplu iptalin](cancel-batch.md) parçası olarak) **o çağrıya özel** bir `call-ended` olayı tetiklenir; bu olay `call_status: "cancelled"` ve **minimal** bir `data` nesnesi taşır. Çağrı hiç gerçekleşmediğinden konuşma, yapısal veri ve zaman alanları `null`, `call_end_reason` `"cancelled"`, `call_recording.available` ise `false` olur. Birebir korelasyon yapabilmeniz için `call_metadata` ve `call_variables` yine aynen geri döner. Bir toplu aramayı iptal ettiğinizde de durdurulan her kuyruk çağrısı için ayrı bir `call-ended` üretilir: örneğin kuyrukta bekleyen 100 çağrıyı iptal eden bir toplu iptal, 100 ayrı `call-ended` olayı gönderir. Bunların tümü gönderildikten sonra, en sonda tek bir [`batch-ended`](#batch-ended) olayı gelir.
 
 ```json
 {
@@ -210,7 +215,7 @@ Gövde **yalın ve yalnızca kayda odaklıdır**; `call-ended`'in tam çağrı n
 | `call_recording.expires_at` | string (ISO 8601) | `url`'in çalışmayı bırakacağı anı gösterir. O ana kadar indirin ya da [`GET /v1/calls/:callId/recording-url`](get-recording-url.md) ile yeniden isteyin. |
 
 ```http
-POST <sizin-webhook-url>
+POST webhook-url
 Content-Type: application/json
 User-Agent: Vindy-Webhooks/1.0
 X-Vindy-Event: recording.ready

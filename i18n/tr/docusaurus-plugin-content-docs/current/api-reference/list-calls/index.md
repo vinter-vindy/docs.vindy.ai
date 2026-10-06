@@ -56,8 +56,8 @@ Tüm alanlar **isteğe bağlıdır**. Şirketinizin sonlanmış tüm çağrılar
 | `assistant_id` | string (UUID) | — | Yalnızca bu asistanın yürüttüğü çağrıları getirmek için gönderirsiniz; kimliğini [`GET /v1/assistants`](../list-assistants.md) yanıtından alırsınız. Boş bırakırsanız her asistanın çağrısı gelir. |
 | `call_bound_type` | string | — | Çağrıları yönüne göre daraltmak için `inbound` ya da `outbound` gönderirsiniz. Başka bir değer ya da alanı boş bırakmak yön filtresi uygulamaz. |
 | `status` | string | — | Sayfayı yalnızca belirli bir `call_status`'e sahip çağrılarla daraltmak için bunu gönderirsiniz. Burada anlamlı değerler `completed` ve `failed`'dir; dört kuyruk durumu kabul edilir ama **boş sayfa** döndürür (aşağıdaki nota bakın). Filtre istemiyorsanız alanı atlarsınız. Geçersiz değer → `400 VALIDATION_FAILED`. |
-| `date_from` | string (`YYYY-MM-DD`) | — | Listeyi, **başlangıç zamanı** bu gün veya sonrasına düşen çağrılarla daraltır. Değer bir takvim günüdür ve o gün tümüyle dahildir: `date_from = 2026-05-23`, Europe/Istanbul saatiyle `2026-05-23 00:00`'dan itibaren demektir. En eski çağrıdan başlayarak taramak için alanı boş bırakırsınız. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
-| `date_to` | string (`YYYY-MM-DD`) | — | Listeyi, **başlangıç zamanı** bu gün veya öncesine düşen çağrılarla daraltır. Belirtilen gün tümüyle dahildir: `date_to = 2026-05-23`, Europe/Istanbul saatiyle `2026-05-23 23:59:59`'a (yani `2026-05-24 00:00`'dan öncesine) kadar demektir. Şimdiye kadarki tüm çağrıları kapsamak için alanı boş bırakırsınız; `date_from`'u `date_to`'dan sonraya verirseniz istek reddedilir. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
+| `date_from` | string (`YYYY-MM-DD`) | — | `date_from`, tarih aralığının **alt sınırını** belirleyen ve `YYYY-MM-DD` biçiminde gönderdiğiniz bir gündür. Liste, yalnızca **başlangıç zamanı** bu tarihe veya daha sonrasına denk gelen çağrılarla sınırlanır. Gönderdiğiniz gün tümüyle dahildir; sınır, Europe/Istanbul saatiyle o günün `00:00`'ıdır. Örnek: `date_from: "2026-05-23"` → 23 Mayıs 2026 `00:00` (Europe/Istanbul) ve sonrası. Alanı boş bırakırsanız alt sınır uygulanmaz; en eski çağrıya kadar taranır. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
+| `date_to` | string (`YYYY-MM-DD`) | — | `date_to`, tarih aralığının **üst sınırını** belirleyen ve `YYYY-MM-DD` biçiminde gönderdiğiniz bir gündür. Liste, yalnızca **başlangıç zamanı** bu tarihe veya daha öncesine denk gelen çağrılarla sınırlanır. Gönderdiğiniz gün tümüyle dahildir; sınır, Europe/Istanbul saatiyle o günün sonudur (`23:59:59`, yani ertesi günün `00:00`'ından öncesi). Örnek: `date_to: "2026-05-23"` → 23 Mayıs 2026 gününün sonuna kadar (Europe/Istanbul). Alanı boş bırakırsanız üst sınır uygulanmaz; şu ana kadarki çağrılar dahil olur. `date_from`'u `date_to`'dan sonraya verirseniz istek `400` ile reddedilir. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
 | `limit` | int | `200` | Sayfa başına en çok kaç çağrının döneceğini belirler (1–500). Alanı atlarsanız ya da `null` gönderirseniz varsayılan değer olan 200 kullanılır. |
 | `cursor` | string | — | Bir önceki sayfadan dönen opak `next_cursor` değerini, sonraki sayfayı almak için buraya geri gönderirsiniz. İlk istekte göndermezsiniz. |
 
@@ -184,9 +184,9 @@ Adım adım gezinme anlatımı, parametrelerin tam referansı, kabul edilen tari
 ```
 
 :::note Başarısız çağrılar da listede döner
-Liste yalnızca başarılı görüşmeleri değil; `completed` çağrıların yanı sıra `failed` çağrıları da döndürür. Hiç bağlanmamış bir çağrının (örneğin cevapsız bir `failed`) konuşması veya ses kaydı olmaz; bu yüzden zaman temelli alanları `null` olur ve `call_recording.available` `false` döner. Kodunuz bu `null` değerlere dayanıklı olmalıdır.
+Bu liste yalnızca başarılı (`completed`) görüşmeleri değil, başarısız (`failed`) çağrıları da içerir. Hiç bağlanmamış bir çağrının (örneğin cevap alınamayan bir `failed`) ne konuşması ne de ses kaydı olur; bu nedenle zaman alanları (`call_started_at`, `call_ended_at`, `call_duration_seconds`) `null` gelir ve `call_recording.available` `false` döner. Bu yüzden bu alanları işlerken `null` ihtimalini baştan hesaba katın.
 
-`date_from` / `date_to` filtrelerinin, çağrının **başlangıç zamanına** (hiç bağlanmamış bir çağrı içinse **oluşturulma zamanına**) göre süzdüğünü unutmayın; böylece `no_answer` / `failed` çağrılar da tarih filtreli sonuçlara **dahil edilir**.
+`date_from` / `date_to` filtreleri çağrının **başlangıç zamanına** bakar; başlangıç zamanı olmayan (hiç bağlanmamış) çağrılarda ise **oluşturulma zamanına** düşer. Böylece hiç bağlanmamış `no_answer` / `failed` çağrılar da tarih penceresinin dışında kalmaz, sonuçlara dahil olur; bu da tarih aralığıyla yaptığınız artımlı senkronizasyonu güvenli kılar.
 
 ```json
 {
@@ -224,20 +224,20 @@ Liste yalnızca başarılı görüşmeleri değil; `completed` çağrıların ya
 
 | Alan | Tür | Açıklama |
 |---|---|---|
-| `call_id` | string | Çağrıyı sistemimizde kalıcı ve benzersiz olarak tanımlayan kimliktir. Bir endpoint `:callId` beklediği her yerde bunu kullanırsınız: örneğin bu çağrıyı getirmek için [`GET /v1/calls/:callId`](../get-call.md), güncel bir kayıt bağlantısı için [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md). Çağrıyı [`call-ended` webhook](../webhooks.md) içeriğiyle eşleştirmek için de bunu kullanırsınız. |
+| `call_id` | string | Çağrıyı sistemimizde benzersiz ve kalıcı olarak tanımlayan kimliktir. Bir uç `:callId` beklediği her yerde bu değeri verirsiniz: örneğin çağrının ayrıntısını almak için [`GET /v1/calls/:callId`](../get-call.md), güncel bir kayıt bağlantısı için [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md). Aynı değeri, çağrıyı [`call-ended` webhook](../webhooks.md) içeriğiyle eşleştirmek için de kullanırsınız. |
 | `batch_call_id` | string \| null | Bu çağrının ait olduğu toplu aramayı tanımlar ve [`POST /v1/calls/bulk`](../bulk-create-calls.md)'ın döndürdüğü `batch_call_id` ile aynıdır; bir toplu aramanın çağrılarını gruplamak için (örneğin `call-ended` webhook'larını işlerken) kullanırsınız. Çağrı bir toplu aramaya ait değilse `null` olur; bu durum, [`POST /v1/calls`](../create-call.md) ile açılan tekil çağrılarda ve herhangi bir gelen (inbound) çağrıda görülür. |
 | `call_status` | string | Çağrının sonlanmış durumunu verir; `completed` ya da `failed` olur. Hâlâ devam eden veya kuyruktayken iptal edilmiş bir çağrı bu listeye hiç ulaşmaz. |
 | `call_assistant_id` | string (UUID) | Bu çağrıyı yürüten asistanı tanımlar ve [`GET /v1/assistants`](../list-assistants.md) yanıtındaki `assistant_id` ile eşleşir. |
 | `call_assistant_name` | string \| null | Bu asistanın görünen adını verir. Adın çözülemediği nadir durumlarda `null` olabilir. |
 | `call_phone_number` | string \| null | Çağrıdaki karşı tarafın numarasını taşır: giden çağrıda aranan numara, gelen çağrıda ise arayanın numarasıdır (mevcut olduğunda E.164 biçiminde). Numaranın bulunmadığı durumlarda (örneğin numarasını gizleyen bir gelen arayan) `null` olur. |
 | `call_bound_type` | `inbound` \| `outbound` | Çağrının yönünü belirtir: müşteri sizi aradıysa `inbound`, asistan müşteriyi aradıysa `outbound` olur. Bu alan asla `null` olmaz. |
-| `call_started_at` | ISO 8601 (UTC) \| null | Çağrının fiilen başladığı anı gösterir; `+00:00` offset biçiminde yazılır (örneğin `2026-05-15T10:30:00+00:00`). Gerçek bir ISO-8601 ayrıştırıcıyla çözümleyin; `Z` son eki ya da sabit milisaniye hassasiyeti varsaymayın. Çağrı hiç bağlanmadıysa `null` olur. |
-| `call_ended_at` | ISO 8601 (UTC) \| null | Çağrının sona erdiği anı gösterir, aynı biçimde yazılır. Çağrı hiç bağlanmadıysa `null` olur. |
+| `call_started_at` | ISO 8601 (UTC) \| null | Çağrının gerçekte başladığı anı, `+00:00` offset'li ISO 8601 (UTC) biçiminde verir; örneğin `2026-05-15T10:30:00+00:00`. Değeri gerçek bir ISO 8601 ayrıştırıcıyla çözümleyin; `Z` son eki ya da sabit bir milisaniye hassasiyeti beklemeyin. Çağrı karşı tarafa herhangi bir nedenle bağlanamadıysa (örneğin sistem hatası, çağrının cevaplanmaması ya da hattın meşgul olması) `null` olur. |
+| `call_ended_at` | ISO 8601 (UTC) \| null | Çağrının sona erdiği anı gösterir; aynı biçimde yazılır. Çağrı karşı tarafa hiç bağlanamadıysa `null` olur. |
 | `call_created_at` | ISO 8601 (UTC) | Çağrı kaydını sistemimizde oluşturduğumuz anı gösterir, aynı biçimde yazılır. |
-| `call_duration_seconds` | int \| null | Çağrının saniye cinsinden ne kadar sürdüğünü verir. Çağrı hiç bağlanmadıysa (örneğin cevapsız bir `failed` çağrı) `null` döner. |
+| `call_duration_seconds` | int \| null | Çağrının saniye cinsinden ne kadar sürdüğünü verir. Çağrı karşı tarafa hiç bağlanamadıysa (örneğin cevapsız kalan bir `failed` çağrı) `null` döner. |
 | `call_end_reason` | string \| null | Çağrının sona ermesinin ham nedenini verir; serbest biçimli bir string olarak, eşlenmeden döner. Bkz. [Bitiş nedenleri](#end-reasons). |
 | `call_transcript` | string \| null | Görüşmenin düz metin dökümünü taşır. Her satırın başında UTC `HH:MM:SS` zaman damgası, ardından Türkçe bir rol etiketi bulunur: asistan için `[HH:MM:SS] Asistan:`, arayan için `[HH:MM:SS] Müşteri:`. Satırlar birbirinden `\n` ile ayrılır. Çok kısa veya başarısız çağrılarda boş ya da `null` olabilir. |
-| `call_structured_data` | object \| null | Yapay zekânın çıkardığı veriyi taşır; asistanınızın yapısal çıktı şemasının özellikleriyle anahtarlanan, düz (flat) bir nesne olarak döner (bkz. [Yapısal veri şekilleri](#structured-data-shapes)). Asistanın yapısal çıktı şeması yoksa, hiçbir şey çıkarılamadığında ya da saklanan veri ayrıştırılamadığında `null` olur. Nesnenin kendisi gelse bile, ilgili alan çıkarılamadığında *içindeki* tekil değerler `null` olabilir; bu yüzden her alanı kullanmadan önce kontrol edin. |
+| `call_structured_data` | object \| null | Yapay zekânın görüşmeden çıkardığı yapısal veriyi taşır. Anahtarları doğrudan asistanınızın yapısal çıktı şemasındaki alan adları olan, düz (flat) bir nesne olarak döner (bkz. [Yapısal veri şekilleri](#structured-data-shapes)). Şu üç durumda `null` gelir: asistanın yapısal çıktı şeması yoktur, görüşmeden hiçbir veri çıkarılamamıştır ya da saklanan veri ayrıştırılamamıştır. Nesne dönse bile, bir alan görüşmeden çıkarılamadıysa *içindeki* o değer `null` olabilir; bu yüzden her değeri kullanmadan önce denetleyin. |
 | `call_metadata` | object \| null | Çağrıyı oluştururken eklediğiniz metadata'yı, kendi kayıtlarınızla eşleştirebilmeniz için size aynen geri döndürür. Çağrı metadata olmadan oluşturulduysa `null` olur. Kurallar için bkz. [Metadata](../bulk-create-calls.md#metadata). |
 | `call_variables` | object \| null | Bu çağrı için gönderilen şablon değişkenlerini taşır; çağrıyı oluştururken `variables` olarak gönderdiğiniz nesne aynen geri döner. Hiç gönderilmediyse (örneğin inbound çağrılar) `null` olur. |
 | `call_recording` | object | Çağrının ses kaydının hazır olup olmadığını, hazırsa nereden indirileceğini belirten bir nesnedir. Alanları aşağıda listelenir. |
@@ -259,13 +259,13 @@ Liste yalnızca başarılı görüşmeleri değil; `completed` çağrıların ya
 
 İkisini ayırmak için [`GET /v1/calls/:callId/recording-url`](../get-recording-url.md) endpoint'ini çağırın: `409 RECORDING_NOT_READY` hâlâ işleniyor demektir (geçici; birazdan tekrar deneyin), `404 RECORDING_NOT_AVAILABLE` ise hiç kayıt olmayacağını doğrular (kalıcı). Kaydın var olması gerektiğini düşündüğünüz hâlde sürekli `404` alıyorsanız Vindy ekibiyle iletişime geçin.
 
-:::note Panelle olası farklılık
-Vindy yönetim paneli, ses kayıtlarını başka kaynaklardan (örneğin geçici bir sağlayıcı bağlantısından) gösterebilir. API ise güvenlik gereği yalnızca kalıcı depolamaya yazılmış kayıtları sunar. Bir kaydın panelde görünüp API üzerinden görünmemesi beklenen bir durumdur; **müşteri tarafı için bağlayıcı olan, API yanıtıdır**.
-:::
-
 ### Yapısal veri şekilleri {#structured-data-shapes}
 
-`call_structured_data`, yapay zekânın **asistanınızın yapısal çıktı şemasına** göre çıkardığı veridir; anahtarları şemanızın özellikleri (örn. `age`, `would_recommend`) olan **düz (flat) bir nesne** olarak döner. Bir çıktı kimliğiyle anahtarlanmaz ve `name`/`result` sarmalayıcısı **yoktur**. Değerleri, şemanızın tanımladığı biçimde skaler değerler, iç içe nesneler ve diziler (nesne dizileri dahil) tutabilir. Asistanın yapısal çıktı şeması yoksa, hiçbir şey çıkarılamadığında ya da saklanan veri ayrıştırılamadığında `null` olur. Bunun ötesinde, nesnenin kendisi bulunsa bile **tekil alanlar `null` dönebilir**; bu, asistanın şemanızı çalıştırdığı ama o belirli değeri çıkaramadığı anlamına gelir. Bu yüzden her alanı kullanmadan önce kontrol edin. Örneğin bir *Order Summary* şeması şöyle dönebilir:
+`call_structured_data`, yapay zekânın her görüşmeden **asistanınızın yapısal çıktı şemasına göre** çıkardığı veridir. Veri, düz (flat) bir JSON nesnesi olarak gelir; nesnenin anahtarları, doğrudan şemanızda tanımladığınız alan adlarıdır (örneğin `age`, `would_recommend`). Veri herhangi bir kimliğin altına yerleştirilmez ve `name` ya da `result` gibi bir sarmalayıcıyla çevrelenmez. Değerler, şemanızın tanımına göre tekil değerler (metin, sayı, doğru/yanlış), iç içe nesneler veya diziler (nesne dizileri dahil) olabilir.
+
+Alanın tamamı üç durumda `null` olur: asistanın yapısal çıktı şeması yoktur, görüşmeden hiçbir veri çıkarılamamıştır ya da saklanan veri ayrıştırılamamıştır. Nesne dolu gelse bile içindeki tek tek alanlar `null` dönebilir; bu, asistanın şemayı çalıştırdığı ama o alanın değerini görüşmeden çıkaramadığı anlamına gelir. Bu yüzden her alanı kullanmadan önce denetleyin.
+
+Örneğin bir *Order Summary* şeması şöyle dönebilir:
 
 ```json
 {
@@ -285,11 +285,11 @@ Vindy yönetim paneli, ses kayıtlarını başka kaynaklardan (örneğin geçici
 }
 ```
 
-Nesnenin anahtarları ve şekli, asistanınız için tanımladığınız yapısal çıktı şemasını birebir yansıtır ([`GET /v1/assistants`](../list-assistants.md) yanıtında döner); böylece alan alan ayrıştırabilirsiniz.
+Bu nesnenin anahtarları ve yapısı, asistanınız için tanımladığınız yapısal çıktı şemasıyla birebir örtüşür; şemanın kendisini [`GET /v1/assistants`](../list-assistants.md) yanıtında görebilirsiniz. Anahtarlar şemadaki alan adlarıyla aynı olduğundan, gelen veriyi beklediğiniz yapıya göre alan alan okuyabilirsiniz.
 
 ## Çağrı bitiş nedenleri {#end-reasons}
 
-`call_status` (`completed` / `failed`) çağrının **türetilmiş özetidir**; `call_end_reason` ise sona ermenin **belirli ham nedenidir**, eşlenmeden döner. Normal bir görüşmeye hiç ulaşmayan bir giden çağrı **`call_status: failed`** ile ve `no_answer`, `busy` ya da `rejected` gibi bir nedenle döner. **`call_end_reason`'ı opak bir string olarak ele alın; sabit bir enum'a güvenmeyin.** Sık karşılaşılan değerler:
+Bir çağrının nasıl bittiğini iki alan birlikte anlatır. `call_status` yalnızca iki değer alır (`completed` / `failed`) ve sonucun **özetidir**: çağrı başarılı mı, başarısız mı. `call_end_reason` ise bitişin **ayrıntılı nedenini** verir ve ham hâliyle, herhangi bir eşlemeden geçmeden döner. Örneğin normal bir görüşmeye hiç ulaşamayan bir giden çağrı, `call_status: failed` ile birlikte `no_answer`, `busy` ya da `rejected` gibi bir `call_end_reason` taşır. `call_end_reason`'ı opak (anlamı önceden sabitlenmemiş) bir metin olarak ele alın; sabit bir değer kümesine (enum) güvenmeyin. Sık karşılaşılan değerler şunlardır:
 
 | Değer | Açıklama |
 |---|---|
@@ -305,7 +305,7 @@ Nesnenin anahtarları ve şekli, asistanınız için tanımladığınız yapısa
 | `max_duration` | Azami çağrı süresine ulaşıldı. |
 | `end_call_tool` | Asistan, görüşme-bitirme aracıyla çağrıyı sonlandırdı. |
 
-Başka değerler de görülebilir; bunlara **ham sağlayıcı/SIP durum metni** (örn. `User Busy`, `486`) da dahildir ve yeni sağlayıcılar ile bileşenler eklendikçe küme genişler. Özellikle yanıtlanmayan, meşgul ya da reddedilen bir giden çağrı, çoğu kez yukarıdaki düzgün `no_answer` / `busy` / `rejected` etiketi yerine bu ham sağlayıcı metnini taşır; bu yüzden o üç değeri garanti edilmiş sabitler değil, temsili kategoriler olarak görün. Bilinen değerlerden oluşan sabit bir liste tutuyorsanız, **tanımadığınız bir nedenle karşılaştığınızda hata fırlatmamalısınız**; değeri log'layıp işleme devam edin. Belirli neden yerine başarılı/başarısız (pass/fail) özetine ihtiyacınız olduğunda `call_end_reason`'ı değil `call_status`'ü okuyun.
+Yukarıdaki tablo tüm değerleri kapsamaz. `call_end_reason`, **ham sağlayıcı/SIP durum metnini** de taşıyabilir (örneğin `User Busy` veya `486`) ve olası değerler kümesi, yeni sağlayıcılar ve bileşenler eklendikçe büyür. Özellikle yanıtlanmayan, meşgul ya da reddedilen bir giden çağrı çoğu zaman tablodaki düzgün `no_answer` / `busy` / `rejected` etiketi yerine bu ham metni taşır. Bu nedenle bu üç değeri garanti edilmiş sabitler gibi değil, birer temsili kategori gibi düşünün. Bilinen değerleri bir listede tutuyorsanız, tanımadığınız bir nedenle karşılaştığınızda hata vermeyin; nedeni günlüğe (log) yazıp işlemeyi sürdürün. Belirli nedenle değil yalnızca çağrının başarılı mı başarısız mı olduğuyla ilgileniyorsanız, `call_end_reason`'ı değil `call_status`'ü okuyun.
 
 ## Hatalar
 

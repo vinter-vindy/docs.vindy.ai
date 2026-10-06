@@ -43,22 +43,27 @@ Vindy sends the same set of headers on every delivery, regardless of event type:
 
 | Header | Value | Notes |
 |---|---|---|
-| `Content-Type` | `application/json` | |
-| `User-Agent` | `Vindy-Webhooks/1.0` | Identifies Vindy's delivery agent. |
-| `X-Vindy-Event` | `call.ended` \| `recording.ready` \| `campaign.ended` | The internal event name — **dotted**, and deliberately different from the hyphenated `event_type` in the body. `call.ended` maps to body `call-ended`; `recording.ready` maps to body `recording-ready`; `campaign.ended` maps to body `batch-ended`. Route on whichever you prefer. |
-| `X-Vindy-Delivery-Id` | `<uuid>` | Stable ID for this delivery — **identical across every retry** of the same event. Use it as your idempotency / de-duplication key. Also present in the body as `delivery_id`. |
-| _custom headers_ | as configured | Any custom headers you registered — sent verbatim. Vindy's canonical headers above always win and cannot be overridden. |
+| `Content-Type` | `application/json` | The body is always JSON. |
+| `User-Agent` | `Vindy-Webhooks/1.0` | Identifies the sender as Vindy's webhook delivery system; the value is the same on every delivery. |
+| `X-Vindy-Event` | `call.ended` \| `recording.ready` \| `campaign.ended` | Tells you which event type was delivered. The event name is **dotted** in this header, deliberately different from the **hyphenated** `event_type` in the body (`call.ended` ↔ `call-ended`, `recording.ready` ↔ `recording-ready`, `campaign.ended` ↔ `batch-ended`). To route by type, use either this header or the body's `event_type` — whichever you prefer. |
+| `X-Vindy-Delivery-Id` | `<uuid>` | A unique ID for this delivery; it stays the same even when the same event is retried. If you receive an event more than once, use this value to de-duplicate (idempotency). The same value also appears in the body as `delivery_id`. |
+| _custom headers_ | as configured | Any custom headers you registered for your webhook are sent verbatim on every delivery. If one of them collides with a standard Vindy header above, Vindy's value always wins; these headers cannot be overridden. |
 
 ## The `call-ended` event {#call-ended}
 
 :::caution A cancelled queued call also fires `call-ended`
-`call-ended` fires when a real call reaches a terminal state (`completed` or `failed`), and **also** whenever a queued call is cancelled — whether you cancel it on its own (from the Vindy panel or via [`POST /v1/calls/:callId/cancel`](cancel-call.md)) **or** as part of a [batch cancel](cancel-batch.md). Every cancelled queued call fires its **own** `call-ended` with `call_status: "cancelled"` and a **minimal** body (transcript, structured data, and recording fields are `null`), with your `call_metadata` and `call_variables` echoed back so you can correlate it one-to-one. See [how cancellations map to webhooks](#batch-ended).
+`call-ended` fires in two situations:
+
+1. **A real call ends** — it reaches a terminal state (`completed` or `failed`).
+2. **A queued call is cancelled** — whether you cancel it on its own (from the Vindy panel or via [`POST /v1/calls/:callId/cancel`](cancel-call.md)) or as part of a [batch cancel](cancel-batch.md).
+
+Every cancelled queued call fires its **own** `call-ended`: `call_status` is `"cancelled"` and the body is minimal (transcript, structured data, and recording fields are `null`). Your `call_metadata` and `call_variables` are echoed back, so you can match each event to its call one-to-one. See [how cancellations map to webhooks](#batch-ended).
 :::
 
 Vindy sends an HTTP `POST` with a JSON body. The body is a **top-level object** (`event_type`, `delivery_id`, `call_id`) that wraps `data` — the **complete call object**, exactly the same shape returned by [`GET /v1/calls/:callId`](get-call.md) and by each item in [`POST /v1/calls/list`](list-calls/index.md).
 
 ```http
-POST <your-webhook-url>
+POST webhook-url
 Content-Type: application/json
 User-Agent: Vindy-Webhooks/1.0
 X-Vindy-Event: call.ended
@@ -105,7 +110,7 @@ X-Vindy-Delivery-Id: 0190aa00-1c5a-7000-8000-abc123def456
 `data.call_transcript` is a single string whose turns are separated by newlines (`\n`), so the escaped value above shows on one line. For the transcript format and a rendered example, see [List Calls](list-calls/index.md).
 
 :::note Field ordering and encoding
-The JSON we deliver keeps the **same field order** as the examples on this page: the envelope leads with `event_type` and `delivery_id`, and `data`'s first field is `call_id`. Non-ASCII characters are sent as raw UTF-8 (not `\u`-escaped). Even so, don't treat field order as a contract — always address fields by name.
+The JSON we deliver keeps the **same field order** as the examples on this page: the request leads with `event_type` and `delivery_id`, and `data`'s first field is `call_id`. Non-ASCII characters are sent as raw UTF-8 (not `\u`-escaped). Even so, don't treat field order as a contract — always address fields by name.
 :::
 
 ### Top-level fields
@@ -130,13 +135,13 @@ The JSON we deliver keeps the **same field order** as the examples on this page:
 | `call_assistant_name` | string \| null | Gives the display name of the assistant that handled the call, the same name you see in the panel. It is `null` if unknown. |
 | `call_phone_number` | string \| null | Holds the other party's number on this call: the number dialed on an outbound call, or the caller's number on an inbound one, in E.164 format when available. It is `null` when unknown. |
 | `call_bound_type` | string \| null | Tells you the call's direction: `inbound` when the customer called you, or `outbound` when the assistant placed the call. It is `null` if unknown. |
-| `call_started_at` | ISO 8601 (UTC) \| null | Marks the moment the call actually started, as an ISO 8601 timestamp in **UTC** written with a `+00:00` offset. There is **no** guaranteed `Z` suffix or fixed millisecond precision, so parse it with a real ISO 8601 parser and convert it to your local timezone for display. It is `null` if the call never connected. |
-| `call_ended_at` | ISO 8601 (UTC) \| null | Marks the moment the call ended, in the same ISO 8601 UTC format. It is `null` if the call never connected. |
+| `call_started_at` | ISO 8601 (UTC) \| null | Marks the moment the call actually started, as an ISO 8601 timestamp in **UTC** written with a `+00:00` offset. There is **no** guaranteed `Z` suffix or fixed millisecond precision, so parse it with a real ISO 8601 parser and convert it to your local timezone for display. It is `null` when the call never connected to the other party — for example a system error, no answer, or a busy line. |
+| `call_ended_at` | ISO 8601 (UTC) \| null | Marks the moment the call ended, in the same ISO 8601 UTC format. It is `null` when the call never connected to the other party. |
 | `call_created_at` | ISO 8601 (UTC) | Marks the moment we created the call record in our system, in the same ISO 8601 UTC format. |
-| `call_duration_seconds` | int \| null | Tells you how long the call lasted, in seconds. It is `null` when the call never connected, as with a no-answer `failed` call. |
+| `call_duration_seconds` | int \| null | Tells you how long the call lasted, in seconds. It is `null` when the call never connected to the other party, as with a no-answer `failed` call. |
 | `call_end_reason` | string \| null | Gives the raw reason the call ended, as a free-form string returned unmapped. See [End reasons](list-calls/index.md#end-reasons); treat it as opaque and don't fail on unknown values. |
 | `call_transcript` | string \| null | Holds the plain-text transcript. Each line reads `[HH:MM:SS] Asistan:` (assistant, `Asistan`) or `[HH:MM:SS] Müşteri:` (caller, `Müşteri`) — Turkish role labels prefixed with a UTC `HH:MM:SS` timestamp — and the lines are separated by newlines (`\n`). It may be empty or `null` for a very short or failed call. |
-| `call_structured_data` | object \| null | Holds the data the AI extracted, usually as a flat object keyed by your assistant's structured output schema properties. It is returned verbatim, so in principle it could take another JSON shape, such as an array. It is `null` when the assistant has no structured output schema or nothing could be extracted — see [Structured data shapes](list-calls/index.md#structured-data-shapes). |
+| `call_structured_data` | object \| null | Holds the structured data the AI extracted from the call — a flat object whose keys are the field names from your assistant's structured output schema. It is `null` when the assistant has no structured output schema, when nothing could be extracted, or when the stored data couldn't be parsed; even when the object is present, individual fields inside it can be `null`. See [Structured data shapes](list-calls/index.md#structured-data-shapes). |
 | `call_metadata` | object \| null | Returns, verbatim, the opaque metadata you sent via [`POST /v1/calls`](create-call.md) or [`POST /v1/calls/bulk`](bulk-create-calls.md), so you can line the call up with your own records. It is `null` if the call wasn't created with metadata. |
 | `call_variables` | object \| null | Returns, verbatim, the template variables sent for this call — the same object you passed as `variables` when you created it. It is `null` when none were sent, as with inbound calls. |
 | `call_recording` | object | Tells you whether the recording is available and, when it is, how to download it. Its fields are listed below. |
@@ -157,7 +162,7 @@ On a **`call-ended`** delivery, `available` may be `false` **transiently** — t
 
 ### A cancelled call {#a-cancelled-single-call}
 
-When a queued call is cancelled — on its own (from the Vindy panel or via [`POST /v1/calls/:callId/cancel`](cancel-call.md)) **or** as part of a [batch cancel](cancel-batch.md) — a `call-ended` event fires for **that specific call**, with `call_status: "cancelled"` and a **minimal** `data` object: the call never happened, so the conversation, structured data, and timing fields are `null`, `call_end_reason` is `"cancelled"`, and `call_recording.available` is `false`. Your `call_metadata` and `call_variables` are still echoed back so you can correlate it one-to-one. A batch cancel emits one of these for **each** stopped queued call (plus a single [`batch-ended`](#batch-ended) that always arrives last).
+When a queued call is cancelled — on its own (from the Vindy panel or via [`POST /v1/calls/:callId/cancel`](cancel-call.md)) **or** as part of a [batch cancel](cancel-batch.md) — a `call-ended` event fires for **that specific call**, with `call_status: "cancelled"` and a **minimal** `data` object: the call never happened, so the conversation, structured data, and timing fields are `null`, `call_end_reason` is `"cancelled"`, and `call_recording.available` is `false`. Your `call_metadata` and `call_variables` are still echoed back so you can correlate it one-to-one. Cancelling a batch does the same for every queued call it stops: a batch cancel that stops 100 queued calls sends 100 separate `call-ended` events. A single [`batch-ended`](#batch-ended) event then arrives last, after all of them.
 
 ```json
 {
@@ -210,7 +215,7 @@ The body is **lean and recording-focused** — deliberately **not** the full cal
 | `call_recording.expires_at` | string (ISO 8601) | Marks the moment `url` stops working. Download the file — or re-request it via [`GET /v1/calls/:callId/recording-url`](get-recording-url.md) — before then. |
 
 ```http
-POST <your-webhook-url>
+POST webhook-url
 Content-Type: application/json
 User-Agent: Vindy-Webhooks/1.0
 X-Vindy-Event: recording.ready
