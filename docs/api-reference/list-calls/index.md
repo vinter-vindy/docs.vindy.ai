@@ -19,10 +19,10 @@ Only calls that are **ready to be shown to you** are returned. A call is ready w
 
 Calls still in progress are **never** included, and browser (WebRTC) calls never appear in the API at all. This makes your sync logic idempotent.
 
-The audio **recording** is delivered separately and is **not** required for a call to appear here — a just-listed call may briefly show `call_recording.available: false` while its recording finalizes. See [Recording retrieval](../../guides/recording-retrieval.md).
+The audio **recording** is processed **asynchronously**, separately from the call, so its readiness is **never** a precondition for the call to be finalized or to appear here. A call surfaces as soon as it's finalized, even while its recording is still being prepared: `call_recording.available` can read `false` on one request and `true` on the same request a few seconds later. See [Recording retrieval](../../guides/recording-retrieval.md).
 :::
 
-A call becomes available **shortly after it ends** — usually within a few seconds, occasionally up to a minute or two while its post-call analysis finishes. So a call that just ended may not show up on your very next request.
+A call becomes available **shortly after it ends** — usually within a few seconds, though it can take a few minutes when its post-call analysis runs long. So a call that just ended may not show up on your very next request.
 
 :::tip Pull and push share the same signal
 This endpoint is the **pull** counterpart of the [`call-ended` webhook](../webhooks.md): a call surfaces here and fires that webhook at the same moment it becomes ready. Use the webhook for real-time delivery, and this endpoint to fetch on demand or back-fill anything you may have missed.

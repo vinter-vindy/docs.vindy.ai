@@ -9,20 +9,20 @@ import TabItem from '@theme/TabItem';
 
 # `POST /v1/calls/list`
 
-Bu uç, şirketinizin çağrılarını döndürür; her çağrı kendi dökümü (transcript), yapay zekânın yapısal çıktı (structured output) şemanıza göre çıkardığı veriler, eklediğiniz metadata ve hazır olduğunda bir ses kaydı bağlantısıyla birlikte gelir. Sonuçlar opak bir cursor ile sayfa sayfa gelir ve asistan, yön ve bir gün aralığıyla daraltılabilir.
+Bu uç, şirketinizin çağrılarını döndürür; her çağrı kendi dökümü (transcript), yapay zekânın yapısal çıktı (structured output) şemanıza göre çıkardığı veriler, eklediğiniz metadata ve hazır olduğunda bir ses kaydı bağlantısıyla birlikte gelir. Sonuçlar opak bir cursor ile sayfa sayfa gelir. Listeyi asistana, yöne ve bir gün aralığına göre daraltabilirsiniz.
 
 :::info Yalnızca sonlanmış çağrılar döndürülür
 Yalnızca **size gösterilmeye hazır** çağrılar döndürülür. Bir çağrının hazır sayılması için:
 
 - **Sonlanmış** bir duruma (`completed` ya da `failed`) ulaşmış olması ve
-- `completed` ise **çağrı sonrası analizinin tamamlanmış** olması (böylece veriyi okuduğunuzda `call_structured_data` artık nihaidir; `failed` bir çağrıda analiz edilecek görüşme olmadığından, çağrı sonlanır sonlanmaz görünür)
+- `completed` ise **çağrı sonrası analizinin tamamlanmış** olması (böylece veriyi okuduğunuzda `call_structured_data` artık nihaidir; `failed` bir çağrıda analiz edilecek görüşme olmadığından, çağrı sonlanır sonlanmaz görünür) gerekir.
 
-gerekir. Hâlâ devam eden çağrılar bu listede **hiçbir zaman** yer almaz; tarayıcı (WebRTC) çağrıları ise API'de hiç görünmez. Bu davranış sayesinde senkronizasyonu tekrar tekrar çalıştırmanız güvenlidir (aynı kaydı iki kez işlemezsiniz).
+Hâlâ devam eden çağrılar bu listede **hiçbir zaman** yer almaz; tarayıcı (WebRTC) çağrıları ise API'de hiç görünmez. Bu davranış sayesinde senkronizasyonu tekrar tekrar çalıştırmanız güvenlidir (aynı kaydı iki kez işlemezsiniz).
 
-Ses **kaydı** ayrı olarak teslim edilir ve bir çağrının burada görünmesi için **ön koşul değildir**. Yeni listelenen bir çağrı, kaydı hâlâ tamamlanırken kısa süre `call_recording.available: false` gösterebilir. Bkz. [Kayıt alma](../../guides/recording-retrieval.md).
+Ses **kaydı**, çağrıdan bağımsız olarak **asenkron** işlenir; bu nedenle kaydın hazır olması, çağrının sonlanması ya da burada listelenmesi için **hiçbir zaman ön koşul değildir**. Çağrı, kaydı hâlâ hazırlanıyor olsa bile sonlandığı anda listede görünür: bir isteğinizde `call_recording.available` alanını `false` görürken, birkaç saniye sonra aynı isteği yinelediğinizde `true` görebilirsiniz. Bkz. [Kayıt alma](../../guides/recording-retrieval.md).
 :::
 
-Bir çağrı, **sona erdikten kısa süre sonra** erişilebilir hâle gelir; bu çoğunlukla birkaç saniye sürer, ara sıra çağrı sonrası analiz tamamlanana dek bir-iki dakikayı bulur. Bu yüzden az önce biten bir çağrı, hemen ardından attığınız istekte henüz görünmeyebilir.
+Bir çağrı, **sona erdikten kısa süre sonra** erişilebilir hâle gelir; bu çoğunlukla birkaç saniye sürer, ancak çağrı sonrası analizin uzadığı durumlarda birkaç dakikayı bulabilir. Bu yüzden yeni sonlanmış bir çağrı, hemen ardından gönderdiğiniz istekte henüz görünmeyebilir.
 
 :::tip Pull ve push aynı sinyali paylaşır
 Bu endpoint, [`call-ended` webhook'unun](../webhooks.md) **pull** karşılığıdır: bir çağrı, hazır hâle geldiği anda hem burada görünür hem de o webhook'u tetikler. Anlık teslim için webhook'u; istediğiniz anda çekmek veya kaçırmış olabileceklerinizi tamamlamak için bu endpoint'i kullanın.

@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `GET /v1/phone-numbers`
 
-Bu uç, şirketinize kayıtlı **arayan numaralarını**, yani giden aramaları **hangi numaradan** başlatabileceğinizi belirleyen telefon numaralarını döndürür. Bunların her biri, Vindy sizin adınıza birini aradığında karşı tarafın telefonunda görünen numaradır.
+Bu uç, şirketinize kayıtlı olan ve giden aramalarda kullanabileceğiniz telefon numaralarını döndürür. Her biri, Vindy sizin adınıza birini aradığında karşı tarafın telefonunda görünen numaradır; dokümanın genelinde bu numaralara **arayan numara** diyoruz.
 
 Tekil ([`POST /v1/calls`](create-call.md)) ya da toplu ([`POST /v1/calls/bulk`](bulk-create-calls.md)) bir giden arama başlatırken, bu listeden bir numara seçer ve onun `phone_number_id` değerini göndererek o aramanın arayan numarasını belirlersiniz.
 
@@ -76,7 +76,6 @@ Bir numara, bir asistana **gelen (inbound) çağrılar** için atanmış olabili
 - Numaralar en yeniden en eskiye sıralanır.
 - Listede yalnızca giden aramaya hazır numaralar yer alır. Beklediğiniz bir numara listede yoksa, henüz giden aramaya hazır hâle getirilmemiştir.
 - `phone_number_id`, hem [`POST /v1/calls`](create-call.md) hem de [`POST /v1/calls/bulk`](bulk-create-calls.md) isteğinin **zorunlu** `phone_number_id` alanında beklediği değerdir. Bilinmeyen ya da şirketinize ait olmayan bir `phone_number_id` orada `404 PHONE_NUMBER_NOT_FOUND` ile reddedilir; var olan ama giden aramaya hazır olmayan bir numara ise `400 PHONE_NUMBER_NOT_USABLE` ile geri çevrilir.
-- `phone_number_id`'yi **anlamı olmayan (opak) bir kimlik** gibi kullanın: içeriğini çözmeye çalışmayın ve telefon numarasını ondan çıkarmaya kalkmayın. Numaranın kendisini `phone_number` alanından okuyun.
 
 ## Örnekler
 

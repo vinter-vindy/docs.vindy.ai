@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `GET /v1/phone-numbers`
 
-Returns the **caller numbers** registered to your company: the phone numbers you can place outbound calls **from**. Each one is the number that shows up on the recipient's phone when Vindy dials them on your behalf.
+This endpoint returns the phone numbers registered to your company that you can use for outbound calls. Each one is the number that shows up on the recipient's phone when Vindy dials on your behalf; throughout these docs we call them **caller numbers**.
 
 When you launch a call — a single call with [`POST /v1/calls`](create-call.md) or a batch with [`POST /v1/calls/bulk`](bulk-create-calls.md) — you pick one of these and pass its `phone_number_id` to set the caller number for that call.
 
@@ -76,7 +76,6 @@ A phone number may be assigned to an assistant for **inbound** routing (so calls
 - Numbers are ordered newest first.
 - Only outbound-ready (provisioned and able to dial) numbers are returned. If a number you expect is missing, it isn't provisioned for outbound yet.
 - The `phone_number_id` is what both [`POST /v1/calls`](create-call.md) and [`POST /v1/calls/bulk`](bulk-create-calls.md) expect in their **required** `phone_number_id` field. A `phone_number_id` that is unknown or not in your company is rejected there with `404 PHONE_NUMBER_NOT_FOUND`; one that exists but isn't ready for outbound with `400 PHONE_NUMBER_NOT_USABLE`.
-- Treat `phone_number_id` as an opaque string — don't parse it or derive the number from it; read the number from `phone_number`.
 
 ## Examples
 
