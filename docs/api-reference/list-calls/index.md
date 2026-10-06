@@ -56,8 +56,8 @@ Every field is **optional** — send an empty body to page through all of your c
 | `assistant_id` | string (UUID) | — | Send this to fetch only the calls handled by one assistant; get its id from [`GET /v1/assistants`](../list-assistants.md). Omit it to get calls from every assistant. |
 | `call_bound_type` | string | — | Send `inbound` or `outbound` to narrow calls by direction. Any other value, or omitting it, applies no direction filter. |
 | `status` | string | — | Send this to narrow the page to a single `call_status`. The meaningful values here are `completed` and `failed`; the four queue statuses are accepted but return an **empty page** (see the note below). Omit it for no status filter. An invalid value → `400 VALIDATION_FAILED`. |
-| `date_from` | string (`YYYY-MM-DD`) | — | Include calls from this day onward. See [Filtering & Pagination](filtering-pagination.md). |
-| `date_to` | string (`YYYY-MM-DD`) | — | Include calls up to and including this day. See [Filtering & Pagination](filtering-pagination.md). |
+| `date_from` | string (`YYYY-MM-DD`) | — | Narrows the list to calls on or after this day, the given day included. Days are read as calendar dates in Europe/Istanbul time. Omit it to scan from your earliest call. See [Filtering & Pagination](filtering-pagination.md). |
+| `date_to` | string (`YYYY-MM-DD`) | — | Narrows the list to calls up to and including this day, again read in Europe/Istanbul time. Omit it to include everything up to now; sending `date_from` later than `date_to` is rejected. See [Filtering & Pagination](filtering-pagination.md). |
 | `limit` | int | `200` | Sets how many calls come back per page (1–500). Omit it or send `null` to use the default of 200. |
 | `cursor` | string | — | The opaque `next_cursor` from your previous page, sent back to fetch the next one. Omit it on the first request. |
 
