@@ -39,7 +39,6 @@ This endpoint takes no query parameters, and the response is **not paginated**: 
           "name": "Vindy - Asistan",
           "schema": {
             "type": "object",
-            "additionalProperties": false,
             "required": ["arama_sonucu", "genel_memnuniyet_puani"],
             "properties": {
               "arama_sonucu": {
@@ -74,7 +73,8 @@ This endpoint takes no query parameters, and the response is **not paginated**: 
                   "required": ["urun", "miktar"]
                 }
               }
-            }
+            },
+            "additionalProperties": false
           }
         }
       ]
@@ -208,7 +208,7 @@ An optional key is simply left out when it doesn't apply; it is never set to `nu
 - `required` lists the fields the assistant always fills in, so you can count on them in every call's `call_structured_data`. In the example, `arama_sonucu` and `genel_memnuniyet_puani` are required; the rest can be missing on some calls. When nothing is required, the `required` key is left out entirely — you will never see `"required": []` or `"required": null`. Many assistants have no required fields, so treat its absence as normal.
 - `additionalProperties` is usually `false`, which simply means a call's data won't contain fields beyond the ones the schema lists.
 
-**Where the values come from.** The `schema` never holds values itself; it is only the form. The values always come from a real call, and the same schema produces different data every time. To read them, call [List Calls](list-calls/index.md): `call_structured_data` is a **flat object** whose keys are exactly the schema's `properties`, not nested under the structured output's `id`. Any value can be `null` when the assistant couldn't capture that field. Treat it as an ordinary JSON object: read `properties` to learn the fields, and don't hard-code an assumption that only `type` and `properties` will be present.
+**Where the values come from.** The `schema` never holds values itself; it is only the form. The values always come from a real call, and the same schema produces different data every time. To read them, call [List Calls](list-calls/index.md). The `call_structured_data` it returns is a **flat object**: its keys are exactly the field names from the schema's `properties`, and you read each value directly from its key, never from under a wrapper such as the structured output's `id`. Any value may be `null` when the assistant couldn't capture that field, so treat every value as possibly null. When you read the **schema** itself, treat it as a standard JSON Schema object: take the field list from `properties`, and don't assume the schema's root holds only `type` and `properties`, since it can also carry keys like `required` and `additionalProperties`.
 
 ## Errors
 

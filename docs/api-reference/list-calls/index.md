@@ -58,7 +58,7 @@ Every field is **optional** — send an empty body to page through all of your c
 | `status` | string | — | Send this to narrow the page to a single `call_status`. The meaningful values here are `completed` and `failed`; the four queue statuses are accepted but return an **empty page** (see the note below). Omit it for no status filter. An invalid value → `400 VALIDATION_FAILED`. |
 | `date_from` | string (`YYYY-MM-DD`) | — | Include calls from this day onward. See [Filtering & Pagination](filtering-pagination.md). |
 | `date_to` | string (`YYYY-MM-DD`) | — | Include calls up to and including this day. See [Filtering & Pagination](filtering-pagination.md). |
-| `limit` | int | `200` | Sets how many calls you get back in this page (1–500). Omit it or send `null` to use the default (200). |
+| `limit` | int | `200` | Sets how many calls come back per page (1–500). Omit it or send `null` to use the default of 200. |
 | `cursor` | string | — | The opaque `next_cursor` from your previous page, sent back to fetch the next one. Omit it on the first request. |
 
 **What each `call_status` means:**

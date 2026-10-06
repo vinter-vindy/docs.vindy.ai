@@ -45,7 +45,7 @@ Content-Type: application/json
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | int | no | `200` | Sets how many calls you get back in this page (1–500). Omit it or send `null` to use the default (200). |
+| `limit` | int | no | `200` | Sets how many calls come back per page (1–500). Omit it or send `null` to use the default of 200. |
 | `cursor` | string | no | — | Send back the opaque `next_cursor` from your previous page to fetch the next one. Omit it on the first request. |
 | `status` | string | no | — | Returns only the calls with this `call_status`. Because this endpoint returns a batch's calls at **any** stage, all six values work: `completed`, `failed`, `cancelled`, `pending`, `scheduled`, `in_progress`. It filters by the call's displayed `call_status` — a call that ran but failed is `failed`, not `completed`, even though it left the queue. Omit it for no status filter. An invalid value returns `400 VALIDATION_FAILED`. |
 

@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `GET /v1/calls/batches/:batchId`
 
-Tek bir **toplu aramanın** ([`POST /v1/calls/bulk`](bulk-create-calls.md) yanıtındaki `batch_call_id`) özetini, nihai durumu ve çağrılarının durum bazında dökümüyle birlikte döndürür.
+Tek bir **toplu aramanın** özetini döndürür; bu özet, toplu aramanın durumunu ve çağrılarının durum bazında dökümünü içerir. Bu toplu arama, ister [`POST /v1/calls/bulk`](bulk-create-calls.md) ile başlattığınız ister Vindy panelinden oluşturduğunuz bir toplu arama olabilir; her iki durumda da onu `batch_call_id` kimliğiyle buradan sorgularsınız. Bu kimliği bulk yanıtında ya da [`POST /v1/calls/batches/list`](list-batches.md) yanıtında bulursunuz.
 
 Gövde, [`batch-ended` webhook'unun](webhooks.md#batch-ended) `data` alanında ilettiği `BatchCallSummary` nesnesinin **birebir aynısıdır**; bu endpoint onun **pull (çekme)** karşılığıdır. Bir toplu arama sonlandığında anlık bildirim için webhook'u, aynı özeti istediğiniz an çekmek için (bir toplu aramanın ilerleyişini yoklamak ya da sonradan mutabakat yapmak için) bu endpoint'i kullanın.
 

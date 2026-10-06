@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `POST /v1/calls/batches/list`
 
-Şirketinizin [`POST /v1/calls/bulk`](bulk-create-calls.md) ile oluşturduğunuz **toplu aramalarını**, en yeniden başlayarak ve cursor tabanlı sayfalamayla döndürür. Her öğe, [`GET /v1/calls/batches/:batchId`](get-batch.md) ve [`batch-ended` webhook'unun](webhooks.md#batch-ended) döndürdüğü `BatchCallSummary` ile aynı yapıdadır; yani bir toplu aramanın durumunu ve durum bazında `counts` dökümünü taşır.
+Şirketinizdeki **toplu aramaları**, en yeniden başlayarak ve cursor tabanlı sayfalamayla döndürür. Bir **toplu arama**, şirketinizdeki herhangi bir giden çağrı kampanyasıdır; ister [`POST /v1/calls/bulk`](bulk-create-calls.md) ile başlatmış olun ister Vindy panelinden oluşturmuş olun, bu uç hepsini döndürür. Her öğe, [`GET /v1/calls/batches/:batchId`](get-batch.md) ve [`batch-ended` webhook'unun](webhooks.md#batch-ended) döndürdüğü `BatchCallSummary` ile aynı yapıdadır; yani bir toplu aramanın durumunu ve durum bazında `counts` dökümünü taşır.
 
 [Çağrıları Listele](list-calls/index.md) gibi bu da küçük bir JSON gövdesiyle yapılan bir `POST` isteğidir; cursor opak olduğu için gövdede taşınır. Listeyi tek bir asistana göre daraltabilirsiniz.
 
@@ -36,7 +36,7 @@ Her alan **opsiyoneldir**; şirketinizin tüm toplu aramalarını sayfalamak iç
 | Alan | Tür | Varsayılan | Açıklama |
 |---|---|---|---|
 | `assistant_id` | string (UUID) | — | Listeyi tek bir asistana ait toplu aramalarla daraltmak için o asistanın kimliğini ([`GET /v1/assistants`](list-assistants.md) yanıtından) gönderirsiniz. Boş bırakırsanız tüm toplu aramalar listelenir. Bilinmeyen veya bozuk bir kimlik hata değil, boş bir sayfa döndürür. |
-| `limit` | int | `200` | Bu sayfada kaç toplu arama alacağınızı belirlersiniz (1–500). Varsayılanı (200) kullanmak için alanı atlar ya da `null` gönderirsiniz. |
+| `limit` | int | `200` | Sayfa başına en çok kaç toplu aramanın döneceğini belirler (1–500). Alanı atlarsanız ya da `null` gönderirseniz varsayılan değer olan 200 kullanılır. |
 | `cursor` | string | — | Bir önceki sayfadan dönen opak `next_cursor` değerini, sonraki sayfayı almak için buraya geri gönderirsiniz. İlk istekte göndermezsiniz. |
 
 Gövde opsiyoneldir; ilk sayfayı varsayılan limitle almak için `{}` (ya da hiçbir şey) gönderebilirsiniz.

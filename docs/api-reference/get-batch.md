@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `GET /v1/calls/batches/:batchId`
 
-Returns a **summary of one batch** — the `batch_call_id` from [`POST /v1/calls/bulk`](bulk-create-calls.md) — with its final status and a per-status breakdown of its calls.
+Returns a **summary of one batch**, identified by its `batch_call_id`, with its status and a per-status breakdown of its calls. The batch can be one you launched with [`POST /v1/calls/bulk`](bulk-create-calls.md) or one created from the Vindy dashboard; either way, you look it up here by its id (from the bulk response, or from [`POST /v1/calls/batches/list`](list-batches.md)).
 
 The body is **exactly the same** `BatchCallSummary` object that the [`batch-ended` webhook](webhooks.md#batch-ended) delivers in its `data` field — this is its **pull** counterpart. Use the webhook for a push notification when a batch settles, and this endpoint to fetch the same summary on demand (to poll a batch's progress, or to reconcile after the fact).
 

@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # `POST /v1/calls/batches/list`
 
-Returns your company's **batches** — the campaigns created via [`POST /v1/calls/bulk`](bulk-create-calls.md) — newest first, with cursor-based pagination. Each item is the **same `BatchCallSummary`** returned by [`GET /v1/calls/batches/:batchId`](get-batch.md) and by the [`batch-ended` webhook](webhooks.md#batch-ended): a batch's status and its per-status `counts`.
+Returns your company's **batches**, newest first, with cursor-based pagination. A **batch** is any campaign of outbound calls in your company — whether you launched it with [`POST /v1/calls/bulk`](bulk-create-calls.md) or created it from the Vindy dashboard — and this endpoint lists them all. Each item is the **same `BatchCallSummary`** returned by [`GET /v1/calls/batches/:batchId`](get-batch.md) and by the [`batch-ended` webhook](webhooks.md#batch-ended): a batch's status and its per-status `counts`.
 
 Like [List Calls](list-calls/index.md), it's a `POST` with a small JSON body — the cursor is opaque, so it travels in the body. You can narrow the list to one assistant.
 
@@ -36,7 +36,7 @@ Every field is **optional** — send an empty body to page through all of your c
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `assistant_id` | string (UUID) | — | Narrows the list to a single assistant's batches — send its id from [`GET /v1/assistants`](list-assistants.md). Omit it to list every batch. An unknown or malformed id returns an empty page, not an error. |
-| `limit` | int | `200` | Sets how many batches you get back in this page (1–500). Omit it or send `null` to use the default (200). |
+| `limit` | int | `200` | Sets how many batches come back per page (1–500). Omit it or send `null` to use the default of 200. |
 | `cursor` | string | — | Send back the opaque `next_cursor` from your previous page to fetch the next one. Omit it on the first request. |
 
 The body is optional — send `{}` (or nothing) to get the first page with the default limit.

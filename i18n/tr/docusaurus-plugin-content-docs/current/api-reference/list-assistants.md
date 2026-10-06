@@ -39,7 +39,6 @@ Bu uç hiçbir sorgu parametresi almaz ve yanıt **sayfalanmaz**; tüm asistanla
           "name": "Vindy - Asistan",
           "schema": {
             "type": "object",
-            "additionalProperties": false,
             "required": ["arama_sonucu", "genel_memnuniyet_puani"],
             "properties": {
               "arama_sonucu": {
@@ -74,7 +73,8 @@ Bu uç hiçbir sorgu parametresi almaz ve yanıt **sayfalanmaz**; tüm asistanla
                   "required": ["urun", "miktar"]
                 }
               }
-            }
+            },
+            "additionalProperties": false
           }
         }
       ]
@@ -208,7 +208,7 @@ Opsiyonel bir anahtar, o alana uymadığında gösterilmez; asla `null` olarak y
 - `required`, asistanın her görüşmede mutlaka doldurduğu alanları sıralar; bu alanların her çağrının `call_structured_data`'sında bulunacağına güvenebilirsiniz. Örneğimizde `arama_sonucu` ile `genel_memnuniyet_puani` zorunludur; kalan alanlar kimi görüşmelerde boş kalabilir. Zorunlu alan hiç yoksa `required` anahtarı şemaya hiç konmaz; yani `"required": []` ya da `"required": null` ile karşılaşmazsınız. Çoğu asistanda zorunlu alan bulunmadığından, bu anahtarın olmamasını olağan sayın.
 - `additionalProperties` çoğunlukla `false`'tur; bu da bir görüşmenin verisinde, şemada sıralanan alanların dışında bir alan çıkmayacağı anlamına gelir.
 
-**Değerler nereden gelir.** `schema` hiçbir zaman değer taşımaz; o yalnızca formun kendisidir. Değerler her zaman gerçek bir görüşmeden doğar ve aynı şema her görüşmede farklı bir sonuç üretir. Bu değerleri görmek için [Çağrıları Listele](list-calls/index.md) ucunu çağırın. Dönen `call_structured_data`, anahtarları doğrudan şemanın `properties`'i olan **düz (flat) bir nesnedir**; yapısal çıktının `id`'si altına hiçbir zaman yerleştirilmez. Asistan bir alanı görüşmeden çıkaramadıysa, o alanın değeri `null` olabilir. Kısacası bunu sıradan bir JSON nesnesi gibi ele alın: alanları `properties`'ten okuyun, şemada yalnızca `type` ile `properties`'in bulunacağını varsaymayın.
+**Değerler nereden gelir.** `schema` hiçbir zaman değer taşımaz; o yalnızca formun kendisidir. Değerler her zaman gerçek bir görüşmeden doğar ve aynı şema her görüşmede farklı bir sonuç üretir. Bu değerleri görmek için [Çağrıları Listele](list-calls/index.md) ucunu çağırın. Dönen `call_structured_data` **düz (flat) bir nesnedir**: anahtarları doğrudan şemanın `properties`'indeki alan adlarıdır ve her değeri kendi anahtarından doğrudan okursunuz; veri, yapısal çıktının `id`'si gibi bir sarmalayıcının altına hiçbir zaman yerleştirilmez. Asistan bir alanı görüşmeden çıkaramadıysa o alanın değeri `null` gelebilir; bu yüzden her değeri okurken `null` olabileceğini hesaba katın. Şemanın kendisini okurken ise onu standart bir JSON Schema nesnesi gibi ele alın: alan listesini `properties`'ten çıkarın ve şemanın kökünde yalnızca `type` ile `properties`'in bulunacağını varsaymayın; kökte `required` veya `additionalProperties` gibi başka anahtarlar da bulunabilir.
 
 ## Hatalar
 

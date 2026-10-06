@@ -45,7 +45,7 @@ Content-Type: application/json
 
 | Alan | Tür | Zorunlu | Varsayılan | Açıklama |
 |---|---|---|---|---|
-| `limit` | int | hayır | `200` | Bu sayfada kaç çağrı alacağınızı belirlersiniz (1–500). Varsayılanı (200) kullanmak için alanı atlar ya da `null` gönderirsiniz. |
+| `limit` | int | hayır | `200` | Sayfa başına en çok kaç çağrının döneceğini belirler (1–500). Alanı atlarsanız ya da `null` gönderirseniz varsayılan değer olan 200 kullanılır. |
 | `cursor` | string | hayır | — | Bir önceki sayfadan dönen opak `next_cursor` değerini, sonraki sayfayı almak için buraya geri gönderirsiniz. İlk istekte göndermezsiniz. |
 | `status` | string | hayır | — | Sayfayı yalnızca belirli bir `call_status`'e sahip çağrılarla daraltmak için bunu gönderirsiniz. Bu endpoint bir toplu aramanın çağrılarını **her** aşamada döndürdüğü için altı değerin hepsi geçerlidir: `completed`, `failed`, `cancelled`, `pending`, `scheduled`, `in_progress`. Filtre, çağrının görüntülenen `call_status`'üne göre çalışır. Aranıp da başarısız olan bir çağrı, kuyruktan çıkmış olsa bile `completed` değil `failed`'dir. Filtre uygulanmasını istemezseniz alanı atlarsınız. Geçersiz değer → `400 VALIDATION_FAILED`. |
 

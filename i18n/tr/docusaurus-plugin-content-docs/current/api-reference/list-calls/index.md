@@ -58,7 +58,7 @@ Tüm alanlar **isteğe bağlıdır**. Şirketinizin sonlanmış tüm çağrılar
 | `status` | string | — | Sayfayı yalnızca belirli bir `call_status`'e sahip çağrılarla daraltmak için bunu gönderirsiniz. Burada anlamlı değerler `completed` ve `failed`'dir; dört kuyruk durumu kabul edilir ama **boş sayfa** döndürür (aşağıdaki nota bakın). Filtre istemiyorsanız alanı atlarsınız. Geçersiz değer → `400 VALIDATION_FAILED`. |
 | `date_from` | string (`YYYY-MM-DD`) | — | Belirtilen günden itibaren (o gün dahil) çağrıları kapsar. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
 | `date_to` | string (`YYYY-MM-DD`) | — | Belirtilen güne kadar, o gün de dahil, çağrıları kapsar. Bkz. [Filtreleme ve Sayfalama](filtering-pagination.md). |
-| `limit` | int | `200` | Bu sayfada kaç çağrı alacağınızı belirlersiniz (1–500). Varsayılanı (200) kullanmak için alanı atlar ya da `null` gönderirsiniz. |
+| `limit` | int | `200` | Sayfa başına en çok kaç çağrının döneceğini belirler (1–500). Alanı atlarsanız ya da `null` gönderirseniz varsayılan değer olan 200 kullanılır. |
 | `cursor` | string | — | Bir önceki sayfadan dönen opak `next_cursor` değerini, sonraki sayfayı almak için buraya geri gönderirsiniz. İlk istekte göndermezsiniz. |
 
 **Her `call_status` ne anlama gelir:**
