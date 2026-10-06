@@ -333,6 +333,17 @@ Son iki durumda da çözüm aynıdır: **`batch-ended`'den sonra da `call-ended`
 
 Bir toplu aramadaki **her** çağrı, ister `completed` ister `failed` ister `cancelled` olsun (toplu iptalin durdurduğu kuyruk çağrıları dâhil), kendi [`call-ended`](#call-ended) olayını üretir. `batch-ended` ise bunların **tümünden sonra** teslim edilir (yukarıdaki sıralama garantisi). Dolayısıyla entegrasyonunuzu baştan sona olaylarla yürütebilir ve her çağrıyı benzersiz bir kimlikle kendi kayıtlarınıza eşleyebilirsiniz; API'yi yalnızca bir kesinti yedeği olarak tutarsınız. Çıkarım yapmanız gereken hiçbir şey yoktur: toplu iptal, çağrıları tek bir özete indirmez (roll-up yapmaz).
 
+Pratikte olaylar size bir akış hâlinde ulaşır: her çağrı önce kendi `call-ended`'ini, ardından (ses kaydı hazır olduğunda) kendi `recording-ready`'sini üretir; toplu aramanın `batch-ended`'i ise hepsinden sonra, en sonda gelir. Aşağıda, örnek bir toplu aramada olayların adresinize **geliş sırası** (yukarıdan aşağıya) görülmektedir; istek gövdeleri kısaltılmıştır:
+
+```text
+POST webhook-url   { "event_type": "call-ended",      "delivery_id": "0a3f…", "call_id": "c1a2…",           "data": { … } }
+POST webhook-url   { "event_type": "recording-ready", "delivery_id": "7b2e…", "call_id": "c1a2…",           "data": { … } }
+POST webhook-url   { "event_type": "call-ended",      "delivery_id": "9d41…", "call_id": "c2b3…",           "data": { … } }
+POST webhook-url   { "event_type": "recording-ready", "delivery_id": "f8a0…", "call_id": "c2b3…",           "data": { … } }
+…
+POST webhook-url   { "event_type": "batch-ended",     "delivery_id": "e5c7…", "batch_call_id": "84213f7a…", "data": { … } }
+```
+
 **Gönderdiğiniz her çağrı için kendi tarafınızda bir satır tutun** ve bu satırı benzersiz bir kimlikle eşleştirin. Bu kimlik için en iyisi, `metadata` içine koyduğunuz bir alandır (önerilir; iptal edilenler dâhil her `call-ended`'de ve API yanıtlarında aynen geri döner); alternatif olarak `call_phone_number`'ı da kullanabilirsiniz. Her satır şu yolu izler: `queued` → `completed` / `failed` / `cancelled`.
 
 1. **Her `call-ended` geldiğinde:** o çağrının satırını doğrudan `call_status` alanındaki terminal duruma (`completed` / `failed` / `cancelled`) güncelleyin. İhtiyacınız olan **tek** durum geçişi budur. Eşleştirmeyi `metadata` kimliği üzerinden yaparsınız; böylece olayın hangi çağrıya ait olduğunu (iptal edilenler dâhil) her zaman kesin bilirsiniz. Tekrarları `delivery_id` ile ayıklayın.

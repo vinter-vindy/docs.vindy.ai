@@ -333,6 +333,17 @@ The top-level object differs from `call-ended`: it carries `batch_call_id` (**no
 
 **Every** call in a batch emits its own [`call-ended`](#call-ended) — whether it `completed`, `failed`, or was `cancelled` (queued calls stopped by the batch cancel included). And `batch-ended` is delivered **after all of them** (the ordering guarantee above). So you can drive your integration entirely from events, matching each call to your own records by a unique id — with the API only as an outage fallback. There is nothing to infer: a batch cancel does **not** roll up its calls.
 
+In practice the events reach you as a stream: each call fires its own `call-ended` first, then (once its recording is ready) its `recording-ready`; the batch's `batch-ended` comes last of all. Below is the **arrival order** (top to bottom) for an example batch, with the request bodies truncated:
+
+```text
+POST webhook-url   { "event_type": "call-ended",      "delivery_id": "0a3f…", "call_id": "c1a2…",           "data": { … } }
+POST webhook-url   { "event_type": "recording-ready", "delivery_id": "7b2e…", "call_id": "c1a2…",           "data": { … } }
+POST webhook-url   { "event_type": "call-ended",      "delivery_id": "9d41…", "call_id": "c2b3…",           "data": { … } }
+POST webhook-url   { "event_type": "recording-ready", "delivery_id": "f8a0…", "call_id": "c2b3…",           "data": { … } }
+…
+POST webhook-url   { "event_type": "batch-ended",     "delivery_id": "e5c7…", "batch_call_id": "84213f7a…", "data": { … } }
+```
+
 **Keep one row per call you submitted**, correlated by a unique id you attach in `metadata` (recommended — echoed back on every `call-ended`, including cancelled ones, and in the API), or by `call_phone_number`. Each row moves: `queued` → `completed` / `failed` / `cancelled`.
 
 1. **On each `call-ended`** → set that call's row to its terminal status straight from `call_status` (`completed` / `failed` / `cancelled`). This is the **only** transition you need — match on your `metadata` id and you always know exactly which call it is, cancelled ones included. De-duplicate by `delivery_id`.
